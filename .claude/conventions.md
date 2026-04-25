@@ -1,0 +1,111 @@
+# Conventions
+
+Rules for contributors (human and LLM) working in this repo.
+
+## Hard rules (non-negotiable)
+
+### No component code in `index.tsx`
+Every component folder uses this shape:
+```
+FolderName/
+  ExportedName.tsx        ← component, styled parts, logic
+  *.module.css            (if applicable)
+  index.ts                ← pure re-export barrel
+```
+The barrel:
+```ts
+export { default } from './ExportedName';
+export * from './ExportedName';
+```
+**Folder name, `.tsx` filename, and exported component name must all match.** If the component is `export default function NavbarLogo()`, the folder is `NavbarLogo/`, the file is `NavbarLogo.tsx`, and the barrel re-exports `NavbarLogo`. Editor tabs, stack traces, and grep results all show the real component name.
+
+Applies to: `src/components/**`, `src/pages/**`.
+
+**Exception — `src/theme/**` swizzles.** Docusaurus's swizzle resolver treats the folder path as the module identity (`@theme/Navbar/Logo` ↔ `src/theme/Navbar/Logo/`). Renaming the folder silently falls through to the default theme-classic component. In swizzles:
+- Folder name stays as Docusaurus dictates (`Logo/`, `Layout/`, `Content/`, etc.).
+- `.tsx` filename still matches the exported component name (`NavbarLogo.tsx`, `NavbarLayout.tsx`).
+- `index.ts` barrel still re-exports from the named file.
+
+Never write `index.tsx`. The repo has zero today; keep it that way.
+
+**Swizzle type imports.** Docusaurus ships `Props` types as ambient `declare module '@theme/X'` augmentations, which get shadowed once you create a local swizzle at that path. Don't write `import type { Props } from '@theme/Navbar/Layout'` inside the swizzle itself — TypeScript can't resolve it. Instead, define and export `Props` locally:
+```ts
+export interface Props {
+  readonly children: ReactNode;
+}
+```
+Match the shape declared in `@docusaurus/theme-classic/src/theme-classic.d.ts`. `@theme-original/*` does not provide these type declarations, so it's not a substitute.
+
+### Tokens are frozen
+The data in [src/lib/tokens.ts](../src/lib/tokens.ts) — `mcoeDefaultTokens`, `uhcTokens`, `optumTokens`, and the `ThemeTokens` interface — is the approved design foundation. Do not change color values, add themes, or restructure interface fields. The consumer layer (CSS-var generation, theme switching plumbing, `resolveColor`) is fair game.
+
+### Behavior must be preserved
+Site works today exactly as the user wants. Every refactor is structural. After each change run `pnpm build && pnpm typecheck` and open the dev server. URL changes, visual changes, routing changes, and theme-switch behavior changes require explicit approval — they are not "cleanup."
+
+## Styling
+
+Three systems exist — use them in their lane, don't cross streams.
+
+| System | Where | When |
+|---|---|---|
+| `@emotion/styled` via [src/lib/styled.ts](../src/lib/styled.ts) | `src/components/**`, `src/pages/**` | Component-scoped styles. Default choice. |
+| CSS Modules (`*.module.css`) | `src/theme/**` only | Docusaurus swizzle overrides. |
+| Global CSS | [src/css/custom.css](../src/css/custom.css), [src/css/tokens.css](../src/css/tokens.css) | Design tokens + Infima overrides only. No component rules. |
+
+Do not introduce Tailwind, vanilla-extract, or inline styles.
+
+## Imports
+- Use folder-level barrel imports: `from '@components/ui'`, not `from '@components/ui/Card'`.
+- Components live under `src/components/{landing,home,ui,mdx}/`. Pick the right bucket:
+  - `landing/` — full-page landing compositions
+  - `home/` — homepage sections
+  - `ui/` — generic reusable primitives (Card, Badge)
+  - `mdx/` — components rendered inside MDX content
+
+## Landing pages
+When adding a new landing, **do not copy** an existing `*Landing.tsx`. Compose from [src/components/landing/primitives.ts](../src/components/landing/primitives.ts):
+```tsx
+import {
+  HeroWrapper, HeroInner, HeroTitle, HeroSubtitle,
+  PageBody, Content, SectionTitle, SectionSubtitle,
+} from '../primitives';
+
+export function MyLanding() {
+  return (
+    <>
+      <HeroWrapper>
+        <HeroInner>
+          <HeroTitle>…</HeroTitle>
+          <HeroSubtitle>…</HeroSubtitle>
+        </HeroInner>
+      </HeroWrapper>
+      <PageBody><Content>{/* sections */}</Content></PageBody>
+    </>
+  );
+}
+```
+If your hero shape genuinely differs (centered, split layout, alternate bg), spread `heroPatternBackground` into a local variant — do not copy the gradient string. Put the landing in its own folder per the component convention: `MyLanding/MyLanding.tsx` + `index.ts`.
+
+## Sidebars
+All sidebar files live in [sidebars/](../sidebars/).
+- `developers.ts` — hand-curated (category grouping, nested structure, HTML quick-links block).
+- `about.ts`, `product.ts`, `resources.ts` — thin wrappers around `autoSidebar(name)` from `shared.ts`. Drop a doc in the corresponding `docs/<name>/` folder and it appears automatically.
+- Adding a new doc instance: create `docs/<new>/`, add `sidebars/<new>.ts` (use `autoSidebar("<new>")` if autogenerated, or hand-curate), and register the plugin in [src/config/doc-instances.ts](../src/config/doc-instances.ts).
+
+## TypeScript
+- `strict: true` is on. No `any` anywhere in first-party code — use `unknown` and narrow, use `never` for "accepts anything" positions, or use proper generics.
+- Type public component props explicitly; internal helpers can infer.
+- `pnpm typecheck` currently surfaces ~20 pre-existing errors in React 19 type shims and untouched `<Layout title>` usages. Keep that count from climbing; don't land new ones.
+
+## Commits / PRs
+- Run `pnpm typecheck && pnpm build` before pushing (CI does not run these yet).
+- `pnpm build` surfaces Docusaurus broken-link warnings — treat them as errors.
+
+## Firebase / Analytics
+- Config in [.env](../.env) (Firebase keys, GA measurement ID). Read via `customFields` in `docusaurus.config.ts`.
+- Only use for UX analytics. Do not add PII collection or other Firebase services (Auth, Firestore) without a scope discussion — this is a public docs site.
+
+## Docusaurus swizzles
+Every file under `src/theme/` shadows a default Docusaurus component and creates upgrade risk. Before adding a new swizzle:
+1. Check if themeConfig or CSS variables can achieve the same result.
+2. If swizzling is necessary, use `@docusaurus/theme-classic` as the reference and copy the latest version, not an older one.

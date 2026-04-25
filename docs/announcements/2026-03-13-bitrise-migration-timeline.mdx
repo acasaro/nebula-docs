@@ -1,0 +1,50 @@
+---
+slug: bitrise-migration-timeline
+title: "Bitrise Migration Timeline Update"
+authors: [dillonhughes]
+tags: [bitrise, migration, ci-cd]
+date: 2026-03-13T08:56:00
+---
+
+import { Note } from '@site/src/components/mdx';
+
+We want to clarify and correct some confusion caused by our earlier communication regarding GitHub Actions runners and the Bitrise migration timeline. First — thank you for the feedback. It's clear the dates communicated sounded more aggressive than intended, and we want to reset expectations with accurate timing.
+
+{/* truncate */}
+
+## What is changing (and what is not)
+
+- The Mobile Center of Excellence is standardizing on **Bitrise** for mobile applications released through MCoE.
+- Bitrise is replacing **GitHub Actions + macOS‑UHG runners** for mobile build and release workflows.
+- This **does not** mean GitHub Actions are being shut down broadly, nor does it apply to non‑mobile teams or non‑macOS runners.
+
+## Updated and clarified timeline
+
+| Timeframe | What's happening |
+|---|---|
+| **Now through March** | Enablement, onboarding, and early migrations to Bitrise. No forced shutdowns. |
+| **Mid‑April** | Recommended planning window for teams to schedule their migration. MCoE will actively assist teams still on GitHub Actions. |
+| **By end of Q2** | `macos‑uhg` runners will be retired. Mobile apps released via MCoE must be building and releasing through Bitrise. |
+
+<Note>
+There is no mid‑March cutoff for macOS runners.
+</Note>
+
+## Why this change is happening
+
+Bitrise provides a single, supported workflow from PR to production that replaces:
+
+- GitHub Actions
+- AWS macOS runners
+- Manual artifact uploads to Firebase
+
+This improves **reliability**, **auditability**, and alignment with the new automated mobile release process.
+
+## Support and next steps
+
+- **Access:** Request membership in `AZU_BITRISE_USERS`, then sign in via SSO at [bitrise.io](https://bitrise.io)
+- **Onboarding help:** Contact Hacker, Rosalee
+- **Migration planning:** Teams still using GitHub Actions may hear from Vaidya, Soumya to help plan a smooth transition
+- **Questions:** Reach out in the [Bitrise Support](https://teams.microsoft.com/l/channel/19%3AFB03vfnBjkHc360bOnohA0H4pCtPJsCqsOXC3lulyyA1%40thread.tacv2?groupId=bf4a70a5-9ee7-4340-9272-c4b2a47dded7&tenantId=db05faca-c82a-4b9d-b9c5-0f64b6755421) channel inside MCoE on Microsoft Teams
+
+We appreciate everyone's patience as we work to make this transition clear, well‑supported, and low‑stress.

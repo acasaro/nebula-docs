@@ -1,0 +1,19 @@
+bitrise:
+  label: Bitrise
+  permalink: /bitrise
+  description: Posts about the Bitrise platform — onboarding, workflows, and platform updates.
+
+ci-cd:
+  label: CI/CD
+  permalink: /ci-cd
+  description: Continuous integration and delivery — pipelines, build infrastructure, and release automation.
+
+migration:
+  label: Migration
+  permalink: /migration
+  description: Migrations between platforms and tooling — GitHub Actions to Bitrise, and related transitions.
+
+onboarding:
+  label: Onboarding
+  permalink: /onboarding
+  description: Guides and announcements for teams joining MCOE platforms.

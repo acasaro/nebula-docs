@@ -1,0 +1,538 @@
+/*
+ * MCoE Docusaurus / Infima Overrides
+ *
+ * Token fallback values live in tokens.css.
+ * This file maps MCoE tokens to Infima variables and adds component overrides.
+ */
+
+@import "./tokens.css";
+
+/* Docusaurus / Infima — driven by MCoE tokens */
+:root {
+  --ifm-color-primary: var(--mcoe-brand-primary);
+  --ifm-color-primary-dark: var(--mcoe-brand-primary-dark);
+  --ifm-color-primary-light: var(--mcoe-brand-primary-light);
+  --ifm-link-color: var(--mcoe-text-link);
+
+  /* Stripe Sail font stack */
+  --ifm-font-family-base: var(--mcoe-font-family);
+  --ifm-font-family-monospace: var(--mcoe-font-family-mono);
+  --ifm-font-size-base: var(--mcoe-font-size-base); /* 14px */
+  --ifm-font-color-base: var(--mcoe-text-primary);
+  --ifm-font-weight-base: var(--mcoe-font-weight-regular);
+
+  /* Stripe Sail code size */
+  --ifm-code-font-size: 13px;
+
+  --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.1);
+
+  /* Navbar — Stripe Sail gray-50 background */
+  --ifm-navbar-background-color: var(--mcoe-bg-secondary);
+  --ifm-navbar-shadow: 0 1px 0 0 var(--mcoe-border-nav);
+
+  --ifm-container-width-xl: 1100px;
+
+  /*
+   * Heading scale — shifted one level to match Stripe's visual hierarchy.
+   * Our h3 plays the role Stripe gives h2 (section label), so h3 is sized
+   * like Stripe's h2, and h2 gets a larger treatment as a true page section.
+   */
+  --ifm-h1-font-size: 2rem;      /* 32px — page title */
+  --ifm-h2-font-size: 1.375rem;  /* 22px — major section (Stripe h2 size) */
+  --ifm-h3-font-size: 1.125rem;  /* 18px — subsection (what Stripe uses h2 for visually) */
+  --ifm-h4-font-size: 1rem;      /* 16px */
+  --ifm-h5-font-size: 1rem;      /* 16px */
+  --ifm-h6-font-size: 0.875rem;  /* 14px */
+
+  /* Stripe Sail global border-radius */
+  --ifm-global-radius: var(--mcoe-radius-md);
+
+  /* Stripe Sail shadows for cards/panels */
+  --ifm-global-shadow-lw: var(--mcoe-shadow-sm);
+  --ifm-global-shadow-md: var(--mcoe-shadow-md);
+  --ifm-global-shadow-tl: var(--mcoe-shadow-lg);
+}
+
+[data-theme="dark"] {
+  --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.3);
+
+  /* Docusaurus surface vars — ThemeContext sets --mcoe-bg-* at runtime,
+     but Infima needs its own vars for the initial dark render. */
+  --ifm-background-color: #1c1e26;
+  --ifm-background-surface-color: #1c1e26;
+  --ifm-navbar-background-color: #14161e;
+  --ifm-navbar-shadow: 0 1px 0 0 #282b3a;
+}
+
+
+/* ─── Base typography — Stripe Sail rendering ─── */
+
+html, body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-size: 14px;
+  font-weight: 400;
+  font-family: var(--mcoe-font-family);
+  color: var(--mcoe-text-primary);
+  line-height: 1.6;
+}
+
+/* Stripe: article p is 16px / 26px line-height */
+.markdown p,
+article p {
+  font-size: 16px;
+  line-height: 26px;
+  color: var(--mcoe-text-primary);
+  padding-top: 12px;
+}
+
+.markdown p:first-child,
+article p:first-child {
+  padding-top: 0;
+}
+
+/* Stripe: all headings bold + gray-900 */
+.markdown h1, .markdown h2, .markdown h3,
+.markdown h4, .markdown h5, .markdown h6,
+article h1, article h2, article h3,
+article h4, article h5, article h6 {
+  font-weight: 700;
+  color: var(--mcoe-text-heading);
+  line-height: 1.3;
+  margin-bottom: 0;
+}
+
+/* h1 — page title, 32px */
+.markdown h1, header h1, article h1 {
+  font-size: 32px !important;
+  letter-spacing: .3px;
+  margin-bottom: 8px;
+}
+
+/* h2 — major section, 22px with top spacing */
+.markdown h2, article h2 {
+  font-size: 1.375rem;
+  padding-top: 32px;
+  margin-top: 0;
+  border-top: 1px solid var(--mcoe-border-default);
+  margin-top: 32px;
+}
+
+/* h3 — subsection, visually equivalent to Stripe h2 in content docs */
+.markdown h3, article h3 {
+  font-size: 1.125rem;
+  font-weight: 700;
+  padding-top: 20px;
+  margin-top: 0;
+}
+
+/* h3 not the first element gets a bit more breathing room */
+.markdown h3:not(:first-child), article h3:not(:first-child) {
+  margin-top: 18px;
+  padding-top: 16px;
+}
+
+/* h4–h6 — inline labels, 16px / 600 */
+.markdown h4, .markdown h5, .markdown h6,
+article h4, article h5, article h6 {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-top: 20px;
+  padding-top: 10px;
+}
+
+/* Stripe: list items match article p sizing */
+.markdown li,
+article li {
+  font-size: 16px;
+  line-height: 26px;
+}
+
+a {
+  color: var(--mcoe-text-link);
+  font-weight: 500;
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+  color: var(--mcoe-text-link);
+}
+
+/* ─── Navbar — ejected, styles in src/theme/Navbar/ ─── */
+
+.navbar__search-input {
+  border-radius: 6px;
+}
+
+.navbar__logo {
+  height: 24px;
+}
+
+/* ─── Layout ─── */
+
+.footer--dark {
+  background-color: var(--mcoe-bg-secondary);
+  border-top: 1px solid var(--mcoe-border-nav);
+}
+
+.footer--dark .footer__title {
+  color: var(--mcoe-text-primary);
+}
+
+.footer--dark .footer__link-item {
+  color: var(--mcoe-text-secondary);
+}
+
+.footer--dark .footer__link-item:hover {
+  color: var(--mcoe-text-primary);
+}
+
+.footer--dark .footer__copyright {
+  color: var(--mcoe-text-secondary);
+}
+
+[data-theme="dark"] .footer--dark {
+  background-color: #14161e;
+  border-top: 1px solid #282b3a;
+}
+
+[data-theme="dark"] .footer--dark .footer__title {
+  color: #e6e8ed;
+}
+
+[data-theme="dark"] .footer--dark .footer__link-item {
+  color: #8b91a0;
+}
+
+[data-theme="dark"] .footer--dark .footer__link-item:hover {
+  color: #e6e8ed;
+}
+
+[data-theme="dark"] .footer--dark .footer__copyright {
+  color: #8b91a0;
+}
+
+main[class*="docMainContainer"] {
+  flex: 1 1 0%;
+}
+
+/* Stripe-style centered prose — constrains content width after sidebar */
+[class*="docItemCol"] {
+  max-width: 800px !important;
+  margin-inline: auto;
+}
+
+main[class*="docMainContainer"] .row {
+  max-width: 1100px;
+  margin-inline: auto;
+}
+
+[data-theme="dark"] main[class*="docMainContainer"] {
+  background-color: #1c1e26;
+}
+
+[data-theme="dark"] aside[class*="docSidebarContainer"],
+[data-theme="dark"] nav[class*="sidebar"],
+[data-theme="dark"] div[class*="sidebarViewport"] {
+  background-color: #1c1e26;
+}
+
+/* Heading sizes — Stripe Sail scale (shifted: our h3 = Stripe's h2 role) */
+.markdown h1,
+header h1 {
+  font-size: 2rem !important;        /* 32px */
+}
+
+.markdown h2 {
+  font-size: 1.375rem;               /* 22px */
+}
+
+.markdown h3 {
+  font-size: 1.125rem;               /* 18px */
+}
+
+.markdown h4 {
+  font-size: 1rem;                   /* 16px */
+}
+
+.markdown h5 {
+  font-size: 1rem;                   /* 16px */
+}
+
+.markdown h6 {
+  font-size: 0.875rem;               /* 14px */
+}
+
+/* ─── Landing pages embedded in docs ─── */
+
+/* Zero out every layer inside and above the landing wrapper */
+[data-landing],
+[data-landing][class],
+[data-landing] .markdown,
+[data-landing] .container,
+[data-landing] .row,
+[data-landing] article,
+[data-landing] > div,
+[data-landing] > div > div,
+[data-landing] > div > div > div,
+[data-landing] [class*="docItemCol"],
+[data-landing] [class*="docItemContainer"],
+div:has(> [data-landing]),
+div:has(> div > [data-landing]),
+main:has([data-landing]) > div,
+main:has([data-landing]) [class*="docItemContainer"],
+main:has([data-landing]) [class*="docItemCol"],
+main:has([data-landing]) [class*="docItemWrapper"],
+main:has([data-landing]) .container,
+main:has([data-landing]) .row,
+main:has([data-landing]) .col,
+main:has([data-landing]) header {
+  max-width: none !important;
+  padding: 0 !important;
+  padding-inline: 0 !important;
+  margin: 0 !important;
+}
+
+
+/* Hide breadcrumbs and prev/next pagination */
+main:has([data-landing]) nav[class*="breadcrumbs"],
+main:has([data-landing]) nav[class*="pagination"] {
+  display: none !important;
+}
+
+/* ─── Code blocks ─── */
+
+div[class*="codeBlockTitle"] {
+  background-color: var(--mcoe-code-title-background);
+  color: var(--mcoe-code-title-text);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.2px;
+}
+
+/* ─── Breadcrumbs ─── */
+
+.breadcrumbs {
+  display: flex;
+  align-items: center;
+}
+
+.breadcrumbs__item {
+  display: flex;
+  align-items: center;
+}
+
+.breadcrumbs__link {
+  display: flex;
+  align-items: center;
+  line-height: 1;
+  font-size: 12px;
+}
+
+.breadcrumbs__link svg {
+  vertical-align: middle;
+  position: relative;
+  top: -1px;
+}
+
+.breadcrumbs__item--active .breadcrumbs__link {
+  padding: 7px 8px;
+  font-weight: 500;
+}
+
+/* ─── Tables ─── */
+
+.markdown table {
+  width: 100%;
+  display: table;
+}
+
+/* ─── Sidebar Quick Links ─── */
+
+li:has(> .sidebar-quick-links) {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.sidebar-quick-links {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 0 0 8px;
+}
+
+.sidebar-quick-link {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  width: 100%;
+  padding: 6px 12px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--ifm-font-color-base);
+  text-decoration: none;
+  border-radius: 6px;
+  transition: background 0.15s ease;
+}
+
+.sidebar-quick-link:hover {
+  background: var(--ifm-color-emphasis-100);
+  text-decoration: none;
+  color: var(--ifm-font-color-base);
+}
+
+.sidebar-quick-link img {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  padding: 4px;
+  margin-right: 16px;
+  box-sizing: content-box;
+  border: 1px solid #b4b6bd78;
+  border-radius: 8px;
+}
+
+[data-theme="dark"] .sidebar-quick-link img {
+  border-color: #dedfe43d;
+}
+
+/* ─── Sidebar — React Native docs style ─── */
+
+/* Sidebar container */
+nav[class*="sidebar"] {
+  --doc-sidebar-width: 280px;
+}
+
+aside[class*="docSidebarContainer"] {
+  border-right: none;
+}
+
+/* Menu reset — clean, minimal look */
+.menu {
+  padding: 12px !important;
+}
+
+/* All menu links — base style */
+.menu__link {
+  font-size: 14px;
+  font-weight: 400;
+  text-decoration: none;
+  color: var(--ifm-color-emphasis-700);
+  border-radius: 6px;
+  padding: 6px 12px;
+  line-height: 1.4;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
+  border-left: 2px solid transparent;
+  margin-left: 0;
+}
+
+.menu__link:hover,
+.menu__link:focus,
+.menu__link:active,
+.menu__link:visited {
+  text-decoration: none;
+}
+
+.menu__link:hover {
+  background: var(--ifm-color-emphasis-100);
+  color: var(--ifm-font-color-base);
+}
+
+/* Active link — left accent bar + tinted background */
+.menu__link--active:not(.menu__link--sublist) {
+  font-weight: 600;
+  color: var(--ifm-color-primary);
+  background: color-mix(in srgb, var(--ifm-color-primary) 8%, transparent);
+  border-left: 2px solid var(--ifm-color-primary);
+  border-radius: 0 6px 6px 0;
+}
+
+.menu__link--active:not(.menu__link--sublist):hover {
+  background: color-mix(in srgb, var(--ifm-color-primary) 12%, transparent);
+}
+
+/* Category headers — uppercase label style */
+.menu__link--sublist {
+  font-size: 14px;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: normal;
+  color: var(--ifm-color-emphasis-700);
+  padding: 8px 12px 6px;
+  margin-top: 12px;
+  border-radius: 0;
+  border-left: none;
+}
+
+.menu__link--sublist:first-child {
+  margin-top: 0;
+}
+
+.menu__link--sublist:hover {
+  background: transparent;
+  color: var(--ifm-color-emphasis-800);
+}
+
+/* Caret/arrow on collapsible categories */
+.menu__link--sublist-caret::after {
+  background-size: 1.1em 1.1em;
+  opacity: 0.4;
+  min-width: 1.1em;
+}
+
+/* Nested list — subtle indent */
+.menu__list .menu__list {
+  padding-left: 12px;
+  margin-left: 4px;
+  border-left: 1px solid var(--ifm-color-emphasis-200);
+}
+
+[data-theme="dark"] .menu__list .menu__list {
+  border-left-color: rgba(255, 255, 255, 0.08);
+}
+
+/* Thin separator between top-level categories */
+.menu__list-item:not(:first-child) > .menu__link--sublist {
+  border-top: 1px solid var(--ifm-color-emphasis-200);
+  padding-top: 12px;
+  margin-top: 8px;
+}
+
+[data-theme="dark"] .menu__list-item:not(:first-child) > .menu__link--sublist {
+  border-top-color: rgba(255, 255, 255, 0.06);
+}
+
+/* Scrollbar styling */
+div[class*="sidebarViewport"] {
+  scrollbar-width: thin;
+  scrollbar-color: var(--ifm-color-emphasis-200) transparent;
+}
+
+div[class*="sidebarViewport"]::-webkit-scrollbar {
+  width: 4px;
+}
+
+div[class*="sidebarViewport"]::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+div[class*="sidebarViewport"]::-webkit-scrollbar-thumb {
+  background: var(--ifm-color-emphasis-200);
+  border-radius: 4px;
+}
+
+/* Doc content images — Mintlify-style contained rendering */
+.markdown img {
+  border-radius: 12px;
+  border: 1px solid var(--ifm-color-emphasis-200);
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 16px 0;
+  background: var(--ifm-color-emphasis-100);
+}

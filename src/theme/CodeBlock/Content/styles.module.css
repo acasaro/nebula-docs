@@ -1,0 +1,21 @@
+.codeBlock {
+  --ifm-pre-background: var(--prism-background-color);
+  margin: 0;
+  padding: 0;
+      padding-left: 34px;
+
+}
+
+.codeBlockLines {
+  font: inherit;
+  float: left;
+  min-width: 100%;
+  padding: var(--ifm-pre-padding);
+}
+
+
+@media print {
+  .codeBlockLines {
+    white-space: pre-wrap;
+  }
+}

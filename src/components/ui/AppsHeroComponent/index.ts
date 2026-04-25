@@ -1,0 +1,1 @@
+export { AppsHeroComponent } from './AppsHeroComponent';

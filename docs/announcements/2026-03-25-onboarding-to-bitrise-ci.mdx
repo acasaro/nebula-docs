@@ -1,0 +1,74 @@
+---
+slug: onboarding-to-bitrise-ci
+title: "Onboarding to Bitrise CI"
+authors: [anthonyasaro]
+tags: [bitrise, onboarding, ci-cd]
+date: 2026-03-25T08:56:00
+---
+
+import { Note } from '@site/src/components/mdx';
+
+Hey mobile teams! We're actively working on connecting additional GitHub Organizations to the Bitrise GitHub app.
+
+If your mobile app team is planning to onboard to Bitrise and your repositories are not in one of the orgs listed below, please reach out to Anthony Asaro with the following info.
+
+{/* truncate */}
+
+## What we need from you
+
+- **GitHub organization name**
+- **Links to each mobile app repository**
+- **Email addresses of the CI Platform Engineers** supporting the migration
+
+<Note>
+Emails must already have an approved Secure request for `AZU_BITRISE_USERS`.
+</Note>
+
+## Currently connected organizations
+
+| Organization |
+|---|
+| `optum-digital-experience` |
+| `uhg-pipelines` |
+| `uhc-consumer` |
+| `optum-financial` |
+| `uhg-internal` |
+| `uhc-tech-employer-individual-ancillary` |
+| `uhc-tech-medicare-retiree-common` |
+
+If you see your org listed here, only steps 1–2 above are needed.
+
+## What happens next?
+
+Once the Bitrise GitHub app is connected and we have the details above, the MCoE team will:
+
+1. **Create your Bitrise CI project** and connect the required repositories
+2. **Set up Bitrise access groups:**
+   - `[Your App Name]__OWNERS` — Platform Engineer access
+   - `[Your App Name]__CONTRIBUTORS` — Onboarding at a later date for Tester / QA access
+3. **Notify you** when Bitrise CI is fully integrated and ready for migration
+
+## Access & requests
+
+Make a Secure request for the following group:
+
+```
+AZU_BITRISE_USERS
+```
+
+Once access has been approved, confirm you can SSO into [Bitrise](https://bitrise.io) with your Optum email.
+
+<Note>
+Getting access to the `AZU_BITRISE_USERS` Secure group **will not** assign you to any project in Bitrise.
+</Note>
+
+If your team has successfully completed the onboarding process, head over to our Teams channel and `@BitriseSupport` with the following:
+
+1. Tag your team's Bitrise migration lead
+2. Request access to your project using this format:
+
+```
+Requesting access to MOBILE_APP_NAME project in Bitrise as: Owner | Developer | Viewer
+```
+
+Feel free to post in the support channel or DM Anthony Asaro with any questions.

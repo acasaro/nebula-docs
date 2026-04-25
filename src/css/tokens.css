@@ -1,0 +1,122 @@
+/*
+ * MCoE Design Token Definitions
+ *
+ * Two categories of tokens live here:
+ *
+ * 1. GLOBAL (never theme-specific) — Stripe Sail typography, spacing, shadows,
+ *    radius, and body/heading text colors. These never change regardless of theme.
+ *
+ * 2. THEME FALLBACKS — SSR/initial-render defaults mirroring mcoe-default tokens.
+ *    ThemeContext overwrites these at runtime once JS loads. If you change a value
+ *    in mcoeDefaultTokens in lib/tokens.ts, mirror it here too.
+ */
+
+:root {
+
+  /* ─── Theme fallbacks (mcoe-default) — overwritten at runtime by ThemeContext ─── */
+
+  /* Brand */
+  --mcoe-brand-primary: #5469d4;
+  --mcoe-brand-primary-dark: #3d4eac;
+  --mcoe-brand-primary-light: #7d89e0;
+  --mcoe-brand-accent: #3abff8;
+  --mcoe-brand-accent-dark: #0ea5e9;
+
+  /* Surfaces */
+  --mcoe-bg-primary: #ffffff;
+  --mcoe-bg-secondary: #f7fafc;
+  --mcoe-bg-tertiary: #e3e8ee;
+  --mcoe-bg-deepest: #ffffff;
+  --mcoe-bg-inverse: #1a1f36;
+
+  /* Link */
+  --mcoe-text-link: #5469d4;
+
+  /* Brand display — for text/icons on light surfaces; ThemeContext sets this to
+     brandPrimaryOnDark in dark mode so hero titles stay readable */
+  --mcoe-brand-display: #5469d4;
+
+  /* Borders */
+  --mcoe-border-default: #e3e8ee;
+  --mcoe-border-muted: #c1c9d2;
+  --mcoe-border-nav: #e3e8ee;
+
+  /* Semantic */
+  --mcoe-success: #09825d;
+  --mcoe-success-light: #efffed;
+  --mcoe-warning: #bb5504;
+  --mcoe-warning-light: #fcf9e9;
+  --mcoe-error: #cd3d64;
+  --mcoe-error-light: #fff8f5;
+  --mcoe-info: #5469d4;
+  --mcoe-info-light: #f5fbff;
+
+  /* Hero */
+  --mcoe-hero-gradient: linear-gradient(135deg, #3d4eac 0%, #2d3a8c 40%, #1a2457 100%);
+  --mcoe-hero-gradient-gray: linear-gradient(135deg, #f7fafc 0%, #e3e8ee 40%, #d5dce6 100%);
+  --mcoe-hero-orb1: rgba(84, 105, 212, 0.25);
+  --mcoe-hero-orb2: rgba(58, 191, 248, 0.15);
+
+  /* ─── Global — Stripe Sail typography (never theme-specific) ─── */
+
+  --mcoe-font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Helvetica Neue", "Ubuntu", sans-serif;
+  --mcoe-font-family-mono: "Menlo", "Consolas", monospace;
+
+  --mcoe-font-size-xs:   11px;
+  --mcoe-font-size-sm:   12px;
+  --mcoe-font-size-base: 14px;
+  --mcoe-font-size-md:   16px;
+  --mcoe-font-size-lg:   20px;
+  --mcoe-font-size-xl:   24px;
+  --mcoe-font-size-2xl:  28px;
+  --mcoe-font-size-3xl:  32px;
+
+  --mcoe-font-weight-regular: 400;
+  --mcoe-font-weight-medium:  500;
+  --mcoe-font-weight-bold:    700;
+
+  /* ─── Global — Stripe Sail spacing ─── */
+
+  --mcoe-space-1:   2px;
+  --mcoe-space-2:   4px;
+  --mcoe-space-3:   8px;
+  --mcoe-space-4:  12px;
+  --mcoe-space-5:  16px;
+  --mcoe-space-6:  20px;
+  --mcoe-space-7:  24px;
+  --mcoe-space-8:  32px;
+  --mcoe-space-9:  48px;
+  --mcoe-space-10: 64px;
+  --mcoe-space-11: 80px;
+
+  /* ─── Global — Stripe Sail radius ─── */
+
+  --mcoe-radius-sm: 3px;
+  --mcoe-radius:    4px;
+  --mcoe-radius-md: 6px;
+
+  /* ─── Global — Stripe Sail shadows ─── */
+
+  --mcoe-shadow-xs: 0 2px 5px 0 rgba(60,66,87,0.08), 0 1px 1px 0 rgba(0,0,0,0.12);
+  --mcoe-shadow-sm: 0 2px 5px 0 rgba(60,66,87,0.08), 0 1px 1px 0 rgba(0,0,0,0.12);
+  --mcoe-shadow-md: 0 7px 14px 0 rgba(60,66,87,0.08), 0 3px 6px 0 rgba(0,0,0,0.12);
+  --mcoe-shadow-lg: 0 15px 35px 0 rgba(60,66,87,0.08), 0 5px 15px 0 rgba(0,0,0,0.12);
+  --mcoe-shadow-focus: 0 0 0 4px rgba(77,183,232,0.28);
+
+  /* ─── Global — body and heading text colors (Stripe Sail, never theme-specific) ─── */
+  /* These are NOT overridden by themes. Headings are always near-black; body always gray-700. */
+
+  --mcoe-text-primary: #3c4257;    /* sail-color-gray-700 — body text */
+  --mcoe-text-secondary: #697386;  /* sail-color-gray-500 — secondary/muted text */
+  --mcoe-text-inverse: #ffffff;
+  --mcoe-text-heading: #1a1f36;    /* sail-color-gray-900 — h1–h6 */
+}
+
+/* Dark mode text — global, same regardless of theme */
+[data-theme="dark"] {
+  --mcoe-text-primary: #e6e8ed;
+  --mcoe-text-secondary: #8b91a0;
+  --mcoe-text-heading: #e6e8ed;
+  --mcoe-text-inverse: #1c1e26;
+  --mcoe-bg-deepest: #0e1018;
+}

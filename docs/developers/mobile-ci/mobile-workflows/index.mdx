@@ -1,0 +1,143 @@
+---
+title: "Enterprise Pipelines"
+description: "Create and manage mobile CI/CD pipelines in Immerse."
+sidebar_position: 1
+sidebar_label: "Enterprise Pipelines"
+---
+
+Enterprise Pipelines in Immerse provide a self-service way to create fully configured CI/CD pipelines for your mobile applications. When you create a pipeline, Immerse handles provisioning the Bitrise project, committing shared workflow files to your repository, and connecting everything together.
+
+## Pipeline Types
+
+Immerse supports creating pipelines for the following project types:
+
+| Type             | Description                                                                        |
+| ---------------- | ---------------------------------------------------------------------------------- |
+| **Mobile**       | React Native, iOS Native, or Android Native applications — triggers Bitrise builds |
+| **Java**         | Java/Spring applications                                                           |
+| **Node**         | Node.js applications                                                               |
+| **Python**       | Python applications                                                                |
+| **Docker Image** | Container-based applications                                                       |
+| **Go**           | Go applications                                                                    |
+| **.NET**         | .NET applications                                                                  |
+
+<Frame caption='The Create Pipeline page in Immerse showing available project types'>
+  ![create-pipeline-types](/images/image-place-holder.png)
+</Frame>
+
+This guide focuses on **mobile pipelines**. For other pipeline types, the process is similar but uses different workflow templates.
+
+## Creating a Mobile Pipeline
+
+<Steps>
+  <Step title="Navigate to Pipelines in Immerse">
+    Go to **Pipelines** from the Immerse navigation. You'll see the pipeline list or an option to create your first pipeline.
+  </Step>
+  <Step title="Click Create and select Mobile">
+    Click **Create** and select **Mobile** as the pipeline type.
+
+    <Frame caption="Selecting the Mobile pipeline type">
+      ![select-mobile-pipeline](/images/image-place-holder.png)
+    </Frame>
+
+  </Step>
+  <Step title="Select your ASK ID">
+    Use the **Select AskId** dropdown to choose your application. This links the pipeline to your registered application in Immerse.
+  </Step>
+  <Step title="Enter the Repository URL">
+    Provide the GitHub repository URL for your mobile project (e.g., `https://github.com/uhg-digital-experiences/your-app`).
+  </Step>
+  <Step title="Enter a Pipeline Name">
+    Give your pipeline a descriptive name. This will be used to identify the pipeline in Immerse and in the generated workflow files.
+  </Step>
+  <Step title="Configure inputs">
+    Provide the required inputs:
+
+    | Input | Description |
+    |-------|-------------|
+    | **JFrog Project Key** | Your JFrog project key for artifact storage. Falls back to the `immerse_jfrog_project_key` custom property on your repository if not provided. |
+
+    Toggle **Show advanced inputs** for additional configuration options.
+
+    <Frame caption="The Create Pipeline form with ASK ID, repository URL, pipeline name, and JFrog inputs">
+      ![create-pipeline-form](/images/image-place-holder.png)
+    </Frame>
+
+  </Step>
+  <Step title="Click Create Pipeline">
+    Click **Create Pipeline** to provision your pipeline.
+  </Step>
+</Steps>
+
+## What Happens Behind the Scenes
+
+When you create a mobile pipeline, the system follows this flow:
+
+<Frame caption='Pipeline creation flow — checking for existing Bitrise projects and provisioning as needed'>
+  ![pipeline-creation-flow](/images/image-place-holder.png)
+</Frame>
+
+<Steps>
+  <Step title="Check for an existing Bitrise project">
+    The system checks whether a Bitrise project already exists for your application's ASK ID.
+  </Step>
+  <Step title="Create a Bitrise project (if needed)">
+    If no Bitrise project exists, one is automatically created and linked to your ASK ID. The new project receives:
+
+    ```json
+    {
+      "slug": "string",
+      "status": "string"
+    }
+    ```
+
+  </Step>
+  <Step title="Create a Mobile Workflow PR">
+    A pull request is created against your GitHub repository containing the shared workflow configuration. This PR adds the reusable CI workflow that connects your GitHub Actions to Bitrise.
+
+    The workflow configuration includes:
+
+    ```json
+    {
+      "_id": "string",
+      "bitriseProjectId": "string",
+      "bitriseApplicationSlug": "string",
+      "askId": "string",
+      "applicationName": "string"
+    }
+    ```
+
+  </Step>
+</Steps>
+
+<Note>
+  You'll need to review and merge the workflow PR into your repository before the CI pipeline will
+  be active.
+</Note>
+
+## Pipeline Architecture
+
+Once your pipeline is created, three systems work together on every commit:
+
+| System             | Role                                                            |
+| ------------------ | --------------------------------------------------------------- |
+| **GitHub Actions** | Runs code quality checks — dependency install, tests, SonarQube |
+| **Bitrise**        | Builds signed mobile artifacts (iOS `.ipa`, Android `.aab`)     |
+| **JFrog**          | Stores build artifacts and runs dependency audits               |
+
+The [React Native CI workflow](/developers/mobile-ci/mobile-workflows/react-native-ci) orchestrates this entire process as a single reusable GitHub Actions workflow.
+
+## Managing Pipelines
+
+Once created, your pipeline runs automatically on push and pull request events. You can:
+
+- **View pipeline status** in the Immerse Pipelines section
+- **Modify workflow configuration** by editing the workflow files in your repository
+- **Update Bitrise workflows** by modifying your `bitrise.yml` configuration
+- **Connect to Release Management** by [creating a Rollout](/developers/release-management/manage-rollout/create-rollout) linked to your Bitrise project
+
+## What's Next
+
+- [React Native CI Workflow](/developers/mobile-ci/mobile-workflows/react-native-ci) — Full configuration reference for the reusable workflow
+- [About Mobile CI](/developers/mobile-ci/about-mobile-ci) — Architecture overview
+- [Migrating to Bitrise](/developers/mobile-ci/migrate-github-to-bitrise) — Move existing CI to the MCOE platform

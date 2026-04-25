@@ -1,0 +1,76 @@
+name: Build & Deploy to OOSS
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  build-deploy:
+    runs-on: uhg-runner
+
+    env:
+      OOSS_BUCKET_NAME: mcoe-dev-docs
+      PNPM_VERSION: 10.33.0
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure JFrog SaaS Connection
+        id: jf-saas-setup
+        uses: uhg-pipelines/epl-jf/configure-saas-connection@v4
+        with:
+          jfrog-url: https://centraluhg.jfrog.io
+          jfrog-edge-url: https://centraluhg.jfrog.io
+          jfrog-project-key: glb
+          npm-setup: true
+
+      - name: Fix pnpm auth for JFrog virtual repos
+        run: |
+          TOKEN=$(grep 'glb-npm-vir/:_authToken=' ~/.npmrc | sed 's/.*_authToken=//')
+          echo "//centraluhg.jfrog.io/:_authToken=${TOKEN}" >> ~/.npmrc
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install pnpm
+        run: npm install -g pnpm@${{ env.PNPM_VERSION }}
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build
+        run: pnpm build
+        env:
+          FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
+          FIREBASE_AUTH_DOMAIN: ${{ secrets.FIREBASE_AUTH_DOMAIN }}
+          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
+          FIREBASE_STORAGE_BUCKET: ${{ secrets.FIREBASE_STORAGE_BUCKET }}
+          FIREBASE_MESSAGE_SENDER_ID: ${{ secrets.FIREBASE_MESSAGE_SENDER_ID }}
+          FIREBASE_APP_ID: ${{ secrets.FIREBASE_APP_ID }}
+          FIREBASE_MEASUREMENT_ID: ${{ secrets.FIREBASE_MEASUREMENT_ID }}
+
+      - name: Get OOSS Credentials
+        uses: uhg-pipelines/immerse-actions/vaults/get-secrets@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          required-secrets: '["OOSS_AWS_ACCESS_KEY_ID", "OOSS_AWS_SECRET_ACCESS_KEY"]'
+          environment: dev
+
+      - name: Deploy to OOSS
+        uses: uhg-pipelines/cd-workflows/actions/ooss-deploy@v1.1.2
+        with:
+          OOSS_AWS_ACCESS_KEY_ID: ${{ env.OOSS_AWS_ACCESS_KEY_ID }}
+          OOSS_AWS_SECRET_ACCESS_KEY: ${{ env.OOSS_AWS_SECRET_ACCESS_KEY }}
+          build-directory: build
+          ooss-custom-bucket-name: ${{ env.OOSS_BUCKET_NAME }}
+          enable-sync-delete: true

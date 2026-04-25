@@ -1,11 +1,14 @@
 import { z } from 'zod';
-import { blockId, calloutVariant } from './_shared';
+import { blockId, calloutVariant, iconLibrary } from './_shared';
 import type { Block } from '../block';
 import { blockSchema } from '../block';
 
 export const calloutPropsSchema = z.object({
-  variant: calloutVariant,
+  variant: calloutVariant.optional(),
   title: z.string().optional(),
+  icon: z.string().optional(),
+  iconLibrary: iconLibrary.optional(),
+  color: z.string().optional(),
 });
 
 export type CalloutProps = z.infer<typeof calloutPropsSchema>;

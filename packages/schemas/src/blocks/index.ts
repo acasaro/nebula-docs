@@ -2,3 +2,8 @@ export * from './_shared';
 export * from './heading';
 export * from './text';
 export * from './callout';
+export * from './icon';
+export * from './frame';
+export * from './video';
+export * from './step';
+export * from './steps';

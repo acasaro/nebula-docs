@@ -11,4 +11,16 @@ export const headingLevel = z.union([
   z.literal(6),
 ]);
 
-export const calloutVariant = z.enum(['info', 'check', 'tip', 'warning', 'danger']);
+export const calloutVariant = z.enum([
+  'info',
+  'check',
+  'tip',
+  'warning',
+  'danger',
+  'note',
+  'custom',
+]);
+
+export const iconLibrary = z.enum(['material-symbol', 'material']);
+
+export const titleSize = z.enum(['p', 'h2', 'h3', 'h4']);

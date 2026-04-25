@@ -12,7 +12,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@mcoe/schemas": "workspace:*"
+    "@mcoe/schemas": "workspace:*",
+    "@mcoe/theme": "workspace:*"
   },
   "devDependencies": {
     "@emotion/react": "^11.14.0",

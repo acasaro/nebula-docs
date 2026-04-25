@@ -1,11 +1,11 @@
 /*
  * MCoE Docusaurus / Infima Overrides
  *
- * Token fallback values live in tokens.css.
+ * Token fallback values come from @mcoe/theme (auto-generated from TS).
  * This file maps MCoE tokens to Infima variables and adds component overrides.
  */
 
-@import "./tokens.css";
+@import "@mcoe/theme/dist/tokens.css";
 
 /* Docusaurus / Infima — driven by MCoE tokens */
 :root {

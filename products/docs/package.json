@@ -4,7 +4,9 @@
   "private": true,
   "scripts": {
     "docusaurus": "docusaurus",
+    "prestart": "pnpm --filter @mcoe/theme build:css",
     "start": "docusaurus start",
+    "prebuild": "pnpm --filter @mcoe/theme build:css",
     "build": "docusaurus build",
     "swizzle": "docusaurus swizzle",
     "deploy": "docusaurus deploy",
@@ -27,6 +29,7 @@
     "@mcoe/firebase": "workspace:*",
     "@mcoe/renderer": "workspace:*",
     "@mcoe/schemas": "workspace:*",
+    "@mcoe/theme": "workspace:*",
     "@mdx-js/react": "^3.0.0",
     "@mui/material": "^9.0.0",
     "clsx": "^2.0.0",

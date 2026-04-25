@@ -59,8 +59,8 @@ function applyTokensToDOM(tokens: ThemeTokens, isDark: boolean) {
 
   // Hero
   root.style.setProperty('--mcoe-hero-gradient', dark.heroGradient ?? tokens.heroGradient);
-  root.style.setProperty('--mcoe-hero-orb1', tokens.heroOrb1);
-  root.style.setProperty('--mcoe-hero-orb2', tokens.heroOrb2);
+  root.style.setProperty('--mcoe-hero-orb-1', tokens.heroOrb1);
+  root.style.setProperty('--mcoe-hero-orb-2', tokens.heroOrb2);
 
   // Code block
   root.style.setProperty('--mcoe-code-background', tokens.codeBackground);

@@ -3,7 +3,16 @@ import { Button, Menu, MenuItem } from '@mui/material';
 import type { BlockType } from '@mcoe/schemas';
 import { Iconify } from 'src/components/iconify';
 
-const BLOCK_TYPES: BlockType[] = ['heading', 'text', 'callout'];
+const BLOCK_TYPES: BlockType[] = [
+  'heading',
+  'text',
+  'callout',
+  'icon',
+  'frame',
+  'video',
+  'steps',
+  'step',
+];
 
 export interface BlockPaletteProps {
   onAdd: (type: BlockType) => void;

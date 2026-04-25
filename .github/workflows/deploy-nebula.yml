@@ -1,0 +1,79 @@
+name: Build & Deploy Nebula CMS to Firebase Hosting
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'products/nebula-cms/**'
+      - 'packages/**'
+      - 'pnpm-workspace.yaml'
+      - 'pnpm-lock.yaml'
+      - 'package.json'
+      - '.github/workflows/deploy-nebula.yml'
+      - 'firebase.json'
+      - '.firebaserc'
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  build-deploy:
+    runs-on: uhg-runner
+
+    env:
+      PNPM_VERSION: 10.33.0
+      # TODO: set FIREBASE_PROJECT_ID once provisioned
+      FIREBASE_PROJECT_ID: ''
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure JFrog SaaS Connection
+        id: jf-saas-setup
+        uses: uhg-pipelines/epl-jf/configure-saas-connection@v4
+        with:
+          jfrog-url: https://centraluhg.jfrog.io
+          jfrog-edge-url: https://centraluhg.jfrog.io
+          jfrog-project-key: glb
+          npm-setup: true
+
+      - name: Fix pnpm auth for JFrog virtual repos
+        run: |
+          TOKEN=$(grep 'glb-npm-vir/:_authToken=' ~/.npmrc | sed 's/.*_authToken=//')
+          echo "//centraluhg.jfrog.io/:_authToken=${TOKEN}" >> ~/.npmrc
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install pnpm
+        run: npm install -g pnpm@${{ env.PNPM_VERSION }}
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build
+        run: pnpm --filter @mcoe/nebula-cms build
+        env:
+          # TODO: wire up Firebase secrets once project is provisioned
+          VITE_FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
+          VITE_FIREBASE_AUTH_DOMAIN: ${{ secrets.FIREBASE_AUTH_DOMAIN }}
+          VITE_FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
+          VITE_FIREBASE_STORAGE_BUCKET: ${{ secrets.FIREBASE_STORAGE_BUCKET }}
+          VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.FIREBASE_MESSAGE_SENDER_ID }}
+          VITE_FIREBASE_APPID: ${{ secrets.FIREBASE_APP_ID }}
+
+      # TODO: replace with the deploy mechanism once Firebase project is provisioned.
+      # Options under consideration:
+      #   - firebase-tools deploy via service account
+      #   - GitHub OIDC + Firebase CLI
+      - name: Deploy to Firebase Hosting
+        if: env.FIREBASE_PROJECT_ID != ''
+        run: |
+          echo "TODO: deploy products/nebula-cms/dist to Firebase Hosting"
+          echo "FIREBASE_PROJECT_ID=$FIREBASE_PROJECT_ID"

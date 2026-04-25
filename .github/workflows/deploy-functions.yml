@@ -1,0 +1,69 @@
+name: Build & Deploy Firebase Functions
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'functions/**'
+      - 'packages/schemas/**'
+      - 'pnpm-workspace.yaml'
+      - 'pnpm-lock.yaml'
+      - 'package.json'
+      - '.github/workflows/deploy-functions.yml'
+      - 'firebase.json'
+      - '.firebaserc'
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  build-deploy:
+    runs-on: uhg-runner
+
+    env:
+      PNPM_VERSION: 10.33.0
+      # TODO: set FIREBASE_PROJECT_ID once provisioned
+      FIREBASE_PROJECT_ID: ''
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure JFrog SaaS Connection
+        id: jf-saas-setup
+        uses: uhg-pipelines/epl-jf/configure-saas-connection@v4
+        with:
+          jfrog-url: https://centraluhg.jfrog.io
+          jfrog-edge-url: https://centraluhg.jfrog.io
+          jfrog-project-key: glb
+          npm-setup: true
+
+      - name: Fix pnpm auth for JFrog virtual repos
+        run: |
+          TOKEN=$(grep 'glb-npm-vir/:_authToken=' ~/.npmrc | sed 's/.*_authToken=//')
+          echo "//centraluhg.jfrog.io/:_authToken=${TOKEN}" >> ~/.npmrc
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install pnpm
+        run: npm install -g pnpm@${{ env.PNPM_VERSION }}
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build Functions
+        run: pnpm --filter @mcoe/functions build
+
+      # TODO: replace with the deploy mechanism once Firebase project is provisioned.
+      # Will use firebase-tools `firebase deploy --only functions` with a service account.
+      - name: Deploy to Firebase
+        if: env.FIREBASE_PROJECT_ID != ''
+        run: |
+          echo "TODO: deploy functions/lib to Firebase"
+          echo "FIREBASE_PROJECT_ID=$FIREBASE_PROJECT_ID"

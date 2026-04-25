@@ -1,10 +1,17 @@
-name: Build & Deploy to OOSS
+name: Build & Deploy Docs to OOSS
 
 on:
   workflow_dispatch:
   push:
     branches:
       - main
+    paths:
+      - 'products/docs/**'
+      - 'packages/**'
+      - 'pnpm-workspace.yaml'
+      - 'pnpm-lock.yaml'
+      - 'package.json'
+      - '.github/workflows/build-deploy.yml'
 
 permissions:
   id-token: write
@@ -48,7 +55,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Build
-        run: pnpm build
+        run: pnpm --filter @mcoe/docs build
         env:
           FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
           FIREBASE_AUTH_DOMAIN: ${{ secrets.FIREBASE_AUTH_DOMAIN }}
@@ -71,6 +78,6 @@ jobs:
         with:
           OOSS_AWS_ACCESS_KEY_ID: ${{ env.OOSS_AWS_ACCESS_KEY_ID }}
           OOSS_AWS_SECRET_ACCESS_KEY: ${{ env.OOSS_AWS_SECRET_ACCESS_KEY }}
-          build-directory: build
+          build-directory: products/docs/build
           ooss-custom-bucket-name: ${{ env.OOSS_BUCKET_NAME }}
           enable-sync-delete: true

@@ -138,6 +138,32 @@ export function useSubscribeToPagesInSpace(spaceId: SpaceId): PagesListState {
   return state;
 }
 
+/**
+ * Published pages only — used by the docs site (anonymous reads).
+ * Firestore security rules require the explicit status filter for unauthed
+ * list queries to be guaranteed-safe.
+ */
+export function useSubscribeToPublishedPages(spaceId: SpaceId): PagesListState {
+  const [state, setState] = useState<PagesListState>({ status: 'loading' });
+
+  useEffect(() => {
+    setState({ status: 'loading' });
+    const q = query(
+      pagesCollection(spaceId),
+      where('status', '==', 'published'),
+      orderBy('sidebarOrder')
+    );
+    const unsubscribe = onSnapshot(
+      q,
+      (snap) => setState({ status: 'success', pages: snap.docs.map((d) => d.data()) }),
+      (error) => setState({ status: 'error', error })
+    );
+    return unsubscribe;
+  }, [spaceId]);
+
+  return state;
+}
+
 /* ── writes (require auth) ─────────────────────────────────────────── */
 
 export interface CreatePageInput {

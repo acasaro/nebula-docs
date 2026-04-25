@@ -1,8 +1,21 @@
+import { useMemo } from 'react';
 import BrowserOnly from '@docusaurus/BrowserOnly';
 import { useLocation } from '@docusaurus/router';
 import Layout from '@theme/Layout';
-import { useSubscribeToPageBySlug } from '@mcoe/firebase';
-import { spaceIdSchema, type SpaceId } from '@mcoe/schemas';
+import DocRootLayout from '@theme/DocRoot/Layout';
+import {
+  DocsSidebarProvider,
+  DocsVersionProvider,
+} from '@docusaurus/plugin-content-docs/client';
+import type {
+  PropSidebar,
+  PropSidebarItem,
+} from '@docusaurus/plugin-content-docs';
+import {
+  useSubscribeToPageBySlug,
+  useSubscribeToPublishedPages,
+} from '@mcoe/firebase';
+import { spaceIdSchema, type Page, type SpaceId } from '@mcoe/schemas';
 import { BlockRenderer } from '@mcoe/renderer';
 
 interface RouteParts {
@@ -19,10 +32,45 @@ function parseLocation(pathname: string): RouteParts | null {
   return { spaceId: parsed.data, slug };
 }
 
+function pagesToSidebar(pages: Page[]): PropSidebar {
+  const byParent = new Map<string | null, Page[]>();
+  for (const p of pages) {
+    const list = byParent.get(p.parentId) ?? [];
+    list.push(p);
+    byParent.set(p.parentId, list);
+  }
+  for (const list of byParent.values()) {
+    list.sort((a, b) => a.sidebarOrder - b.sidebarOrder);
+  }
+  const itemsFor = (parentId: string | null): PropSidebarItem[] =>
+    (byParent.get(parentId) ?? []).map((p) => {
+      const children = itemsFor(p.id);
+      const href = `/${p.spaceId}/${p.slug}`;
+      if (children.length > 0) {
+        return {
+          type: 'category',
+          label: p.title,
+          items: children,
+          href,
+          collapsible: true,
+          collapsed: false,
+        };
+      }
+      return {
+        type: 'link',
+        label: p.title,
+        href,
+      };
+    });
+  return itemsFor(null);
+}
+
 export default function CmsPage() {
   return (
     <Layout>
-      <BrowserOnly fallback={<CmsLoading />}>{() => <CmsPageContent />}</BrowserOnly>
+      <BrowserOnly fallback={<CmsLoading />}>
+        {() => <CmsPageContent />}
+      </BrowserOnly>
     </Layout>
   );
 }
@@ -35,16 +83,35 @@ function CmsPageContent() {
     return <CmsNotFound message={`Unrecognized URL: ${location.pathname}`} />;
   }
 
-  return <CmsPageBody spaceId={route.spaceId} slug={route.slug} />;
+  return <CmsRouteWithSidebar {...route} />;
+}
+
+function CmsRouteWithSidebar({ spaceId, slug }: RouteParts) {
+  const sidebarState = useSubscribeToPublishedPages(spaceId);
+  const sidebarItems = useMemo(
+    () =>
+      sidebarState.status === 'success'
+        ? pagesToSidebar(sidebarState.pages)
+        : undefined,
+    [sidebarState]
+  );
+
+  return (
+    <DocsVersionProvider version={null}>
+      <DocsSidebarProvider name={spaceId} items={sidebarItems}>
+        <DocRootLayout>
+          <CmsPageBody spaceId={spaceId} slug={slug} />
+        </DocRootLayout>
+      </DocsSidebarProvider>
+    </DocsVersionProvider>
+  );
 }
 
 function CmsPageBody({ spaceId, slug }: RouteParts) {
   const state = useSubscribeToPageBySlug(spaceId, slug);
 
   if (state.status === 'loading') return <CmsLoading />;
-  if (state.status === 'error') {
-    return <CmsError message={state.error.message} />;
-  }
+  if (state.status === 'error') return <CmsError message={state.error.message} />;
   if (state.page === null) {
     return <CmsNotFound message={`No published page at /${spaceId}/${slug}`} />;
   }
@@ -52,33 +119,31 @@ function CmsPageBody({ spaceId, slug }: RouteParts) {
   const { page } = state;
 
   return (
-    <main style={{ maxWidth: 920, margin: '0 auto', padding: '32px 24px' }}>
+    <article>
       <h1>{page.title}</h1>
       <BlockRenderer blocks={page.publishedBlocks} />
-    </main>
+    </article>
   );
 }
 
 function CmsLoading() {
-  return (
-    <main style={{ padding: 32, color: '#666' }}>Loading…</main>
-  );
+  return <p style={{ color: 'var(--ifm-color-emphasis-600)' }}>Loading…</p>;
 }
 
 function CmsNotFound({ message }: { message: string }) {
   return (
-    <main style={{ padding: 32 }}>
+    <div>
       <h1>Page not found</h1>
-      <p style={{ color: '#666' }}>{message}</p>
-    </main>
+      <p style={{ color: 'var(--ifm-color-emphasis-600)' }}>{message}</p>
+    </div>
   );
 }
 
 function CmsError({ message }: { message: string }) {
   return (
-    <main style={{ padding: 32 }}>
+    <div>
       <h1>Error</h1>
-      <pre style={{ color: '#b00020' }}>{message}</pre>
-    </main>
+      <pre style={{ color: 'var(--ifm-color-danger)' }}>{message}</pre>
+    </div>
   );
 }

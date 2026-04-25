@@ -1,59 +1,20 @@
 {
-  "name": "mcoe-docusaurus",
+  "name": "mcoe-monorepo",
   "version": "0.0.0",
   "private": true,
-  "scripts": {
-    "docusaurus": "docusaurus",
-    "start": "docusaurus start",
-    "build": "docusaurus build",
-    "swizzle": "docusaurus swizzle",
-    "deploy": "docusaurus deploy",
-    "clear": "docusaurus clear",
-    "serve": "docusaurus serve",
-    "write-translations": "docusaurus write-translations",
-    "write-heading-ids": "docusaurus write-heading-ids",
-    "typecheck": "tsc"
-  },
-  "dependencies": {
-    "@docusaurus/core": "^3.10.0",
-    "@docusaurus/faster": "^3.10.0",
-    "@docusaurus/plugin-content-docs": "^3.10.0",
-    "@docusaurus/preset-classic": "^3.10.0",
-    "@docusaurus/theme-common": "^3.10.0",
-    "@easyops-cn/docusaurus-search-local": "^0.55.1",
-    "@emotion/react": "^11.14.0",
-    "@emotion/styled": "^11.14.1",
-    "@mdx-js/react": "^3.0.0",
-    "@mui/material": "^9.0.0",
-    "clsx": "^2.0.0",
-    "firebase": "^12.12.0",
-    "minimal-shared": "^1.1.5",
-    "prism-react-renderer": "^2.3.0",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0"
-  },
-  "devDependencies": {
-    "@docusaurus/module-type-aliases": "3.10.0",
-    "@docusaurus/tsconfig": "3.10.0",
-    "@docusaurus/types": "3.10.0",
-    "@types/react": "^19.0.0",
-    "dotenv": "^17.4.2",
-    "typescript": "~6.0.2"
-  },
-  "browserslist": {
-    "production": [
-      ">0.5%",
-      "not dead",
-      "not op_mini all"
-    ],
-    "development": [
-      "last 3 chrome version",
-      "last 3 firefox version",
-      "last 5 safari version"
-    ]
-  },
+  "packageManager": "pnpm@10.33.0",
   "engines": {
-    "packageManager": "pnpm@10.33.0"
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev:docs": "pnpm --filter @mcoe/docs start",
+    "dev:nebula": "pnpm --filter @mcoe/nebula-cms dev",
+    "build:docs": "pnpm --filter @mcoe/docs build",
+    "build:nebula": "pnpm --filter @mcoe/nebula-cms build",
+    "build": "pnpm -r build",
+    "typecheck": "pnpm -r typecheck",
+    "lint": "pnpm -r lint",
+    "clean": "pnpm -r --parallel exec rm -rf node_modules dist build .docusaurus && rm -rf node_modules"
   },
   "pnpm": {
     "overrides": {

@@ -1,13 +1,10 @@
 import type { Theme, Components } from '@mui/material/styles';
 
-import { list } from './list';
-import { card } from './card';
 import { menu } from './menu';
 import { chip } from './chip';
 import { link } from './link';
 import { form } from './form';
 import { tabs } from './tabs';
-import { table } from './table';
 import { alert } from './alert';
 import { stack } from './stack';
 import { badge } from './badge';
@@ -47,15 +44,12 @@ import { datePicker } from './mui-x-date-picker';
 // ----------------------------------------------------------------------
 
 export const components: Components<Theme> = {
-  ...card,
   ...link,
   ...tabs,
   ...chip,
   ...menu,
-  ...list,
   ...stack,
   ...paper,
-  ...table,
   ...alert,
   ...badge,
   ...dialog,

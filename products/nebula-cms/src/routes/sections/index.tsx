@@ -1,29 +1,42 @@
-import type { RouteObject } from 'react-router';
+import { lazy, Suspense } from 'react';
+import { Navigate, type RouteObject } from 'react-router';
+import { LoadingScreen } from 'src/components/loading-screen';
+import { RequireAuth, SignInPage } from 'src/auth';
+import { AppLayout } from 'src/layouts/AppLayout';
 
-import { lazy } from 'react';
-import { Navigate } from 'react-router';
+const PageList = lazy(() =>
+  import('src/pages/PageList').then((m) => ({ default: m.PageList }))
+);
+const PageEditor = lazy(() =>
+  import('src/pages/PageEditor').then((m) => ({ default: m.PageEditor }))
+);
 
-import { CONFIG } from 'src/global-config';
-
-import { authRoutes } from './auth';
-import { dashboardRoutes } from './dashboard';
-
-// ----------------------------------------------------------------------
-
-const Page404 = lazy(() => import('src/pages/error/404'));
+const fallback = <LoadingScreen />;
 
 export const routesSection: RouteObject[] = [
   {
-    path: '/',
-    element: <Navigate to={CONFIG.auth.redirectPath} replace />,
+    path: 'sign-in',
+    element: <SignInPage />,
   },
-
-  // Auth
-  ...authRoutes,
-
-  // Dashboard
-  ...dashboardRoutes,
-
-  // No match
-  { path: '*', element: <Page404 /> },
+  {
+    element: (
+      <RequireAuth>
+        <AppLayout />
+      </RequireAuth>
+    ),
+    children: [
+      {
+        index: true,
+        element: <Suspense fallback={fallback}><PageList /></Suspense>,
+      },
+      {
+        path: 'page/:pageId',
+        element: <Suspense fallback={fallback}><PageEditor /></Suspense>,
+      },
+    ],
+  },
+  {
+    path: '*',
+    element: <Navigate to="/" replace />,
+  },
 ];

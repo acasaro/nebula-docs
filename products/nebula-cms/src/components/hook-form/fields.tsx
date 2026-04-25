@@ -2,7 +2,6 @@ import { RHFRating } from './rhf-rating';
 import { RHFSlider } from './rhf-slider';
 import { RHFTextField } from './rhf-text-field';
 import { RHFRadioGroup } from './rhf-radio-group';
-import { RHFAutocomplete } from './rhf-autocomplete';
 import { RHFSwitch, RHFMultiSwitch } from './rhf-switch';
 import { RHFSelect, RHFMultiSelect } from './rhf-select';
 import { RHFCheckbox, RHFMultiCheckbox } from './rhf-checkbox';
@@ -20,7 +19,6 @@ export const Field = {
   RadioGroup: RHFRadioGroup,
   MultiSelect: RHFMultiSelect,
   MultiSwitch: RHFMultiSwitch,
-  Autocomplete: RHFAutocomplete,
   MultiCheckbox: RHFMultiCheckbox,
   // Pickers
   DatePicker: RHFDatePicker,

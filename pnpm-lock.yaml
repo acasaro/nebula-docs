@@ -10,7 +10,11 @@ overrides:
 
 importers:
 
-  .: {}
+  .:
+    devDependencies:
+      firebase-admin:
+        specifier: ^13.0.0
+        version: 13.8.0
 
   functions:
     dependencies:
@@ -36,19 +40,25 @@ importers:
       '@mcoe/schemas':
         specifier: workspace:*
         version: link:../schemas
-      react:
-        specifier: ^19.2.3
-        version: 19.2.5
-      zod:
-        specifier: ^4.1.13
-        version: 4.3.6
     devDependencies:
+      '@emotion/react':
+        specifier: ^11.14.0
+        version: 11.14.0(@types/react@19.2.14)(react@19.2.5)
+      '@emotion/styled':
+        specifier: ^11.14.1
+        version: 11.14.1(@emotion/react@11.14.0(@types/react@19.2.14)(react@19.2.5))(@types/react@19.2.14)(react@19.2.5)
       '@types/react':
         specifier: ^19.2.7
         version: 19.2.14
+      react:
+        specifier: ^19.2.3
+        version: 19.2.5
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
+      zod:
+        specifier: ^4.1.13
+        version: 4.3.6
 
   packages/firebase:
     dependencies:
@@ -80,13 +90,13 @@ importers:
       '@mcoe/schemas':
         specifier: workspace:*
         version: link:../schemas
-      react:
-        specifier: ^19.2.3
-        version: 19.2.5
     devDependencies:
       '@types/react':
         specifier: ^19.2.7
         version: 19.2.14
+      react:
+        specifier: ^19.2.3
+        version: 19.2.5
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
@@ -127,6 +137,18 @@ importers:
       '@emotion/styled':
         specifier: ^11.14.1
         version: 11.14.1(@emotion/react@11.14.0(@types/react@19.2.14)(react@19.2.5))(@types/react@19.2.14)(react@19.2.5)
+      '@mcoe/blocks':
+        specifier: workspace:*
+        version: link:../../packages/blocks
+      '@mcoe/firebase':
+        specifier: workspace:*
+        version: link:../../packages/firebase
+      '@mcoe/renderer':
+        specifier: workspace:*
+        version: link:../../packages/renderer
+      '@mcoe/schemas':
+        specifier: workspace:*
+        version: link:../../packages/schemas
       '@mdx-js/react':
         specifier: ^3.0.0
         version: 3.1.1(@types/react@19.2.14)(react@19.2.5)

@@ -14,7 +14,11 @@
     "build": "pnpm -r build",
     "typecheck": "pnpm -r typecheck",
     "lint": "pnpm -r lint",
-    "clean": "pnpm -r --parallel exec rm -rf node_modules dist build .docusaurus && rm -rf node_modules"
+    "clean": "pnpm -r --parallel exec rm -rf node_modules dist build .docusaurus && rm -rf node_modules",
+    "seed:test": "node scripts/seed-test-page.mjs"
+  },
+  "devDependencies": {
+    "firebase-admin": "^13.0.0"
   },
   "pnpm": {
     "overrides": {

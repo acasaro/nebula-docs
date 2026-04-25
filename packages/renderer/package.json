@@ -13,11 +13,11 @@
   },
   "dependencies": {
     "@mcoe/blocks": "workspace:*",
-    "@mcoe/schemas": "workspace:*",
-    "react": "^19.2.3"
+    "@mcoe/schemas": "workspace:*"
   },
   "devDependencies": {
     "@types/react": "^19.2.7",
+    "react": "^19.2.3",
     "typescript": "^5.9.3"
   },
   "peerDependencies": {

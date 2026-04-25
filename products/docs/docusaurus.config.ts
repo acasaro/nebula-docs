@@ -72,9 +72,18 @@ const config: Config = {
     environment: process.env.NODE_ENV === "development" ? "development" : "production",
   },
 
-  clientModules: ["./src/plugins/firebase-analytics.ts"],
+  clientModules: [
+    "./src/plugins/firebase-analytics.ts",
+    "./src/plugins/cms-firebase-init.ts",
+  ],
 
-  plugins: docInstances,
+  plugins: [
+    ...docInstances,
+    [
+      "./src/plugins/cms-pages.ts",
+      { spaces: ["developers"] },
+    ],
+  ],
 
   themes: [
     [

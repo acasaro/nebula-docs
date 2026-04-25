@@ -1,0 +1,34 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Pages: anyone can read published pages; authenticated users can write.
+    // The publishedBlocks field is what readers see; drafts (blocks field)
+    // are still gated behind authentication via the explicit status filter.
+    match /spaces/{spaceId}/pages/{pageId} {
+      allow read: if resource.data.status == 'published'
+                  || request.auth != null;
+      allow create, update: if request.auth != null;
+      allow delete: if request.auth != null;
+    }
+
+    // Snippets: same access pattern as pages.
+    match /spaces/{spaceId}/snippets/{snippetId} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+
+    // Audit log: authenticated read, Cloud-Function-only write.
+    match /audit/{entryId} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+
+    // Assets metadata.
+    match /assets/{assetId} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+  }
+}

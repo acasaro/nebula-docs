@@ -35,6 +35,7 @@
     "@mcoe/firebase": "workspace:*",
     "@mcoe/renderer": "workspace:*",
     "@mcoe/schemas": "workspace:*",
+    "@mcoe/theme": "workspace:*",
     "@mui/lab": "9.0.0-beta.2",
     "@mui/material": "^9.0.0",
     "@mui/stylis-plugin-rtl": "^9.0.0",

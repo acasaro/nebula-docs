@@ -15,10 +15,8 @@ import {
   savePageDraft,
   useSubscribeToPageById,
 } from '@mcoe/firebase';
-import type { Block, BlockType, Page, SpaceId } from '@mcoe/schemas';
-import { BlockEditor } from 'src/blocks/BlockEditor';
-import { BlockPalette } from 'src/blocks/BlockPalette';
-import { newBlockOfType } from 'src/blocks/edit-forms/registry';
+import type { Block, Page, SpaceId } from '@mcoe/schemas';
+import { BlockChildSlot } from 'src/blocks/primitives/BlockChildSlot';
 
 const SPACE_ID: SpaceId = 'developers';
 
@@ -48,32 +46,6 @@ export function PageEditor() {
 
   const updateDraft = (patch: Partial<Page>) =>
     setDraft((d) => (d ? { ...d, ...patch } : d));
-
-  const updateBlockAt = (idx: number, block: Block) => {
-    if (!draft) return;
-    const blocks = draft.blocks.slice();
-    blocks[idx] = block;
-    updateDraft({ blocks });
-  };
-
-  const deleteBlockAt = (idx: number) => {
-    if (!draft) return;
-    updateDraft({ blocks: draft.blocks.filter((_, i) => i !== idx) });
-  };
-
-  const moveBlockBy = (idx: number, delta: -1 | 1) => {
-    if (!draft) return;
-    const target = idx + delta;
-    if (target < 0 || target >= draft.blocks.length) return;
-    const blocks = draft.blocks.slice();
-    [blocks[idx], blocks[target]] = [blocks[target]!, blocks[idx]!];
-    updateDraft({ blocks });
-  };
-
-  const addBlock = (type: BlockType) => {
-    if (!draft) return;
-    updateDraft({ blocks: [...draft.blocks, newBlockOfType(type)] });
-  };
 
   const handleSaveDraft = async () => {
     if (!draft) return;
@@ -166,27 +138,12 @@ export function PageEditor() {
       />
 
       <Box>
-        {draft.blocks.length === 0 ? (
-          <Typography color="text.secondary" sx={{ mb: 2 }}>
-            No blocks yet — add one below.
-          </Typography>
-        ) : (
-          draft.blocks.map((block, idx) => (
-            <BlockEditor
-              key={block.id}
-              block={block}
-              isFirst={idx === 0}
-              isLast={idx === draft.blocks.length - 1}
-              onChange={(b) => updateBlockAt(idx, b)}
-              onDelete={() => deleteBlockAt(idx)}
-              onMoveUp={() => moveBlockBy(idx, -1)}
-              onMoveDown={() => moveBlockBy(idx, 1)}
-            />
-          ))
-        )}
+        <BlockChildSlot
+          blocks={draft.blocks}
+          onChange={(blocks: Block[]) => updateDraft({ blocks })}
+          emptyHint="No blocks yet — add one below to begin."
+        />
       </Box>
-
-      <BlockPalette onAdd={addBlock} />
     </Stack>
   );
 }

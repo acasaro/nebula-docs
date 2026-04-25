@@ -3,7 +3,7 @@ import { Button, Menu, MenuItem } from '@mui/material';
 import type { BlockType } from '@mcoe/schemas';
 import { Iconify } from 'src/components/iconify';
 
-const BLOCK_TYPES: BlockType[] = [
+const ALL_BLOCK_TYPES: BlockType[] = [
   'heading',
   'text',
   'callout',
@@ -16,10 +16,12 @@ const BLOCK_TYPES: BlockType[] = [
 
 export interface BlockPaletteProps {
   onAdd: (type: BlockType) => void;
+  allowedTypes?: BlockType[];
 }
 
-export function BlockPalette({ onAdd }: BlockPaletteProps) {
+export function BlockPalette({ onAdd, allowedTypes }: BlockPaletteProps) {
   const [anchor, setAnchor] = useState<HTMLElement | null>(null);
+  const types = allowedTypes ?? ALL_BLOCK_TYPES;
 
   const open = (e: MouseEvent<HTMLButtonElement>) => setAnchor(e.currentTarget);
   const close = () => setAnchor(null);
@@ -27,14 +29,16 @@ export function BlockPalette({ onAdd }: BlockPaletteProps) {
   return (
     <>
       <Button
-        variant="outlined"
+        size="small"
+        variant="text"
         onClick={open}
         startIcon={<Iconify icon="solar:add-circle-bold" />}
+        sx={{ color: 'text.secondary' }}
       >
         Add block
       </Button>
       <Menu open={!!anchor} anchorEl={anchor} onClose={close}>
-        {BLOCK_TYPES.map((type) => (
+        {types.map((type) => (
           <MenuItem
             key={type}
             onClick={() => {

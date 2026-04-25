@@ -5,6 +5,8 @@ const sidebars: SidebarsConfig = {
     "guides",
     "glossary",
     "library",
+    "about-mobile-ci",
+    "migrate-github-to-bitrise",
   ],
 };
 

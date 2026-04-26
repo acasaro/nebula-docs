@@ -14,7 +14,6 @@ import {
   Calendar,
   Camera,
   Check,
-  CheckCircle,
   ChevronDown,
   ChevronLeft,
   ChevronRight,

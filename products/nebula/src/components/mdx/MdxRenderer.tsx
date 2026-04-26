@@ -12,7 +12,6 @@ import type {
   ListItem,
   Paragraph,
   PhrasingContent,
-  Root,
   RootContent,
   Strong,
   Table,

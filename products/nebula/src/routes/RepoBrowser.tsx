@@ -1,6 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, Navigate, useParams } from 'react-router';
-import { ChevronDown, ChevronRight, Folder, GitBranch } from 'lucide-react';
+import {
+  ChevronDown,
+  ChevronRight,
+  Code2,
+  Eye,
+  Folder,
+  GitBranch,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -11,10 +18,17 @@ import {
 } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { FileTypeIcon, isBinaryFile } from '@/components/FileTypeIcon';
+import { MdxRenderer } from '@/components/mdx/MdxRenderer';
 import { cn } from '@/lib/utils';
 import { fetchFileContent, fetchRepoTree } from '@/lib/githubApi';
 import { useGitSettings } from '@/lib/gitSettings';
 import { buildTree, type TreeNode } from '@/lib/repoTree';
+
+function isMdxFile(name: string): boolean {
+  return name.endsWith('.mdx') || name.endsWith('.md');
+}
+
+type ViewMode = 'visual' | 'source';
 
 interface TreeItemProps {
   node: TreeNode;
@@ -93,18 +107,86 @@ function stripExtension(name: string): string {
   return idx > 0 ? name.slice(0, idx) : name;
 }
 
+interface FileHeaderProps {
+  path: string;
+  mode: ViewMode | null;
+  onModeChange?: (mode: ViewMode) => void;
+}
+
+function FileHeader({ path, mode, onModeChange }: FileHeaderProps) {
+  return (
+    <div className="flex h-10 items-center justify-between gap-3 border-b bg-muted/30 px-4 text-xs font-mono text-muted-foreground">
+      <span className="truncate">{path}</span>
+      {mode && onModeChange ? (
+        <div className="flex items-center gap-0.5 rounded-md border bg-background p-0.5">
+          <ModeButton
+            active={mode === 'visual'}
+            onClick={() => onModeChange('visual')}
+            icon={<Eye className="size-3.5" />}
+            label="Visual"
+          />
+          <ModeButton
+            active={mode === 'source'}
+            onClick={() => onModeChange('source')}
+            icon={<Code2 className="size-3.5" />}
+            label="Source"
+          />
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function ModeButton({
+  active,
+  onClick,
+  icon,
+  label,
+}: {
+  active: boolean;
+  onClick: () => void;
+  icon: React.ReactNode;
+  label: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        'flex items-center gap-1 rounded-sm px-2 py-1 font-sans text-xs transition-colors',
+        active
+          ? 'bg-accent text-accent-foreground'
+          : 'text-muted-foreground hover:text-foreground',
+      )}
+      aria-pressed={active}
+    >
+      {icon}
+      {label}
+    </button>
+  );
+}
+
 interface FileViewerProps {
   path: string | null;
   content: string | null;
   loading: boolean;
   error: string | null;
+  mode: ViewMode;
+  onModeChange: (mode: ViewMode) => void;
 }
 
-function FileViewer({ path, content, loading, error }: FileViewerProps) {
+function FileViewer({
+  path,
+  content,
+  loading,
+  error,
+  mode,
+  onModeChange,
+}: FileViewerProps) {
   if (!path) {
     return (
       <div className="flex h-full items-center justify-center p-8 text-sm text-muted-foreground">
-        Pick a file from the tree to preview it.
+        Pick a file from the tree to open it.
       </div>
     );
   }
@@ -121,20 +203,35 @@ function FileViewer({ path, content, loading, error }: FileViewerProps) {
   if (content === null && isBinaryFile(path)) {
     return (
       <div className="flex h-full min-h-0 flex-col">
-        <div className="border-b bg-muted/30 px-4 py-2 text-xs font-mono text-muted-foreground">
-          {path}
-        </div>
+        <FileHeader path={path} mode={null} />
         <div className="flex flex-1 items-center justify-center p-8 text-sm text-muted-foreground">
-          Binary file — preview not available in Phase 2.
+          Binary file — preview not available.
         </div>
       </div>
     );
   }
+  if (content === null) return null;
+
+  if (isMdxFile(path)) {
+    return (
+      <div className="flex h-full min-h-0 flex-col">
+        <FileHeader path={path} mode={mode} onModeChange={onModeChange} />
+        {mode === 'visual' ? (
+          <div className="flex-1 overflow-auto bg-background">
+            <MdxRenderer source={content} />
+          </div>
+        ) : (
+          <pre className="flex-1 overflow-auto whitespace-pre-wrap break-words p-6 font-mono text-xs leading-relaxed text-foreground/90">
+            {content}
+          </pre>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="border-b bg-muted/30 px-4 py-2 text-xs font-mono text-muted-foreground">
-        {path}
-      </div>
+      <FileHeader path={path} mode={null} />
       <pre className="flex-1 overflow-auto whitespace-pre-wrap break-words p-6 font-mono text-xs leading-relaxed text-foreground/90">
         {content}
       </pre>
@@ -199,6 +296,7 @@ export function RepoBrowser() {
   const [fileContent, setFileContent] = useState<string | null>(null);
   const [fileLoading, setFileLoading] = useState(false);
   const [fileError, setFileError] = useState<string | null>(null);
+  const [mode, setMode] = useState<ViewMode>('visual');
 
   const active = settings.status === 'ready' ? settings.settings : null;
   const matchesActive = active && active.owner === owner && active.repo === repo;
@@ -376,6 +474,8 @@ export function RepoBrowser() {
           content={fileContent}
           loading={fileLoading}
           error={fileError}
+          mode={mode}
+          onModeChange={setMode}
         />
       </main>
     </div>

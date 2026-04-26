@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, Navigate, useParams } from 'react-router';
 import {
   ChevronDown,
@@ -18,11 +18,20 @@ import {
 } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { FileTypeIcon, isBinaryFile } from '@/components/FileTypeIcon';
-import { MdxEditor } from '@/components/mdx/MdxEditor';
+import { MdxEditor, normalizeMdx } from '@/components/mdx/MdxEditor';
 import { cn } from '@/lib/utils';
 import { fetchFileContent, fetchRepoTree } from '@/lib/githubApi';
 import { useGitSettings } from '@/lib/gitSettings';
 import { buildTree, type TreeNode } from '@/lib/repoTree';
+
+interface FileEntry {
+  /** Canonical content from GitHub, normalized through the MDX serializer
+   * so the editor's first emission won't mark the file dirty on load. */
+  original: string;
+  /** Latest editor output. Equals `original` when the file is clean. */
+  draft: string;
+  sha: string;
+}
 
 function isMdxFile(name: string): boolean {
   return name.endsWith('.mdx') || name.endsWith('.md');
@@ -178,7 +187,6 @@ interface FileViewerProps {
   mode: ViewMode;
   onModeChange: (mode: ViewMode) => void;
   onContentChange?: (next: string) => void;
-  onDirtyChange?: (dirty: boolean) => void;
   dirty?: boolean;
 }
 
@@ -190,7 +198,6 @@ function FileViewer({
   mode,
   onModeChange,
   onContentChange,
-  onDirtyChange,
   dirty,
 }: FileViewerProps) {
   if (!path) {
@@ -232,7 +239,6 @@ function FileViewer({
               key={path}
               source={content}
               onSourceChange={onContentChange}
-              onDirtyChange={onDirtyChange}
             />
           </div>
         ) : (
@@ -308,12 +314,23 @@ export function RepoBrowser() {
   const [truncated, setTruncated] = useState(false);
 
   const [selectedPath, setSelectedPath] = useState<string | null>(null);
-  const [fileContent, setFileContent] = useState<string | null>(null);
-  const [draftContent, setDraftContent] = useState<string | null>(null);
-  const [isDirty, setIsDirty] = useState(false);
+  const [files, setFiles] = useState<Record<string, FileEntry>>({});
+  const fetchedPathsRef = useRef<Set<string>>(new Set());
   const [fileLoading, setFileLoading] = useState(false);
   const [fileError, setFileError] = useState<string | null>(null);
   const [mode, setMode] = useState<ViewMode>('visual');
+
+  const currentEntry = selectedPath ? (files[selectedPath] ?? null) : null;
+  const dirtyPaths = useMemo(
+    () =>
+      Object.entries(files)
+        .filter(([, entry]) => entry.original !== entry.draft)
+        .map(([path]) => path),
+    [files],
+  );
+  const isCurrentDirty = currentEntry
+    ? currentEntry.original !== currentEntry.draft
+    : false;
 
   const active = settings.status === 'ready' ? settings.settings : null;
   const matchesActive = active && active.owner === owner && active.repo === repo;
@@ -344,19 +361,19 @@ export function RepoBrowser() {
   useEffect(() => {
     if (!active || !selectedPath) return;
     if (isBinaryFile(selectedPath)) {
-      setFileContent(null);
-      setDraftContent(null);
-      setIsDirty(false);
       setFileLoading(false);
       setFileError(null);
       return;
     }
+    if (fetchedPathsRef.current.has(selectedPath)) {
+      setFileLoading(false);
+      setFileError(null);
+      return;
+    }
+    fetchedPathsRef.current.add(selectedPath);
     let cancelled = false;
     setFileLoading(true);
     setFileError(null);
-    setFileContent(null);
-    setDraftContent(null);
-    setIsDirty(false);
     fetchFileContent(
       active.installationId,
       active.owner,
@@ -364,13 +381,20 @@ export function RepoBrowser() {
       selectedPath,
       active.defaultBranch,
     )
-      .then(({ content }) => {
+      .then(({ content, sha }) => {
         if (cancelled) return;
-        setFileContent(content);
-        setDraftContent(content);
+        const normalized = isMdxFile(selectedPath)
+          ? normalizeMdx(content)
+          : content;
+        setFiles((prev) => ({
+          ...prev,
+          [selectedPath]: { original: normalized, draft: normalized, sha },
+        }));
       })
       .catch((err) => {
         if (cancelled) return;
+        // Allow retry on next select.
+        fetchedPathsRef.current.delete(selectedPath);
         setFileError(err instanceof Error ? err.message : 'Failed to load file.');
       })
       .finally(() => {
@@ -380,6 +404,16 @@ export function RepoBrowser() {
       cancelled = true;
     };
   }, [active, selectedPath]);
+
+  const handleContentChange = (next: string) => {
+    if (!selectedPath) return;
+    setFiles((prev) => {
+      const entry = prev[selectedPath];
+      if (!entry) return prev;
+      if (entry.draft === next) return prev;
+      return { ...prev, [selectedPath]: { ...entry, draft: next } };
+    });
+  };
 
   const subdir = active?.docsSubdirectory ?? '';
 
@@ -485,6 +519,13 @@ export function RepoBrowser() {
         </Tabs>
 
         <div className="border-t px-4 py-2 text-xs text-muted-foreground">
+          {dirtyPaths.length > 0 ? (
+            <div className="mb-1 flex items-center gap-1.5 text-amber-500">
+              <span aria-hidden>●</span>
+              {dirtyPaths.length} unsaved change
+              {dirtyPaths.length === 1 ? '' : 's'}
+            </div>
+          ) : null}
           {navCount} doc{navCount === 1 ? '' : 's'} · {filesCount} file
           {filesCount === 1 ? '' : 's'}
           {truncated ? ' · tree truncated' : ''}
@@ -493,14 +534,13 @@ export function RepoBrowser() {
       <main className="flex-1 overflow-hidden bg-background">
         <FileViewer
           path={selectedPath}
-          content={draftContent}
+          content={currentEntry?.draft ?? null}
           loading={fileLoading}
           error={fileError}
           mode={mode}
           onModeChange={setMode}
-          onContentChange={setDraftContent}
-          onDirtyChange={setIsDirty}
-          dirty={isDirty}
+          onContentChange={handleContentChange}
+          dirty={isCurrentDirty}
         />
       </main>
     </div>

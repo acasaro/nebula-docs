@@ -5,6 +5,7 @@ import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { Home } from '@/routes/Home';
 import { InstallCallback } from '@/routes/InstallCallback';
 import { NotConfigured } from '@/routes/NotConfigured';
+import { RepoBrowser } from '@/routes/RepoBrowser';
 import { SettingsGithubApp } from '@/routes/SettingsGithubApp';
 import { SettingsGitRepo } from '@/routes/SettingsGitRepo';
 import { SignIn } from '@/routes/SignIn';
@@ -22,6 +23,7 @@ export function App() {
         <Route element={<ProtectedRoute />}>
           <Route element={<AppShell />}>
             <Route index element={<Home />} />
+            <Route path="repo/:owner/:repo" element={<RepoBrowser />} />
             <Route path="settings/github-app" element={<SettingsGithubApp />} />
             <Route path="settings/git" element={<SettingsGitRepo />} />
             <Route path="install/callback" element={<InstallCallback />} />

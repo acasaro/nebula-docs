@@ -1,5 +1,5 @@
 import { Link } from 'react-router';
-import { ArrowRight, FolderTree, GitBranch } from 'lucide-react';
+import { ArrowRight, FolderTree, GitBranch, PenLine } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -67,9 +67,14 @@ export function Home() {
             </CardAction>
           </CardHeader>
           <CardContent>
-            <p className="text-sm text-muted-foreground">
-              File browser arrives in Phase 2.
-            </p>
+            <Button asChild>
+              <Link
+                to={`/repo/${settings.settings.owner}/${settings.settings.repo}`}
+              >
+                <PenLine />
+                Open editor
+              </Link>
+            </Button>
           </CardContent>
         </Card>
       )}

@@ -1,1 +1,2 @@
-export { Step, type StepNaturalProps, type StepTitleSize } from './Step';
+export { Step } from './Step';
+export type { StepProps, StepTitleSize } from './Step';

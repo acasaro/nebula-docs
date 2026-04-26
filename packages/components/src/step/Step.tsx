@@ -1,95 +1,100 @@
-import styled from '@emotion/styled';
 import type { ReactNode } from 'react';
-
-export const StepLayout = styled.div({
-  display: 'flex',
-  alignItems: 'flex-start',
-});
-
-export const StepIndicator = styled.div({
-  flexShrink: 0,
-  position: 'relative',
-  zIndex: 1,
-});
-
-export const StepCircle = styled.div({
-  width: '28px',
-  height: '28px',
-  borderRadius: '50%',
-  background: 'var(--ifm-color-emphasis-200)',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  fontSize: '12px',
-  fontWeight: 600,
-  color: 'var(--ifm-font-color-base)',
-  '[data-theme="dark"] &': { background: 'rgba(255, 255, 255, 0.1)' },
-});
-
-export const StepContentArea = styled.div({
-  paddingLeft: '16px',
-  flex: 1,
-  minWidth: 0,
-  overflow: 'hidden',
-});
-
-export const StepBody = styled.div({
-  marginTop: '8px',
-  fontSize: '14px',
-  lineHeight: 1.7,
-  color: 'var(--ifm-color-emphasis-700)',
-  '& > *:last-child': { marginBottom: 0 },
-  '& img': { maxWidth: '680px', margin: '12px 0' },
-  '& h1, & h2, & h3, & h4, & h5, & h6': {
-    marginTop: 0,
-    paddingTop: 0,
-    borderTop: 'none',
-  },
-});
+import { cn } from '../utils/cn';
 
 export type StepTitleSize = 'p' | 'h2' | 'h3' | 'h4';
 
-export interface StepNaturalProps {
-  title: string;
+export interface StepProps {
+  title?: ReactNode;
   titleSize?: StepTitleSize;
   icon?: ReactNode;
+  /** Filled in by `<Steps>` when used as a child. Defaults to 1 standalone. */
   stepNumber?: number;
+  /** Filled in by `<Steps>` to suppress the trailing connector line. */
+  isLast?: boolean;
+  className?: string;
   children?: ReactNode;
 }
 
+/**
+ * Mintlify-style Step item. Standalone-friendly, but typically nested inside
+ * a `<Steps>` container that injects `stepNumber` and `isLast` via cloneElement.
+ */
 export function Step({
   title,
-  titleSize = 'h3',
+  titleSize = 'p',
   icon,
-  stepNumber,
+  stepNumber = 1,
+  isLast = false,
+  className,
   children,
-}: StepNaturalProps) {
-  const TitleTag = titleSize === 'p' ? 'p' : titleSize;
-  const hasContent = children !== null && children !== undefined && children !== false;
-
+}: StepProps) {
   return (
-    <StepLayout>
-      <StepIndicator>
-        <StepCircle>{icon ?? stepNumber}</StepCircle>
-      </StepIndicator>
-      <StepContentArea>
-        <TitleTag
-          style={{
-            marginTop: 0,
-            marginBottom: 0,
-            paddingTop: 0,
-            paddingBottom: 0,
-            fontSize: titleSize === 'p' ? '15px' : '16px',
-            fontWeight: 600,
-            lineHeight: 1.5,
-            color: 'var(--ifm-font-color-base)',
-            borderTop: 'none',
-          }}
+    <div
+      role="listitem"
+      className={cn('group/step relative flex items-start pb-5', className)}
+      data-component-part="step-item"
+    >
+      <div
+        aria-hidden="true"
+        className={cn(
+          'absolute top-11 h-[calc(100%-2.75rem)] w-px',
+          isLast
+            ? 'bg-linear-to-b from-stone-200 via-80% via-stone-200 to-transparent dark:from-white/10 dark:via-white/10'
+            : 'bg-stone-200/70 dark:bg-white/10',
+        )}
+        data-component-part="step-line"
+      />
+      <div
+        aria-hidden="true"
+        className="absolute -ml-3 py-2"
+        data-component-part="step-number"
+      >
+        <div className="relative flex size-7 shrink-0 items-center justify-center rounded-full bg-stone-50 font-semibold text-stone-900 text-xs dark:bg-white/10 dark:text-stone-50">
+          {icon ?? stepNumber}
+        </div>
+      </div>
+      <div className="w-full overflow-hidden pr-px pl-8">
+        {title ? <StepTitle as={titleSize}>{title}</StepTitle> : null}
+        <div
+          className={cn('prose dark:prose-invert', !title && 'mt-2')}
+          data-component-part="step-content"
         >
-          {title}
-        </TitleTag>
-        {hasContent && <StepBody>{children}</StepBody>}
-      </StepContentArea>
-    </StepLayout>
+          {children}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function StepTitle({ as, children }: { as: StepTitleSize; children: ReactNode }) {
+  const className = 'mt-2 text-stone-900 dark:text-stone-200';
+  if (as === 'p') {
+    return (
+      <p
+        className={cn(className, 'prose dark:prose-invert font-semibold')}
+        data-component-part="step-title"
+      >
+        {children}
+      </p>
+    );
+  }
+  if (as === 'h2') {
+    return (
+      <h2 className={className} data-component-part="step-title">
+        {children}
+      </h2>
+    );
+  }
+  if (as === 'h3') {
+    return (
+      <h3 className={className} data-component-part="step-title">
+        {children}
+      </h3>
+    );
+  }
+  return (
+    <h4 className={className} data-component-part="step-title">
+      {children}
+    </h4>
   );
 }

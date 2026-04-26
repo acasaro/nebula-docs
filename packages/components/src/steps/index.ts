@@ -1,1 +1,2 @@
-export { Steps, StepsContainer, type StepsNaturalProps } from './Steps';
+export { Steps } from './Steps';
+export type { StepsProps } from './Steps';

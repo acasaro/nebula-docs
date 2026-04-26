@@ -2,11 +2,17 @@ import type { ComponentType } from 'react';
 import {
   Badge,
   Callout,
+  Card,
+  CardGroup,
   Check,
+  Column,
+  Columns,
   Danger,
   Frame,
   Info,
   Note,
+  Step,
+  Steps,
   Tip,
   Warning,
 } from '@nebula/components';
@@ -35,6 +41,12 @@ export const componentRegistry: Record<string, MdxComponent> = {
   Check: Check as unknown as MdxComponent,
   Warning: Warning as unknown as MdxComponent,
   Danger: Danger as unknown as MdxComponent,
+  Steps: Steps as unknown as MdxComponent,
+  Step: Step as unknown as MdxComponent,
+  Card: Card as unknown as MdxComponent,
+  CardGroup: CardGroup as unknown as MdxComponent,
+  Columns: Columns as unknown as MdxComponent,
+  Column: Column as unknown as MdxComponent,
 };
 
 export function registerComponent(name: string, Component: MdxComponent): void {

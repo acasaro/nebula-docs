@@ -42,6 +42,15 @@ importers:
       '@nebula/theme':
         specifier: workspace:*
         version: link:../theme
+      clsx:
+        specifier: ^2.1.1
+        version: 2.1.1
+      lucide-react:
+        specifier: ^0.471.2
+        version: 0.471.2(react@19.2.5)
+      tailwind-merge:
+        specifier: ^2.6.1
+        version: 2.6.1
     devDependencies:
       '@emotion/react':
         specifier: ^11.14.0

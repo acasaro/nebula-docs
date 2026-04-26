@@ -319,15 +319,112 @@ function renderJsx(
   key: string,
 ): ReactNode {
   if (!node.name) return null;
-  const Component = lookupComponent(node.name);
   const props = attributesToProps(node);
   const children = renderChildren(node.children as readonly AnyNode[], key);
+
+  // Lowercase tag names are intrinsic HTML elements, not user components.
+  // MDX parses them into the JSX AST too, so we route them straight to
+  // their native React tag.
+  if (/^[a-z]/.test(node.name)) {
+    return renderNativeJsx(node.name, props, children, key);
+  }
+
+  const Component = lookupComponent(node.name);
   if (Component) {
     return (
-      <Component key={key} attributes={props} children={children} />
+      <Component key={key} {...props}>
+        {children}
+      </Component>
     );
   }
   return renderUnknownJsx(node.name, props, children, key);
+}
+
+const SELF_CLOSING_TAGS = new Set([
+  'br',
+  'hr',
+  'img',
+  'input',
+  'meta',
+  'link',
+  'source',
+  'area',
+  'base',
+  'col',
+  'embed',
+  'param',
+  'track',
+  'wbr',
+]);
+
+function renderNativeJsx(
+  name: string,
+  props: Record<string, unknown>,
+  children: ReactNode,
+  key: string,
+): ReactNode {
+  const sanitized = sanitizeNativeProps(props);
+  if (SELF_CLOSING_TAGS.has(name)) {
+    const { Tag } = { Tag: name as keyof React.JSX.IntrinsicElements };
+    return <Tag key={key} {...(sanitized as React.JSX.IntrinsicAttributes)} />;
+  }
+  const Tag = name as keyof React.JSX.IntrinsicElements;
+  return (
+    <Tag key={key} {...(sanitized as React.JSX.IntrinsicAttributes)}>
+      {children}
+    </Tag>
+  );
+}
+
+/**
+ * MDX style props can come back as `__mdxExpression`-wrapped objects; pass
+ * those through as-is wouldn't work for native React elements. For the
+ * common case of `style={{ width: '67%' }}`, we try a cheap eval of the
+ * expression text via JSON5-ish coercion. Anything we can't coerce is
+ * dropped (better than crashing the renderer).
+ */
+function sanitizeNativeProps(
+  props: Record<string, unknown>,
+): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(props)) {
+    if (
+      value &&
+      typeof value === 'object' &&
+      '__mdxExpression' in value &&
+      key === 'style'
+    ) {
+      const parsed = tryParseStyleExpr(
+        (value as { __mdxExpression: string }).__mdxExpression,
+      );
+      if (parsed) out[key] = parsed;
+      continue;
+    }
+    if (value && typeof value === 'object' && '__mdxExpression' in value) {
+      // Skip arbitrary expressions we can't safely materialize — better
+      // than crashing React with an invalid prop.
+      continue;
+    }
+    out[key] = value;
+  }
+  return out;
+}
+
+function tryParseStyleExpr(raw: string): Record<string, string> | null {
+  // Common shape: `{{ width: "67%" }}` — strip wrapping braces, replace
+  // unquoted keys with quoted keys, JSON.parse.
+  const trimmed = raw.trim();
+  const inner = trimmed.replace(/^\{\s*/, '').replace(/\s*\}$/, '');
+  const objectish = `{${inner}}`;
+  try {
+    const quoted = objectish.replace(
+      /([{,]\s*)([A-Za-z_][A-Za-z0-9_-]*)\s*:/g,
+      '$1"$2":',
+    );
+    return JSON.parse(quoted) as Record<string, string>;
+  } catch {
+    return null;
+  }
 }
 
 function renderUnknownJsx(

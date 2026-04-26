@@ -1,7 +1,13 @@
-import styled from '@emotion/styled';
 import type { ReactNode } from 'react';
-import { resolveColor } from '@nebula/theme';
-import { Icon, type IconLibrary } from '../icon/Icon';
+import {
+  CircleAlert,
+  CircleCheck,
+  Info,
+  Lightbulb,
+  OctagonAlert,
+  TriangleAlert,
+} from 'lucide-react';
+import { cn } from '../utils/cn';
 
 export type CalloutVariant =
   | 'info'
@@ -12,133 +18,135 @@ export type CalloutVariant =
   | 'danger'
   | 'custom';
 
-const presets: Record<
-  Exclude<CalloutVariant, 'custom'>,
-  { icon: string; color: string; label: string }
-> = {
-  note:    { icon: 'info',          color: 'info',    label: 'Note' },
-  info:    { icon: 'lightbulb',     color: 'primary', label: 'Info' },
-  tip:     { icon: 'emoji_objects', color: 'success', label: 'Tip' },
-  check:   { icon: 'check_circle',  color: 'success', label: 'Check' },
-  warning: { icon: 'warning',       color: 'warning', label: 'Warning' },
-  danger:  { icon: 'dangerous',     color: 'error',   label: 'Danger' },
-};
-
-const Header = styled.div({
-  display: 'flex',
-  alignItems: 'center',
-  gap: '8px',
-  marginBottom: '8px',
-});
-
-const Content = styled.div({
-  fontSize: '14px',
-  lineHeight: 1.6,
-  '& > *:last-child': { marginBottom: 0 },
-});
-
-export interface CalloutNaturalProps {
-  children: ReactNode;
+export interface CalloutProps {
+  children?: ReactNode;
   title?: string;
   variant?: CalloutVariant;
-  icon?: ReactNode | string;
-  iconLibrary?: IconLibrary;
-  color?: string;
+  icon?: ReactNode;
   className?: string;
   ariaLabel?: string;
 }
 
+const variantConfig: Record<
+  Exclude<CalloutVariant, 'custom'>,
+  {
+    Icon: typeof Info;
+    label: string;
+    container: string;
+    body: string;
+  }
+> = {
+  info: {
+    Icon: Info,
+    label: 'Info',
+    container:
+      'border border-stone-200 bg-stone-50 dark:border-stone-700 dark:bg-white/10',
+    body: 'text-stone-800 dark:text-stone-300',
+  },
+  note: {
+    Icon: CircleAlert,
+    label: 'Note',
+    container:
+      'border border-blue-200 bg-blue-50 dark:border-blue-900 dark:bg-blue-600/20',
+    body: 'text-blue-800 dark:text-blue-300',
+  },
+  tip: {
+    Icon: Lightbulb,
+    label: 'Tip',
+    container:
+      'border border-green-200 bg-green-50 dark:border-green-900 dark:bg-green-600/20',
+    body: 'text-green-800 dark:text-green-300',
+  },
+  check: {
+    Icon: CircleCheck,
+    label: 'Check',
+    container:
+      'border border-green-200 bg-green-50 dark:border-green-900 dark:bg-green-600/20',
+    body: 'text-green-800 dark:text-green-300',
+  },
+  warning: {
+    Icon: TriangleAlert,
+    label: 'Warning',
+    container:
+      'border border-yellow-200 bg-yellow-50 dark:border-yellow-900 dark:bg-yellow-600/20',
+    body: 'text-yellow-800 dark:text-yellow-300',
+  },
+  danger: {
+    Icon: OctagonAlert,
+    label: 'Danger',
+    container:
+      'border border-red-200 bg-red-50 dark:border-red-900 dark:bg-red-600/20',
+    body: 'text-red-800 dark:text-red-300',
+  },
+};
+
+const customClasses = {
+  container:
+    'border border-stone-500/20 bg-stone-50/50 dark:border-stone-500/30 dark:bg-stone-500/10',
+  body: 'text-stone-900 dark:text-stone-200',
+};
+
 export function Callout({
   children,
   title,
-  variant = 'note',
+  variant = 'custom',
   icon,
-  iconLibrary,
-  color,
   className,
   ariaLabel,
-}: CalloutNaturalProps) {
-  const preset = variant !== 'custom' ? presets[variant] : null;
-  const resolvedColor = resolveColor(color ?? preset?.color ?? 'info');
-  const resolvedTitle = title ?? preset?.label;
+}: CalloutProps) {
+  const isPreset = variant !== 'custom';
+  const config = isPreset ? variantConfig[variant] : null;
 
-  // Resolve icon: ReactNode passthrough, string via Icon, or preset default
-  let iconElement: ReactNode = null;
-  if (icon && typeof icon !== 'string') {
-    iconElement = icon;
-  } else {
-    const iconName = (icon as string) ?? preset?.icon;
-    if (iconName) {
-      iconElement = (
-        <Icon
-          icon={iconName}
-          size={18}
-          color={color ?? preset?.color}
-          iconLibrary={iconLibrary}
-        />
-      );
-    }
-  }
+  const renderedIcon =
+    icon ?? (config ? <config.Icon aria-label={ariaLabel ?? config.label} /> : null);
+  const containerClasses = config?.container ?? customClasses.container;
+  const bodyClasses = config?.body ?? customClasses.body;
 
   return (
     <div
-      className={className}
-      role={ariaLabel ? 'note' : undefined}
-      aria-label={ariaLabel}
-      data-analytics-surface="mdx.callout"
-      data-analytics-category={variant}
-      style={{
-        borderRadius: '12px',
-        borderLeft: `4px solid ${resolvedColor}`,
-        background: `color-mix(in srgb, ${resolvedColor} 8%, transparent)`,
-        padding: '16px 20px',
-        margin: '16px 0',
-      }}
-    >
-      {(iconElement || resolvedTitle) && (
-        <Header>
-          {iconElement}
-          {resolvedTitle && (
-            <span style={{ fontSize: '14px', fontWeight: 650, color: resolvedColor }}>
-              {resolvedTitle}
-            </span>
-          )}
-        </Header>
+      className={cn(
+        'my-4 flex gap-3 overflow-hidden rounded-2xl px-5 py-4',
+        containerClasses,
+        className,
       )}
-      <Content>{children}</Content>
+      data-callout-type={variant}
+    >
+      {renderedIcon ? (
+        <div className="mt-0.5 size-4 shrink-0" data-component-part="callout-icon">
+          {renderedIcon}
+        </div>
+      ) : null}
+      <div
+        className={cn(
+          'prose dark:prose-invert w-full min-w-0 text-sm [&_a]:border-current [&_a]:text-current! [&_code]:text-current! [&_strong]:text-current!',
+          title && '[&>:nth-child(2)]:mt-3',
+          bodyClasses,
+        )}
+        data-component-part="callout-content"
+      >
+        {title ? (
+          <div className="font-semibold" data-component-part="callout-title">
+            {title}
+          </div>
+        ) : null}
+        {children}
+      </div>
     </div>
   );
 }
 
-/* ── Convenience presets — for MDX shorthand like <Note>, <Tip>, etc. ── */
+type PresetProps = Omit<CalloutProps, 'variant'>;
+const preset =
+  (variant: Exclude<CalloutVariant, 'custom'>) =>
+  (props: PresetProps) => <Callout {...props} variant={variant} />;
 
-function createPreset(presetVariant: Exclude<CalloutVariant, 'custom'>) {
-  return function PresetCallout({
-    children,
-    title,
-    icon,
-    iconLibrary,
-    className,
-    ariaLabel,
-  }: Omit<CalloutNaturalProps, 'variant' | 'color'>) {
-    return (
-      <Callout
-        variant={presetVariant}
-        title={title}
-        icon={icon}
-        iconLibrary={iconLibrary}
-        className={className}
-        ariaLabel={ariaLabel}
-      >
-        {children}
-      </Callout>
-    );
-  };
-}
+export const Info_ = preset('info');
+export const Note = preset('note');
+export const Tip = preset('tip');
+export const Check = preset('check');
+export const Warning = preset('warning');
+export const Danger = preset('danger');
 
-export const Note    = createPreset('note');
-export const Warning = createPreset('warning');
-export const Info    = createPreset('info');
-export const Tip     = createPreset('tip');
-export const Check   = createPreset('check');
-export const Danger  = createPreset('danger');
+// Preserve the documented `Info` export name. (Local var renamed to avoid
+// colliding with lucide-react's `Info` icon import above.)
+export { Info_ as Info };

@@ -2,6 +2,10 @@
 @import "tw-animate-css";
 @import "@nebula/theme/dist/tokens.css";
 
+/* Tailwind v4: tell the JIT to scan the shared component sources so any
+ * utility classes used in @nebula/components ship in the bundle. */
+@source "../../../packages/components/src";
+
 @custom-variant dark (&:is(.dark *));
 
 :root {

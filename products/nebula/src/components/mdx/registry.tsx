@@ -1,5 +1,7 @@
 import type { ComponentType } from 'react';
 import {
+  Accordion,
+  AccordionGroup,
   Badge,
   Callout,
   Card,
@@ -8,11 +10,14 @@ import {
   Column,
   Columns,
   Danger,
+  Expandable,
   Frame,
   Info,
   Note,
   Step,
   Steps,
+  Tab,
+  Tabs,
   Tip,
   Warning,
 } from '@nebula/components';
@@ -47,6 +52,11 @@ export const componentRegistry: Record<string, MdxComponent> = {
   CardGroup: CardGroup as unknown as MdxComponent,
   Columns: Columns as unknown as MdxComponent,
   Column: Column as unknown as MdxComponent,
+  Tabs: Tabs as unknown as MdxComponent,
+  Tab: Tab as unknown as MdxComponent,
+  Accordion: Accordion as unknown as MdxComponent,
+  AccordionGroup: AccordionGroup as unknown as MdxComponent,
+  Expandable: Expandable as unknown as MdxComponent,
 };
 
 export function registerComponent(name: string, Component: MdxComponent): void {

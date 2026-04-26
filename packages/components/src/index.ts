@@ -5,6 +5,9 @@ export * from './frame';
 export * from './callout';
 export * from './card';
 export * from './columns';
+export * from './tabs';
+export * from './accordion';
+export * from './expandable';
 
 // Legacy components kept for now to avoid breaking the Docusaurus build.
 // These will be removed when products/docs/ is replaced by the SSG.

@@ -6,7 +6,6 @@ import {
   Code2,
   Eye,
   Folder,
-  GitBranch,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -19,11 +18,14 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { BranchPicker } from '@/components/BranchPicker';
 import { FileTypeIcon, isBinaryFile } from '@/components/FileTypeIcon';
+import { useHeaderLeading, useHeaderSlot } from '@/components/HeaderSlot';
 import { MdxEditor, normalizeMdx } from '@/components/mdx/MdxEditor';
+import { PublishMenu, type PublishChange } from '@/components/PublishMenu';
 import { cn } from '@/lib/utils';
 import {
   commitFiles,
   createBranch,
+  createPullRequest,
   fetchFileContent,
   fetchRepoTree,
   listBranches,
@@ -38,6 +40,8 @@ interface FileEntry {
   /** Latest editor output. Equals `original` when the file is clean. */
   draft: string;
   sha: string;
+  /** Bumped on revert so the editor remounts and picks up `original`. */
+  revertNonce: number;
 }
 
 function isMdxFile(name: string): boolean {
@@ -132,7 +136,7 @@ interface FileHeaderProps {
 
 function FileHeader({ path, mode, onModeChange, dirty }: FileHeaderProps) {
   return (
-    <div className="flex h-10 items-center justify-between gap-3 border-b bg-muted/30 px-4 text-xs font-mono text-muted-foreground">
+    <div className="flex flex-1 items-center justify-between gap-3 min-w-0 text-xs font-mono text-muted-foreground">
       <span className="truncate">
         {path}
         {dirty ? <span className="ml-2 text-amber-500" aria-label="unsaved">●</span> : null}
@@ -189,23 +193,21 @@ function ModeButton({
 interface FileViewerProps {
   path: string | null;
   content: string | null;
+  revertNonce: number;
   loading: boolean;
   error: string | null;
   mode: ViewMode;
-  onModeChange: (mode: ViewMode) => void;
   onContentChange?: (next: string) => void;
-  dirty?: boolean;
 }
 
 function FileViewer({
   path,
   content,
+  revertNonce,
   loading,
   error,
   mode,
-  onModeChange,
   onContentChange,
-  dirty,
 }: FileViewerProps) {
   if (!path) {
     return (
@@ -226,44 +228,33 @@ function FileViewer({
   }
   if (content === null && isBinaryFile(path)) {
     return (
-      <div className="flex h-full min-h-0 flex-col">
-        <FileHeader path={path} mode={null} />
-        <div className="flex flex-1 items-center justify-center p-8 text-sm text-muted-foreground">
-          Binary file — preview not available.
-        </div>
+      <div className="flex flex-1 items-center justify-center p-8 text-sm text-muted-foreground">
+        Binary file — preview not available.
       </div>
     );
   }
   if (content === null) return null;
 
   if (isMdxFile(path)) {
-    return (
-      <div className="flex h-full min-h-0 flex-col">
-        <FileHeader path={path} mode={mode} onModeChange={onModeChange} dirty={dirty} />
-        {mode === 'visual' ? (
-          <div className="flex-1 overflow-auto bg-background">
-            <MdxEditor
-              key={path}
-              source={content}
-              onSourceChange={onContentChange}
-            />
-          </div>
-        ) : (
-          <pre className="flex-1 overflow-auto whitespace-pre-wrap break-words p-6 font-mono text-xs leading-relaxed text-foreground/90">
-            {content}
-          </pre>
-        )}
+    return mode === 'visual' ? (
+      <div className="flex-1 overflow-auto bg-background">
+        <MdxEditor
+          key={`${path}:${revertNonce}`}
+          source={content}
+          onSourceChange={onContentChange}
+        />
       </div>
+    ) : (
+      <pre className="flex-1 overflow-auto whitespace-pre-wrap break-words p-6 font-mono text-xs leading-relaxed text-foreground/90">
+        {content}
+      </pre>
     );
   }
 
   return (
-    <div className="flex h-full min-h-0 flex-col">
-      <FileHeader path={path} mode={null} />
-      <pre className="flex-1 overflow-auto whitespace-pre-wrap break-words p-6 font-mono text-xs leading-relaxed text-foreground/90">
-        {content}
-      </pre>
-    </div>
+    <pre className="flex-1 overflow-auto whitespace-pre-wrap break-words p-6 font-mono text-xs leading-relaxed text-foreground/90">
+      {content}
+    </pre>
   );
 }
 
@@ -331,6 +322,7 @@ export function RepoBrowser() {
   const [branches, setBranches] = useState<string[]>([]);
   const [branchesLoading, setBranchesLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [creatingPr, setCreatingPr] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
 
   const currentEntry = selectedPath ? (files[selectedPath] ?? null) : null;
@@ -428,7 +420,7 @@ export function RepoBrowser() {
           : content;
         setFiles((prev) => ({
           ...prev,
-          [selectedPath]: { original: normalized, draft: normalized, sha },
+          [selectedPath]: { original: normalized, draft: normalized, sha, revertNonce: 0 },
         }));
       })
       .catch((err) => {
@@ -451,6 +443,39 @@ export function RepoBrowser() {
       if (!entry) return prev;
       if (entry.draft === next) return prev;
       return { ...prev, [selectedPath]: { ...entry, draft: next } };
+    });
+  };
+
+  const handleRevert = (path: string) => {
+    setFiles((prev) => {
+      const entry = prev[path];
+      if (!entry) return prev;
+      if (entry.original === entry.draft) return prev;
+      return {
+        ...prev,
+        [path]: {
+          ...entry,
+          draft: entry.original,
+          revertNonce: entry.revertNonce + 1,
+        },
+      };
+    });
+  };
+
+  const handleRevertAll = () => {
+    setFiles((prev) => {
+      const next: Record<string, FileEntry> = { ...prev };
+      let changed = false;
+      for (const [path, entry] of Object.entries(prev)) {
+        if (entry.original === entry.draft) continue;
+        next[path] = {
+          ...entry,
+          draft: entry.original,
+          revertNonce: entry.revertNonce + 1,
+        };
+        changed = true;
+      }
+      return changed ? next : prev;
     });
   };
 
@@ -482,7 +507,7 @@ export function RepoBrowser() {
     setSaveMessage(null);
   };
 
-  const handleSaveInBranch = async () => {
+  const handleSave = async () => {
     if (!active || !currentBranch || dirtyPaths.length === 0) return;
     setSaving(true);
     setSaveMessage(null);
@@ -505,7 +530,6 @@ export function RepoBrowser() {
         changes,
         message,
       );
-      // Mark all committed files as clean by aligning original to draft.
       setFiles((prev) => {
         const next: Record<string, FileEntry> = { ...prev };
         for (const change of changes) {
@@ -514,7 +538,9 @@ export function RepoBrowser() {
         }
         return next;
       });
-      setSaveMessage(`Saved ${changes.length} file${changes.length === 1 ? '' : 's'} to ${currentBranch}.`);
+      setSaveMessage(
+        `Saved ${changes.length} file${changes.length === 1 ? '' : 's'} to ${currentBranch}.`,
+      );
     } catch (err) {
       setSaveMessage(
         err instanceof Error ? `Save failed: ${err.message}` : 'Save failed.',
@@ -524,7 +550,111 @@ export function RepoBrowser() {
     }
   };
 
-  const onDefaultBranch = currentBranch === active?.defaultBranch;
+  const handleCreatePr = async (title: string, body: string) => {
+    if (!active || !currentBranch) return;
+    setCreatingPr(true);
+    setSaveMessage(null);
+    try {
+      // Auto-save any pending dirty drafts onto the branch first so the PR
+      // includes them. Skipping save here would open a PR that's missing
+      // in-progress work.
+      if (dirtyPaths.length > 0) await handleSave();
+      const { number, url } = await createPullRequest(
+        active.installationId,
+        active.owner,
+        active.repo,
+        currentBranch,
+        active.defaultBranch,
+        title,
+        body,
+      );
+      setSaveMessage(`Opened PR #${number}: ${url}`);
+    } catch (err) {
+      const detail = err instanceof Error ? err.message : 'Failed to create PR.';
+      setSaveMessage(`PR failed: ${detail}`);
+      throw err instanceof Error ? err : new Error(detail);
+    } finally {
+      setCreatingPr(false);
+    }
+  };
+
+  const publishChanges = useMemo<PublishChange[]>(
+    () => dirtyPaths.map((path) => ({ path, status: 'modified' as const })),
+    [dirtyPaths],
+  );
+
+  const headerSlot = useMemo(() => {
+    const fileNode = selectedPath ? (
+      <FileHeader
+        path={selectedPath}
+        mode={isMdxFile(selectedPath) ? mode : null}
+        onModeChange={isMdxFile(selectedPath) ? setMode : undefined}
+        dirty={isCurrentDirty}
+      />
+    ) : (
+      <div className="flex-1" />
+    );
+    if (!active || !currentBranch) return fileNode;
+    return (
+      <>
+        {fileNode}
+        <PublishMenu
+          currentBranch={currentBranch}
+          defaultBranch={active.defaultBranch}
+          changes={publishChanges}
+          saving={saving}
+          creatingPr={creatingPr}
+          message={saveMessage}
+          onSave={handleSave}
+          onCreatePr={handleCreatePr}
+          onRevert={handleRevert}
+          onRevertAll={handleRevertAll}
+        />
+      </>
+    );
+    // handleSave / handleCreatePr close over current state but are
+    // re-derived each render; including them as deps would re-run the
+    // memo on every keystroke. The deps below cover the actual inputs
+    // those handlers read.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    selectedPath,
+    mode,
+    isCurrentDirty,
+    active,
+    currentBranch,
+    publishChanges,
+    saving,
+    creatingPr,
+    saveMessage,
+  ]);
+  useHeaderSlot(headerSlot);
+
+  const headerLeading = useMemo(() => {
+    if (!active || !currentBranch) return null;
+    return (
+      <BranchPicker
+        currentBranch={currentBranch}
+        defaultBranch={active.defaultBranch}
+        branches={branches}
+        loading={branchesLoading}
+        hasDirty={dirtyPaths.length > 0}
+        onSwitch={handleSwitchBranch}
+        onCreate={handleCreateBranch}
+      />
+    );
+    // handleSwitchBranch / handleCreateBranch close over current state but
+    // are re-derived each render; including them as deps would re-run the
+    // memo and rebuild the BranchPicker subtree on every keystroke.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    active,
+    currentBranch,
+    branches,
+    branchesLoading,
+    dirtyPaths.length,
+  ]);
+  useHeaderLeading(headerLeading);
 
   const subdir = active?.docsSubdirectory ?? '';
 
@@ -579,26 +709,11 @@ export function RepoBrowser() {
   return (
     <div className="-m-8 flex h-[calc(100vh-3.5rem)] min-h-0">
       <aside className="flex w-72 shrink-0 flex-col overflow-hidden border-r bg-muted/30">
-        <div className="flex flex-col gap-2 border-b px-4 py-3">
-          <div className="flex items-center gap-2 text-sm font-semibold">
-            <GitBranch className="size-3.5 text-primary" />
-            {owner}/{repo}
+        {active.docsSubdirectory ? (
+          <div className="border-b border-border/40 px-4 py-2 text-xs text-muted-foreground">
+            <code>{active.docsSubdirectory}</code>
           </div>
-          <BranchPicker
-            currentBranch={currentBranch ?? active.defaultBranch}
-            defaultBranch={active.defaultBranch}
-            branches={branches}
-            loading={branchesLoading}
-            hasDirty={dirtyPaths.length > 0}
-            onSwitch={handleSwitchBranch}
-            onCreate={handleCreateBranch}
-          />
-          {active.docsSubdirectory ? (
-            <div className="text-xs text-muted-foreground">
-              <code>{active.docsSubdirectory}</code>
-            </div>
-          ) : null}
-        </div>
+        ) : null}
 
         <Tabs defaultValue="navigation" className="flex flex-1 flex-col overflow-hidden">
           <TabsList className="mx-3 mt-2 grid w-auto grid-cols-2">
@@ -634,62 +749,21 @@ export function RepoBrowser() {
           </TabsContent>
         </Tabs>
 
-        <div className="flex flex-col gap-2 border-t px-4 py-3 text-xs text-muted-foreground">
-          {dirtyPaths.length > 0 ? (
-            <>
-              <div className="flex items-center gap-1.5 text-amber-500">
-                <span aria-hidden>●</span>
-                {dirtyPaths.length} unsaved change
-                {dirtyPaths.length === 1 ? '' : 's'}
-              </div>
-              {onDefaultBranch ? (
-                <p className="text-[11px] leading-tight">
-                  Create a branch off{' '}
-                  <code className="font-mono">{active.defaultBranch}</code> to
-                  save your changes.
-                </p>
-              ) : (
-                <Button
-                  type="button"
-                  size="sm"
-                  className="h-8 w-full"
-                  disabled={saving}
-                  onClick={handleSaveInBranch}
-                >
-                  {saving ? 'Saving…' : `Save in ${currentBranch}`}
-                </Button>
-              )}
-            </>
-          ) : null}
-          {saveMessage ? (
-            <p
-              className={cn(
-                'text-[11px] leading-tight',
-                saveMessage.startsWith('Save failed')
-                  ? 'text-destructive'
-                  : 'text-emerald-500',
-              )}
-            >
-              {saveMessage}
-            </p>
-          ) : null}
-          <div>
-            {navCount} doc{navCount === 1 ? '' : 's'} · {filesCount} file
-            {filesCount === 1 ? '' : 's'}
-            {truncated ? ' · tree truncated' : ''}
-          </div>
+        <div className="border-t px-4 py-2 text-xs text-muted-foreground">
+          {navCount} doc{navCount === 1 ? '' : 's'} · {filesCount} file
+          {filesCount === 1 ? '' : 's'}
+          {truncated ? ' · tree truncated' : ''}
         </div>
       </aside>
-      <main className="flex-1 overflow-hidden bg-background">
+      <main className="flex flex-1 flex-col overflow-hidden bg-background">
         <FileViewer
           path={selectedPath}
           content={currentEntry?.draft ?? null}
+          revertNonce={currentEntry?.revertNonce ?? 0}
           loading={fileLoading}
           error={fileError}
           mode={mode}
-          onModeChange={setMode}
           onContentChange={handleContentChange}
-          dirty={isCurrentDirty}
         />
       </main>
     </div>

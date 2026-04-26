@@ -1,24 +1,54 @@
 import { Outlet } from 'react-router';
 import { useCurrentUser } from '@nebula/firebase';
+import { HeaderSlotProvider } from '@/components/HeaderSlot';
 import { Sidebar } from '@/components/Sidebar';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { UserMenu } from '@/components/UserMenu';
+import { cn } from '@/lib/utils';
 
 export function AppShell() {
   const auth = useCurrentUser();
 
   return (
-    <div className="flex min-h-screen bg-background text-foreground">
-      <Sidebar />
-      <div className="flex flex-1 flex-col">
-        <header className="flex h-14 items-center justify-end gap-2 border-b bg-background px-6">
-          <ThemeToggle />
-          {auth.status === 'authenticated' ? <UserMenu user={auth.user} /> : null}
-        </header>
-        <main className="flex-1 p-8">
-          <Outlet />
-        </main>
-      </div>
-    </div>
+    <HeaderSlotProvider
+      render={({ slot, leading }) => (
+        <div className="flex min-h-screen bg-background text-foreground">
+          <Sidebar />
+          <div className="flex flex-1 flex-col">
+            <header className="flex h-14 items-stretch bg-background">
+              {leading ? (
+                <div className="flex w-72 shrink-0 items-center border-r border-b border-border/40 bg-muted/30 px-3">
+                  {leading}
+                </div>
+              ) : null}
+              <div
+                className={cn(
+                  'flex flex-1 items-center gap-3 min-w-0 px-6',
+                  !leading && 'border-b',
+                )}
+              >
+                {slot}
+              </div>
+              <div
+                className={cn(
+                  'flex shrink-0 items-center gap-2 pr-6',
+                  !leading && 'border-b',
+                )}
+              >
+                <ThemeToggle />
+                {auth.status === 'authenticated' ? (
+                  <UserMenu user={auth.user} />
+                ) : null}
+              </div>
+            </header>
+            <main className="flex-1 p-8">
+              <Outlet />
+            </main>
+          </div>
+        </div>
+      )}
+    >
+      {null}
+    </HeaderSlotProvider>
   );
 }

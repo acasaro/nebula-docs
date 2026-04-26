@@ -10,8 +10,8 @@ const navItems = [
 
 export function Sidebar() {
   return (
-    <aside className="flex w-56 shrink-0 flex-col border-r bg-sidebar text-sidebar-foreground">
-      <div className="flex h-14 items-center gap-2 border-b px-4">
+    <aside className="flex w-56 shrink-0 flex-col border-r border-border/40 bg-sidebar text-sidebar-foreground">
+      <div className="flex h-14 items-center gap-2 border-b border-border/40 px-4">
         <FileText className="size-5 text-sidebar-primary" />
         <span className="text-base font-semibold tracking-tight">Nebula</span>
       </div>

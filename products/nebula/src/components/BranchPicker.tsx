@@ -47,13 +47,13 @@ export function BranchPicker({
           <button
             type="button"
             className={cn(
-              'inline-flex max-w-full items-center gap-1.5 rounded-md border bg-background px-2 py-1',
-              'text-xs font-medium transition-colors hover:bg-accent/60',
+              'flex w-full items-center gap-2 rounded-md border bg-background px-3 py-2',
+              'text-sm font-medium transition-colors hover:bg-accent/60',
             )}
           >
-            <GitBranch className="size-3.5 shrink-0 text-muted-foreground" />
+            <GitBranch className="size-4 shrink-0 text-muted-foreground" />
             <span className="truncate">{currentBranch}</span>
-            <ChevronDown className="size-3 shrink-0 text-muted-foreground" />
+            <ChevronDown className="ml-auto size-3.5 shrink-0 text-muted-foreground" />
           </button>
         </Popover.Trigger>
         <Popover.Portal>
@@ -61,49 +61,68 @@ export function BranchPicker({
             sideOffset={6}
             align="start"
             className={cn(
-              'z-50 w-64 rounded-md border bg-popover p-1 shadow-md',
+              'z-50 w-72 rounded-md border bg-popover p-1.5 shadow-md',
               'data-[state=open]:animate-in data-[state=closed]:animate-out',
               'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
             )}
           >
             <div className="max-h-72 overflow-y-auto py-1">
               {loading ? (
-                <div className="px-2 py-1.5 text-xs text-muted-foreground">
+                <div className="px-3 py-2 text-sm text-muted-foreground">
                   Loading branches…
                 </div>
               ) : branches.length === 0 ? (
-                <div className="px-2 py-1.5 text-xs text-muted-foreground">
+                <div className="px-3 py-2 text-sm text-muted-foreground">
                   No branches found.
                 </div>
               ) : (
-                branches.map((b) => (
-                  <button
-                    key={b}
-                    type="button"
-                    onClick={() => {
-                      onSwitch(b);
-                      setOpen(false);
-                    }}
-                    className={cn(
-                      'flex w-full items-center justify-between gap-2 rounded-sm px-2 py-1.5 text-left text-sm',
-                      'hover:bg-accent hover:text-accent-foreground',
-                    )}
-                  >
-                    <span className="flex items-center gap-2 truncate">
-                      <GitBranch className="size-3.5 shrink-0 text-muted-foreground" />
-                      <span className="truncate">{b}</span>
-                      {b === defaultBranch ? (
-                        <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-muted-foreground">
-                          Default
-                        </span>
+                branches.map((b) => {
+                  const isActive = b === currentBranch;
+                  return (
+                    <button
+                      key={b}
+                      type="button"
+                      onClick={() => {
+                        onSwitch(b);
+                        setOpen(false);
+                      }}
+                      className={cn(
+                        'flex w-full items-center justify-between gap-2 rounded-md px-3 py-2 text-left text-sm transition-colors',
+                        isActive
+                          ? 'bg-primary/10 text-primary'
+                          : 'hover:bg-accent hover:text-accent-foreground',
+                      )}
+                    >
+                      <span className="flex items-center gap-2 truncate">
+                        <GitBranch
+                          className={cn(
+                            'size-4 shrink-0',
+                            isActive ? 'text-primary' : 'text-muted-foreground',
+                          )}
+                        />
+                        <span className="truncate font-medium">{b}</span>
+                        {b === defaultBranch ? (
+                          <span
+                            className={cn(
+                              'rounded px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide',
+                              isActive
+                                ? 'bg-primary/20 text-primary'
+                                : 'bg-muted text-muted-foreground',
+                            )}
+                          >
+                            Default
+                          </span>
+                        ) : null}
+                      </span>
+                      {isActive ? (
+                        <Check className="size-4 shrink-0 text-primary" />
                       ) : null}
-                    </span>
-                    {b === currentBranch ? <Check className="size-3.5 shrink-0" /> : null}
-                  </button>
-                ))
+                    </button>
+                  );
+                })
               )}
             </div>
-            <div className="border-t pt-1">
+            <div className="mt-1 border-t pt-1">
               <button
                 type="button"
                 onClick={() => {
@@ -111,11 +130,11 @@ export function BranchPicker({
                   setCreateOpen(true);
                 }}
                 className={cn(
-                  'flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm',
+                  'flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm font-medium',
                   'hover:bg-accent hover:text-accent-foreground',
                 )}
               >
-                <Plus className="size-3.5" />
+                <Plus className="size-4" />
                 Create new branch
               </button>
             </div>

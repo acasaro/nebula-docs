@@ -17,10 +17,17 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { BranchPicker } from '@/components/BranchPicker';
 import { FileTypeIcon, isBinaryFile } from '@/components/FileTypeIcon';
 import { MdxEditor, normalizeMdx } from '@/components/mdx/MdxEditor';
 import { cn } from '@/lib/utils';
-import { fetchFileContent, fetchRepoTree } from '@/lib/githubApi';
+import {
+  commitFiles,
+  createBranch,
+  fetchFileContent,
+  fetchRepoTree,
+  listBranches,
+} from '@/lib/githubApi';
 import { useGitSettings } from '@/lib/gitSettings';
 import { buildTree, type TreeNode } from '@/lib/repoTree';
 
@@ -320,6 +327,12 @@ export function RepoBrowser() {
   const [fileError, setFileError] = useState<string | null>(null);
   const [mode, setMode] = useState<ViewMode>('visual');
 
+  const [currentBranch, setCurrentBranch] = useState<string | null>(null);
+  const [branches, setBranches] = useState<string[]>([]);
+  const [branchesLoading, setBranchesLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [saveMessage, setSaveMessage] = useState<string | null>(null);
+
   const currentEntry = selectedPath ? (files[selectedPath] ?? null) : null;
   const dirtyPaths = useMemo(
     () =>
@@ -337,10 +350,15 @@ export function RepoBrowser() {
 
   useEffect(() => {
     if (!active || !matchesActive) return;
+    if (currentBranch === null) setCurrentBranch(active.defaultBranch);
+  }, [active, matchesActive, currentBranch]);
+
+  useEffect(() => {
+    if (!active || !matchesActive || !currentBranch) return;
     let cancelled = false;
     setTreeLoading(true);
     setTreeError(null);
-    fetchRepoTree(active.installationId, active.owner, active.repo, active.defaultBranch)
+    fetchRepoTree(active.installationId, active.owner, active.repo, currentBranch)
       .then((result) => {
         if (cancelled) return;
         setAllPaths(result.paths);
@@ -356,10 +374,32 @@ export function RepoBrowser() {
     return () => {
       cancelled = true;
     };
+  }, [active, matchesActive, currentBranch]);
+
+  useEffect(() => {
+    if (!active || !matchesActive) return;
+    let cancelled = false;
+    setBranchesLoading(true);
+    listBranches(active.installationId, active.owner, active.repo)
+      .then((list) => {
+        if (cancelled) return;
+        setBranches(list);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        // Fall back to just the default branch on failure.
+        setBranches([active.defaultBranch]);
+      })
+      .finally(() => {
+        if (!cancelled) setBranchesLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [active, matchesActive]);
 
   useEffect(() => {
-    if (!active || !selectedPath) return;
+    if (!active || !selectedPath || !currentBranch) return;
     if (isBinaryFile(selectedPath)) {
       setFileLoading(false);
       setFileError(null);
@@ -379,7 +419,7 @@ export function RepoBrowser() {
       active.owner,
       active.repo,
       selectedPath,
-      active.defaultBranch,
+      currentBranch,
     )
       .then(({ content, sha }) => {
         if (cancelled) return;
@@ -393,7 +433,6 @@ export function RepoBrowser() {
       })
       .catch((err) => {
         if (cancelled) return;
-        // Allow retry on next select.
         fetchedPathsRef.current.delete(selectedPath);
         setFileError(err instanceof Error ? err.message : 'Failed to load file.');
       })
@@ -403,7 +442,7 @@ export function RepoBrowser() {
     return () => {
       cancelled = true;
     };
-  }, [active, selectedPath]);
+  }, [active, selectedPath, currentBranch]);
 
   const handleContentChange = (next: string) => {
     if (!selectedPath) return;
@@ -414,6 +453,78 @@ export function RepoBrowser() {
       return { ...prev, [selectedPath]: { ...entry, draft: next } };
     });
   };
+
+  const handleSwitchBranch = (branch: string) => {
+    if (!active) return;
+    setCurrentBranch(branch);
+    // Drop cached file content — same path may differ between branches.
+    setFiles({});
+    fetchedPathsRef.current = new Set();
+    setSaveMessage(null);
+  };
+
+  const handleCreateBranch = async (
+    name: string,
+    base: string,
+    bringChanges: boolean,
+  ) => {
+    if (!active) return;
+    await createBranch(active.installationId, active.owner, active.repo, base, name);
+    setBranches((prev) => (prev.includes(name) ? prev : [...prev, name].sort()));
+    setCurrentBranch(name);
+    if (!bringChanges) {
+      // Drop in-progress drafts so they stay on the prior branch.
+      setFiles({});
+      fetchedPathsRef.current = new Set();
+    }
+    // If bringChanges is true, dirty file drafts ride along — they're
+    // already in our `files` map and will commit to the new branch.
+    setSaveMessage(null);
+  };
+
+  const handleSaveInBranch = async () => {
+    if (!active || !currentBranch || dirtyPaths.length === 0) return;
+    setSaving(true);
+    setSaveMessage(null);
+    try {
+      const changes: Array<{ path: string; content: string }> = [];
+      for (const path of dirtyPaths) {
+        const entry = files[path];
+        if (entry) changes.push({ path, content: entry.draft });
+      }
+      if (changes.length === 0) return;
+      const message =
+        changes.length === 1
+          ? `Update ${changes[0]!.path}`
+          : `Update ${changes.length} files`;
+      await commitFiles(
+        active.installationId,
+        active.owner,
+        active.repo,
+        currentBranch,
+        changes,
+        message,
+      );
+      // Mark all committed files as clean by aligning original to draft.
+      setFiles((prev) => {
+        const next: Record<string, FileEntry> = { ...prev };
+        for (const change of changes) {
+          const entry = next[change.path];
+          if (entry) next[change.path] = { ...entry, original: change.content };
+        }
+        return next;
+      });
+      setSaveMessage(`Saved ${changes.length} file${changes.length === 1 ? '' : 's'} to ${currentBranch}.`);
+    } catch (err) {
+      setSaveMessage(
+        err instanceof Error ? `Save failed: ${err.message}` : 'Save failed.',
+      );
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const onDefaultBranch = currentBranch === active?.defaultBranch;
 
   const subdir = active?.docsSubdirectory ?? '';
 
@@ -468,20 +579,25 @@ export function RepoBrowser() {
   return (
     <div className="-m-8 flex h-[calc(100vh-3.5rem)] min-h-0">
       <aside className="flex w-72 shrink-0 flex-col overflow-hidden border-r bg-muted/30">
-        <div className="border-b px-4 py-3">
+        <div className="flex flex-col gap-2 border-b px-4 py-3">
           <div className="flex items-center gap-2 text-sm font-semibold">
             <GitBranch className="size-3.5 text-primary" />
             {owner}/{repo}
           </div>
-          <div className="text-xs text-muted-foreground">
-            {active.defaultBranch}
-            {active.docsSubdirectory ? (
-              <>
-                {' · '}
-                <code>{active.docsSubdirectory}</code>
-              </>
-            ) : null}
-          </div>
+          <BranchPicker
+            currentBranch={currentBranch ?? active.defaultBranch}
+            defaultBranch={active.defaultBranch}
+            branches={branches}
+            loading={branchesLoading}
+            hasDirty={dirtyPaths.length > 0}
+            onSwitch={handleSwitchBranch}
+            onCreate={handleCreateBranch}
+          />
+          {active.docsSubdirectory ? (
+            <div className="text-xs text-muted-foreground">
+              <code>{active.docsSubdirectory}</code>
+            </div>
+          ) : null}
         </div>
 
         <Tabs defaultValue="navigation" className="flex flex-1 flex-col overflow-hidden">
@@ -518,17 +634,50 @@ export function RepoBrowser() {
           </TabsContent>
         </Tabs>
 
-        <div className="border-t px-4 py-2 text-xs text-muted-foreground">
+        <div className="flex flex-col gap-2 border-t px-4 py-3 text-xs text-muted-foreground">
           {dirtyPaths.length > 0 ? (
-            <div className="mb-1 flex items-center gap-1.5 text-amber-500">
-              <span aria-hidden>●</span>
-              {dirtyPaths.length} unsaved change
-              {dirtyPaths.length === 1 ? '' : 's'}
-            </div>
+            <>
+              <div className="flex items-center gap-1.5 text-amber-500">
+                <span aria-hidden>●</span>
+                {dirtyPaths.length} unsaved change
+                {dirtyPaths.length === 1 ? '' : 's'}
+              </div>
+              {onDefaultBranch ? (
+                <p className="text-[11px] leading-tight">
+                  Create a branch off{' '}
+                  <code className="font-mono">{active.defaultBranch}</code> to
+                  save your changes.
+                </p>
+              ) : (
+                <Button
+                  type="button"
+                  size="sm"
+                  className="h-8 w-full"
+                  disabled={saving}
+                  onClick={handleSaveInBranch}
+                >
+                  {saving ? 'Saving…' : `Save in ${currentBranch}`}
+                </Button>
+              )}
+            </>
           ) : null}
-          {navCount} doc{navCount === 1 ? '' : 's'} · {filesCount} file
-          {filesCount === 1 ? '' : 's'}
-          {truncated ? ' · tree truncated' : ''}
+          {saveMessage ? (
+            <p
+              className={cn(
+                'text-[11px] leading-tight',
+                saveMessage.startsWith('Save failed')
+                  ? 'text-destructive'
+                  : 'text-emerald-500',
+              )}
+            >
+              {saveMessage}
+            </p>
+          ) : null}
+          <div>
+            {navCount} doc{navCount === 1 ? '' : 's'} · {filesCount} file
+            {filesCount === 1 ? '' : 's'}
+            {truncated ? ' · tree truncated' : ''}
+          </div>
         </div>
       </aside>
       <main className="flex-1 overflow-hidden bg-background">

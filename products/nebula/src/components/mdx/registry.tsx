@@ -19,6 +19,8 @@ import {
   Tab,
   Tabs,
   Tip,
+  Tree,
+  Update,
   Warning,
 } from '@nebula/components';
 
@@ -57,6 +59,10 @@ export const componentRegistry: Record<string, MdxComponent> = {
   Accordion: Accordion as unknown as MdxComponent,
   AccordionGroup: AccordionGroup as unknown as MdxComponent,
   Expandable: Expandable as unknown as MdxComponent,
+  Tree: Tree as unknown as MdxComponent,
+  'Tree.Folder': Tree.Folder as unknown as MdxComponent,
+  'Tree.File': Tree.File as unknown as MdxComponent,
+  Update: Update as unknown as MdxComponent,
 };
 
 export function registerComponent(name: string, Component: MdxComponent): void {

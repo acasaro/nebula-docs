@@ -8,6 +8,8 @@ export * from './columns';
 export * from './tabs';
 export * from './accordion';
 export * from './expandable';
+export * from './tree';
+export * from './update';
 
 // Legacy components kept for now to avoid breaking the Docusaurus build.
 // These will be removed when products/docs/ is replaced by the SSG.

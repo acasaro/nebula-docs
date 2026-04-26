@@ -18,35 +18,43 @@ export interface UpdateProps {
  * visual layout only — anchor + scroll integrations land later.
  */
 export function Update({ label, description, tags, className, children }: UpdateProps) {
-  const tagsArray = (tags ?? [])
-    .map((tag) => tag.trim())
-    .filter(Boolean);
+  // Tags can arrive from MDX as undefined, an array, or a comma-separated
+  // string ("alpha, beta"). Anything else (e.g. unparsed expression
+  // objects from our JSX attribute coercer) coerces safely to [].
+  const tagsArray = Array.isArray(tags)
+    ? tags.map((t) => String(t).trim()).filter(Boolean)
+    : typeof tags === 'string'
+      ? tags
+          .split(',')
+          .map((t) => t.trim())
+          .filter(Boolean)
+      : [];
   const uniqueTags = Array.from(new Set(tagsArray));
 
   return (
     <div
       className={cn(
-        'update-container relative flex w-full flex-col items-start gap-2 py-8 lg:flex-row lg:gap-6',
+        'relative flex w-full items-start gap-6 py-6',
         className,
       )}
       data-component-part="update"
     >
-      <div className="flex w-full shrink-0 flex-col items-start justify-start lg:sticky lg:top-24 lg:w-[160px]">
-        <div
-          className="flex grow-0 items-center justify-center rounded-lg bg-primary/10 px-2 py-1 font-medium text-primary text-sm"
+      <div className="flex w-[140px] shrink-0 flex-col items-start">
+        <span
+          className="inline-flex items-center rounded-md bg-primary/10 px-2 py-1 text-sm font-medium text-primary"
           data-component-part="update-label"
         >
           {label}
-        </div>
+        </span>
         {uniqueTags.length > 0 ? (
           <div
-            className="mt-3 flex flex-wrap gap-2 px-1 text-stone-500 text-sm dark:text-stone-400"
+            className="mt-3 flex flex-wrap gap-2 px-1 text-sm text-stone-500 dark:text-stone-400"
             data-component-part="update-tag-list"
           >
             {uniqueTags.map((tag) => (
               <span
                 key={tag}
-                className="inline-block rounded-lg font-medium text-sm"
+                className="inline-block rounded-lg text-sm font-medium"
                 data-component-part="update-tag"
               >
                 {tag}
@@ -55,19 +63,17 @@ export function Update({ label, description, tags, className, children }: Update
           </div>
         ) : null}
         {description ? (
-          <div
-            className="wrap-break-word mt-3 max-w-[160px] px-1 text-stone-500 text-sm dark:text-stone-400"
+          <p
+            className="mt-3 max-w-full px-1 text-sm text-stone-500 dark:text-stone-400"
             data-component-part="update-description"
           >
             {description}
-          </div>
+          </p>
         ) : null}
       </div>
 
-      <div className="max-w-full flex-1 overflow-hidden px-0.5">
-        <div className="prose-sm dark:prose-invert" data-component-part="update-content">
-          {children}
-        </div>
+      <div className="min-w-0 flex-1" data-component-part="update-content">
+        {children}
       </div>
     </div>
   );

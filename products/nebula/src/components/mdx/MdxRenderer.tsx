@@ -211,7 +211,7 @@ function renderList(node: List, key: string): ReactNode {
       <ol
         key={key}
         start={node.start ?? undefined}
-        className="my-4 list-decimal pl-6"
+        className="my-4 list-decimal pl-6 marker:text-gray-500"
       >
         {renderChildren(node.children, key)}
       </ol>
@@ -267,7 +267,7 @@ function renderBlockquote(node: Blockquote, key: string): ReactNode {
   return (
     <blockquote
       key={key}
-      className="my-4 border-l-2 border-border pl-4 italic text-muted-foreground"
+      className="my-4 border-l-2 border-border pl-4 text-stone-600 dark:text-stone-400"
     >
       {renderChildren(node.children, key)}
     </blockquote>

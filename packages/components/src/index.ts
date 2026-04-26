@@ -4,6 +4,7 @@ export * from './accordion';
 export * from './badge';
 export * from './callout';
 export * from './card';
+export * from './code-block';
 export * from './columns';
 export * from './example';
 export * from './expandable';

@@ -21,7 +21,7 @@ import type {
   ThematicBreak,
 } from 'mdast';
 import type { MdxJsxFlowElement, MdxJsxTextElement } from 'mdast-util-mdx';
-import { Mermaid } from '@nebula/components';
+import { CodeBlock, Mermaid } from '@nebula/components';
 import { parseMdx } from '@/lib/mdx/parse';
 import { lookupComponent } from './registry';
 import { attributesToProps } from './jsxAttributes';
@@ -158,15 +158,7 @@ function renderCode(node: Code, key: string): ReactNode {
     return <Mermaid key={key} chart={node.value} />;
   }
   return (
-    <pre key={key}>
-      {node.lang ? (
-        <div className="mb-2 text-[0.7rem] uppercase tracking-wide text-muted-foreground">
-          {node.lang}
-          {node.meta ? ` · ${node.meta}` : ''}
-        </div>
-      ) : null}
-      <code>{node.value}</code>
-    </pre>
+    <CodeBlock key={key} code={node.value} language={node.lang ?? undefined} />
   );
 }
 

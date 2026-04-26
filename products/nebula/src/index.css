@@ -170,14 +170,32 @@
   margin-top: 0.5rem;
 }
 
+/* Step title: align vertically with the step number circle. The component
+ * sets `mt-2` (8px) which gives the desired alignment, but the broader
+ * `.mdx-prose p { my-4 }` rule otherwise wins. Use a more specific selector
+ * so the intended 8px takes effect. */
+.mdx-prose [data-component-part="step-title"] {
+  margin-top: 0.5rem;
+  margin-bottom: 0;
+}
+.mdx-prose [data-component-part="step-content"] :where(p, ul, ol, blockquote) {
+  margin: 0;
+}
+.mdx-prose [data-component-part="step-content"] :is(p, ul, ol, blockquote) + :is(p, ul, ol, blockquote) {
+  margin-top: 0.5rem;
+}
+
 /* Tiptap editor surface — keep the focus ring off the contenteditable. */
 .mdx-prose .ProseMirror {
   outline: none;
 }
-.mdx-prose .ProseMirror p.is-editor-empty:first-child::before {
+/* Placeholder shown on empty paragraphs (configured per-context via the
+ * Tiptap Placeholder extension's `placeholder` callback). */
+.mdx-prose .ProseMirror p.is-empty::before {
   content: attr(data-placeholder);
   float: left;
-  color: theme('colors.muted.foreground');
+  color: var(--muted-foreground);
+  opacity: 0.55;
   pointer-events: none;
   height: 0;
 }

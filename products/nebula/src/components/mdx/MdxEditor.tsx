@@ -1,32 +1,70 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo } from 'react';
 import { EditorContent, useEditor } from '@tiptap/react';
 import { StarterKit } from '@tiptap/starter-kit';
+import Placeholder from '@tiptap/extension-placeholder';
 import { mdxToTiptapDoc } from '@/lib/mdx/mdastToTiptap';
 import { tiptapDocToMdx } from '@/lib/mdx/tiptapToMdx';
 import { cn } from '@/lib/utils';
 import { EditorWithBlockHandle } from './BlockHandle';
 import { MdxCallout } from './MdxCalloutNode';
+import { MdxCard } from './MdxCardNode';
+import { MdxCodeBlock } from './MdxCodeBlockNode';
+import { MdxFrame } from './MdxFrameNode';
 import { MdxRaw } from './MdxRawNode';
+import { MdxStep, MdxSteps } from './MdxStepsNode';
+import { MdxUpdate } from './MdxUpdateNode';
+import { SlashCommand } from './slashCommand';
 
 interface MdxEditorProps {
   source: string;
   onSourceChange?: (next: string) => void;
-  onDirtyChange?: (dirty: boolean) => void;
   className?: string;
 }
 
 export function MdxEditor({
   source,
   onSourceChange,
-  onDirtyChange,
   className,
 }: MdxEditorProps) {
   const initialDoc = useMemo(() => mdxToTiptapDoc(source), [source]);
-  const initialDocJsonRef = useRef<string>('');
-  const lastDirtyRef = useRef<boolean>(false);
 
   const editor = useEditor({
-    extensions: [StarterKit, MdxCallout, MdxRaw],
+    extensions: [
+      StarterKit.configure({ codeBlock: false }),
+      MdxCodeBlock,
+      MdxCallout,
+      MdxCard,
+      MdxFrame,
+      MdxUpdate,
+      MdxSteps,
+      MdxStep,
+      MdxRaw,
+      SlashCommand,
+      Placeholder.configure({
+        placeholder: ({ editor, node, pos }) => {
+          if (node.type.name !== 'paragraph') return '';
+          let parentName: string | null = null;
+          try {
+            const $pos = editor.state.doc.resolve(pos);
+            parentName = $pos.parent?.type.name ?? null;
+          } catch {
+            parentName = null;
+          }
+          if (parentName === 'mdxStep') {
+            return 'Start typing or press "/" for commands';
+          }
+          if (parentName === 'mdxCallout') {
+            return 'Start typing…';
+          }
+          if (parentName === 'mdxCard') {
+            return 'Card description…';
+          }
+          return '';
+        },
+        showOnlyCurrent: false,
+        includeChildren: true,
+      }),
+    ],
     content: initialDoc,
     editable: !!onSourceChange,
     editorProps: {
@@ -34,17 +72,9 @@ export function MdxEditor({
         class: 'outline-none focus:outline-none min-h-full',
       },
     },
-    onCreate: ({ editor }) => {
-      initialDocJsonRef.current = normalizeDocJson(editor.getJSON());
-    },
     onUpdate: ({ editor }) => {
       const doc = editor.getJSON() as ReturnType<typeof mdxToTiptapDoc>;
       onSourceChange?.(tiptapDocToMdx(doc));
-      const dirty = normalizeDocJson(doc) !== initialDocJsonRef.current;
-      if (dirty !== lastDirtyRef.current) {
-        lastDirtyRef.current = dirty;
-        onDirtyChange?.(dirty);
-      }
     },
   });
 
@@ -66,27 +96,11 @@ export function MdxEditor({
   );
 }
 
-interface DocLike {
-  type?: string;
-  content?: DocLike[];
-}
-
 /**
- * Strip trailing empty paragraphs ProseMirror auto-inserts when the doc
- * ends with an atom node (so the user has somewhere to type after it).
- * Without this, dirty would fire after focus + undo even though the
- * meaningful content matches load state.
+ * Round-trip MDX through the parser and serializer. Used at load time so
+ * the stored "original" matches the editor's first emission — without this,
+ * any whitespace drift in the serializer would mark a file dirty on open.
  */
-function normalizeDocJson(json: DocLike): string {
-  const content = json.content ?? [];
-  let end = content.length;
-  while (end > 0) {
-    const last = content[end - 1];
-    if (last?.type === 'paragraph' && !last.content?.length) {
-      end--;
-    } else {
-      break;
-    }
-  }
-  return JSON.stringify({ ...json, content: content.slice(0, end) });
+export function normalizeMdx(source: string): string {
+  return tiptapDocToMdx(mdxToTiptapDoc(source));
 }

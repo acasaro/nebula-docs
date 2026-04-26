@@ -66,7 +66,7 @@ export function Expandable({
         </p>
       </summary>
       <div
-        className="mx-3 border-t border-stone-100 px-2 dark:border-white/10"
+        className="border-t border-stone-100 px-3.5 py-3 dark:border-white/10 [&_:is(p,ul,ol,blockquote)]:m-0 [&_:is(p,ul,ol,blockquote)+:is(p,ul,ol,blockquote)]:mt-2"
         data-component-part="expandable-content"
         id={contentId}
       >

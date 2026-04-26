@@ -6,7 +6,7 @@ on:
     branches:
       - main
     paths:
-      - 'products/nebula-cms/**'
+      - 'products/nebula/**'
       - 'packages/**'
       - 'pnpm-workspace.yaml'
       - 'pnpm-lock.yaml'
@@ -75,5 +75,5 @@ jobs:
       - name: Deploy to Firebase Hosting
         if: env.FIREBASE_PROJECT_ID != ''
         run: |
-          echo "TODO: deploy products/nebula-cms/dist to Firebase Hosting"
+          echo "TODO: deploy products/nebula/dist to Firebase Hosting"
           echo "FIREBASE_PROJECT_ID=$FIREBASE_PROJECT_ID"

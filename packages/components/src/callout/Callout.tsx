@@ -101,28 +101,34 @@ export function Callout({
   const resolvedIcon =
     typeof icon === 'string' ? <McoeIcon icon={icon} size={16} /> : icon;
   const renderedIcon =
-    resolvedIcon ?? (config ? <config.Icon aria-label={ariaLabel ?? config.label} /> : null);
+    resolvedIcon ??
+    (config ? (
+      <config.Icon size={16} aria-label={ariaLabel ?? config.label} />
+    ) : null);
   const containerClasses = config?.container ?? customClasses.container;
   const bodyClasses = config?.body ?? customClasses.body;
 
   return (
     <div
       className={cn(
-        'my-4 flex gap-3 overflow-hidden rounded-2xl px-5 py-4',
+        'my-4 flex items-start gap-3 overflow-hidden rounded-2xl px-4 py-3',
         containerClasses,
         className,
       )}
       data-callout-type={variant}
     >
       {renderedIcon ? (
-        <div className="mt-0.5 size-4 shrink-0" data-component-part="callout-icon">
+        <div
+          className={cn('mt-0.5 size-4 shrink-0', bodyClasses)}
+          data-component-part="callout-icon"
+        >
           {renderedIcon}
         </div>
       ) : null}
       <div
         className={cn(
-          'prose dark:prose-invert w-full min-w-0 text-sm [&_a]:border-current [&_a]:text-current! [&_code]:text-current! [&_strong]:text-current!',
-          title && '[&>:nth-child(2)]:mt-3',
+          'prose dark:prose-invert w-full min-w-0 text-sm leading-6 [&_a]:border-current [&_a]:text-current! [&_code]:text-current! [&_strong]:text-current! [&_p]:my-0',
+          title && '[&>:nth-child(2)]:mt-2',
           bodyClasses,
         )}
         data-component-part="callout-content"

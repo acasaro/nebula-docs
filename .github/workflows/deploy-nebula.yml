@@ -58,7 +58,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Build
-        run: pnpm --filter @mcoe/nebula-cms build
+        run: pnpm --filter @nebula/cms build
         env:
           # TODO: wire up Firebase secrets once project is provisioned
           VITE_FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY }}

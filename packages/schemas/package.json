@@ -1,5 +1,5 @@
 {
-  "name": "@mcoe/schemas",
+  "name": "@nebula/schemas",
   "version": "0.0.0",
   "private": true,
   "type": "module",

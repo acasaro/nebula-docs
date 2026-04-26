@@ -1,5 +1,5 @@
 {
-  "name": "@mcoe/functions",
+  "name": "@nebula/functions",
   "version": "0.0.0",
   "private": true,
   "main": "lib/index.js",
@@ -18,7 +18,7 @@
     "node": "22"
   },
   "dependencies": {
-    "@mcoe/schemas": "workspace:*",
+    "@nebula/schemas": "workspace:*",
     "firebase-admin": "^13.0.0",
     "firebase-functions": "^6.0.0",
     "zod": "^4.1.13"

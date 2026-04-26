@@ -1,0 +1,359 @@
+import type { Meta, StoryObj } from "@storybook/react-vite";
+import { Tabs } from "@/components/tabs";
+import { Mermaid } from "./mermaid";
+
+const meta: Meta<typeof Mermaid> = {
+  title: "Components/Mermaid",
+  component: Mermaid,
+  parameters: {
+    layout: "centered",
+  },
+  tags: ["autodocs"],
+  argTypes: {
+    chart: {
+      control: "text",
+      description: "The mermaid chart definition string",
+    },
+    className: {
+      control: "text",
+      description: "Additional CSS classes for the root element",
+    },
+    actions: {
+      control: "boolean",
+      description:
+        "Show or hide the interactive controls. When set, this overrides the default behavior (controls shown when diagram height exceeds 120px).",
+    },
+    placement: {
+      control: "select",
+      options: ["top-left", "top-right", "bottom-left", "bottom-right"],
+      description: "Position of the interactive controls.",
+    },
+    ariaLabel: {
+      control: "text",
+      description: "Accessible label for the diagram",
+    },
+  },
+};
+
+export default meta;
+type Story = StoryObj<typeof Mermaid>;
+
+const flowchartExample = `graph TD
+    A[Start] --> B{Is it working?}
+    B -->|Yes| C[Great!]
+    B -->|No| D[Debug]
+    D --> B`;
+
+const sequenceDiagramExample = `sequenceDiagram
+    participant Alice
+    participant Bob
+    Alice->>John: Hello John, how are you?
+    loop Healthcheck
+        John->>John: Fight against hypochondria
+    end
+    Note right of John: Rational thoughts <br/>prevail!
+    John-->>Alice: Great!
+    John->>Bob: How about you?
+    Bob-->>John: Jolly good!`;
+
+const classDiagramExample = `classDiagram
+    Animal <|-- Duck
+    Animal <|-- Fish
+    Animal <|-- Zebra
+    Animal : +int age
+    Animal : +String gender
+    Animal: +isMammal()
+    Animal: +mate()
+    class Duck{
+        +String beakColor
+        +swim()
+        +quack()
+    }
+    class Fish{
+        -int sizeInFeet
+        -canEat()
+    }
+    class Zebra{
+        +bool is_wild
+        +run()
+    }`;
+
+const stateDiagramExample = `stateDiagram-v2
+    [*] --> Still
+    Still --> [*]
+    Still --> Moving
+    Moving --> Still
+    Moving --> Crash
+    Crash --> [*]`;
+
+const entityRelationshipExample = `erDiagram
+    CUSTOMER ||--o{ ORDER : places
+    ORDER ||--|{ LINE-ITEM : contains
+    CUSTOMER }|..|{ DELIVERY-ADDRESS : uses`;
+
+const ganttChartExample = `gantt
+    title A Gantt Diagram
+    dateFormat  YYYY-MM-DD
+    section Section
+    A task           :a1, 2024-01-01, 30d
+    Another task     :after a1, 20d
+    section Another
+    Task in sec      :2024-01-12, 12d
+    another task     :24d`;
+
+const pieChartExample = `pie title Pets adopted by volunteers
+    "Dogs" : 386
+    "Cats" : 85
+    "Rats" : 15`;
+
+const gitGraphExample = `gitGraph
+    commit
+    commit
+    branch develop
+    checkout develop
+    commit
+    commit
+    checkout main
+    merge develop
+    commit
+    commit`;
+
+const journeyExample = `journey
+    title My working day
+    section Go to work
+      Make tea: 5: Me
+      Go upstairs: 3: Me
+      Do work: 1: Me, Cat
+    section Go home
+      Go downstairs: 5: Me
+      Sit down: 5: Me`;
+
+export const Default: Story = {
+  args: {
+    chart: flowchartExample,
+  },
+};
+
+export const Flowchart: Story = {
+  args: {
+    chart: flowchartExample,
+  },
+};
+
+export const SequenceDiagram: Story = {
+  args: {
+    chart: sequenceDiagramExample,
+  },
+};
+
+export const ClassDiagram: Story = {
+  args: {
+    chart: classDiagramExample,
+  },
+};
+
+export const StateDiagram: Story = {
+  args: {
+    chart: stateDiagramExample,
+  },
+};
+
+export const EntityRelationship: Story = {
+  args: {
+    chart: entityRelationshipExample,
+  },
+};
+
+export const GanttChart: Story = {
+  args: {
+    chart: ganttChartExample,
+  },
+};
+
+export const PieChart: Story = {
+  args: {
+    chart: pieChartExample,
+  },
+};
+
+export const GitGraph: Story = {
+  args: {
+    chart: gitGraphExample,
+  },
+};
+
+export const UserJourney: Story = {
+  args: {
+    chart: journeyExample,
+  },
+};
+
+export const ComplexFlowchart: Story = {
+  args: {
+    chart: `graph TB
+    subgraph Frontend
+        A[React App] --> B[Components]
+        B --> C[State Management]
+    end
+    subgraph Backend
+        D[API Gateway] --> E[Auth Service]
+        D --> F[Data Service]
+        E --> G[(Database)]
+        F --> G
+    end
+    A --> D`,
+  },
+};
+
+export const WithCustomClassName: Story = {
+  args: {
+    chart: flowchartExample,
+    className: "border rounded-lg p-4 bg-stone-50 dark:bg-stone-800",
+  },
+};
+
+export const LargeDiagram: Story = {
+  render: () => (
+    <div className="h-[600px] w-[800px]">
+      <Mermaid
+        chart={`graph TD
+    A[Christmas] -->|Get money| B(Go shopping)
+    B --> C{Let me think}
+    C -->|One| D[Laptop]
+    C -->|Two| E[iPhone]
+    C -->|Three| F[fa:fa-car Car]
+    D --> G[Work]
+    E --> H[Fun]
+    F --> I[Travel]
+    G --> J[Success]
+    H --> J
+    I --> J
+    J --> K{Happy?}
+    K -->|Yes| L[Celebrate]
+    K -->|No| M[Try Again]
+    M --> B`}
+        placement="top-right"
+      />
+    </div>
+  ),
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "Large diagram with controls in the top-right corner. Controls appear automatically because the diagram height exceeds 120px.",
+      },
+    },
+  },
+};
+
+export const AllDiagramTypes: Story = {
+  render: () => (
+    <div className="flex flex-col gap-8">
+      <div>
+        <h3 className="mb-2 font-semibold text-lg">Flowchart</h3>
+        <Mermaid chart={flowchartExample} />
+      </div>
+      <div>
+        <h3 className="mb-2 font-semibold text-lg">Sequence Diagram</h3>
+        <Mermaid chart={sequenceDiagramExample} />
+      </div>
+      <div>
+        <h3 className="mb-2 font-semibold text-lg">State Diagram</h3>
+        <Mermaid chart={stateDiagramExample} />
+      </div>
+      <div>
+        <h3 className="mb-2 font-semibold text-lg">Pie Chart</h3>
+        <Mermaid chart={pieChartExample} />
+      </div>
+    </div>
+  ),
+};
+
+export const ActionsHidden: Story = {
+  args: {
+    chart: flowchartExample,
+    actions: false,
+  },
+  parameters: {
+    docs: {
+      description: {
+        story: "Hide the interactive controls regardless of diagram size.",
+      },
+    },
+  },
+};
+
+export const ActionsVisible: Story = {
+  args: {
+    chart: `flowchart LR
+    A --> B`,
+    actions: true,
+  },
+  parameters: {
+    docs: {
+      description: {
+        story: "Always show the interactive controls, even for small diagrams.",
+      },
+    },
+  },
+};
+
+export const Placement: Story = {
+  args: {
+    chart: flowchartExample,
+    actions: true,
+    placement: "bottom-right",
+  },
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "Position of the interactive controls. Use the controls panel to try different placements: top-left, top-right, bottom-left, bottom-right.",
+      },
+    },
+  },
+};
+
+export const InvalidSyntax: Story = {
+  args: {
+    chart: `graph TD
+    A[Start --> B{Invalid syntax here`,
+  },
+};
+
+const orderProcessingDiagram1 = `sequenceDiagram
+    participant Customer
+    participant Frontend as Web Frontend
+    participant API as Order API
+    participant Payment as Payment Gateway
+    participant Warehouse as Warehouse System
+    
+    Customer->>Frontend: Submit order request
+    Frontend->>API: Create order
+    API->>Payment: Process payment
+    Payment-->>API: Payment confirmed
+    API->>Warehouse: Reserve inventory
+    Warehouse-->>API: Inventory reserved
+    API-->>Frontend: Order confirmed
+    Frontend-->>Customer: Order confirmation email`;
+
+export const DuplicateDiagrams: Story = {
+  render: () => (
+    <Tabs>
+      <Tabs.Item title="Diagram 1">
+        <Mermaid ariaLabel="diagram 1" chart={orderProcessingDiagram1} />
+      </Tabs.Item>
+      <Tabs.Item title="Diagram 2">
+        <Mermaid ariaLabel="diagram 2" chart={orderProcessingDiagram1} />
+      </Tabs.Item>
+    </Tabs>
+  ),
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "Two similar sequence diagrams rendered in tabs. This tests that marker IDs are made unique across multiple diagrams to prevent SVG marker conflicts when switching between tabs.",
+      },
+    },
+  },
+};

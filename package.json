@@ -8,17 +8,11 @@
   },
   "scripts": {
     "dev:docs": "pnpm --filter @mcoe/docs start",
-    "dev:nebula": "pnpm --filter @mcoe/nebula-cms dev",
     "build:docs": "pnpm --filter @mcoe/docs build",
-    "build:nebula": "pnpm --filter @mcoe/nebula-cms build",
     "build": "pnpm -r build",
     "typecheck": "pnpm -r typecheck",
     "lint": "pnpm -r lint",
-    "clean": "pnpm -r --parallel exec rm -rf node_modules dist build .docusaurus && rm -rf node_modules",
-    "seed:test": "node scripts/seed-test-page.mjs"
-  },
-  "devDependencies": {
-    "firebase-admin": "^13.0.0"
+    "clean": "pnpm -r --parallel exec rm -rf node_modules dist build .docusaurus && rm -rf node_modules"
   },
   "pnpm": {
     "overrides": {

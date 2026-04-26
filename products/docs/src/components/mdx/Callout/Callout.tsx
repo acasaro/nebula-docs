@@ -1,5 +1,5 @@
 /**
- * Compat re-export. Canonical implementation lives in `@mcoe/blocks`.
+ * Compat re-export. Canonical implementation lives in `@nebula/components`.
  */
 export {
   Callout,
@@ -9,4 +9,4 @@ export {
   Tip,
   Check,
   Danger,
-} from '@mcoe/blocks';
+} from '@nebula/components';

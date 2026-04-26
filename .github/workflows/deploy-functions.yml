@@ -58,7 +58,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Build Functions
-        run: pnpm --filter @mcoe/functions build
+        run: pnpm --filter @nebula/functions build
 
       # TODO: replace with the deploy mechanism once Firebase project is provisioned.
       # Will use firebase-tools `firebase deploy --only functions` with a service account.

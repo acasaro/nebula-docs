@@ -1,5 +1,5 @@
 /**
- * Compat re-export. Canonical implementation lives in `@mcoe/blocks`.
+ * Compat re-export. Canonical implementation lives in `@nebula/components`.
  * Existing MDX usage like `<Frame>` keeps working unchanged.
  */
-export { Frame } from '@mcoe/blocks';
+export { Frame } from '@nebula/components';

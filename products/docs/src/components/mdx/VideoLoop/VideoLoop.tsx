@@ -1,4 +1,4 @@
 /**
- * Compat re-export. Canonical implementation lives in `@mcoe/blocks`.
+ * Compat re-export. Canonical implementation lives in `@nebula/components`.
  */
-export { VideoLoop } from '@mcoe/blocks';
+export { VideoLoop } from '@nebula/components';

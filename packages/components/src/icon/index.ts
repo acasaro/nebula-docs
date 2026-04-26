@@ -1,1 +1,1 @@
-export { Icon, type IconNaturalProps, type IconLibrary } from './Icon';
+export { Icon, resolveIcon, type IconNaturalProps, type IconLibrary } from './Icon';

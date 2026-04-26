@@ -1,5 +1,6 @@
 import type { ElementType, ReactNode } from 'react';
 import { ArrowRight, ArrowUpRight } from 'lucide-react';
+import { Icon } from '../icon';
 import { cn } from '../utils/cn';
 
 export interface CardProps {
@@ -89,7 +90,7 @@ export function Card({
             className="size-6 fill-stone-800 text-stone-800 dark:fill-stone-100 dark:text-stone-100"
             data-component-part="card-icon"
           >
-            {icon}
+            {typeof icon === 'string' ? <Icon icon={icon} size={24} /> : icon}
           </div>
         ) : null}
         <div className="min-w-0 flex-1">

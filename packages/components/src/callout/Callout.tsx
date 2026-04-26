@@ -7,6 +7,7 @@ import {
   OctagonAlert,
   TriangleAlert,
 } from 'lucide-react';
+import { Icon as McoeIcon } from '../icon';
 import { cn } from '../utils/cn';
 
 export type CalloutVariant =
@@ -97,8 +98,10 @@ export function Callout({
   const isPreset = variant !== 'custom';
   const config = isPreset ? variantConfig[variant] : null;
 
+  const resolvedIcon =
+    typeof icon === 'string' ? <McoeIcon icon={icon} size={16} /> : icon;
   const renderedIcon =
-    icon ?? (config ? <config.Icon aria-label={ariaLabel ?? config.label} /> : null);
+    resolvedIcon ?? (config ? <config.Icon aria-label={ariaLabel ?? config.label} /> : null);
   const containerClasses = config?.container ?? customClasses.container;
   const bodyClasses = config?.body ?? customClasses.body;
 

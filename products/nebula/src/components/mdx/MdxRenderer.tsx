@@ -22,6 +22,7 @@ import type {
   ThematicBreak,
 } from 'mdast';
 import type { MdxJsxFlowElement, MdxJsxTextElement } from 'mdast-util-mdx';
+import { Mermaid } from '@nebula/components';
 import { parseMdx } from '@/lib/mdx/parse';
 import { lookupComponent } from './registry';
 import { attributesToProps } from './jsxAttributes';
@@ -184,6 +185,11 @@ function renderInlineCode(node: InlineCode, key: string): ReactNode {
 }
 
 function renderCode(node: Code, key: string): ReactNode {
+  // Mermaid diagrams: a fenced code block with `mermaid` language renders
+  // as a real diagram instead of a code block.
+  if (node.lang === 'mermaid') {
+    return <Mermaid key={key} chart={node.value} />;
+  }
   return (
     <pre
       key={key}

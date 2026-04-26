@@ -1,5 +1,11 @@
 import type { ReactNode } from 'react';
+import { Icon } from '../icon';
 import { cn } from '../utils/cn';
+
+function maybeResolveIcon(icon: ReactNode, size: number): ReactNode {
+  if (typeof icon === 'string') return <Icon icon={icon} size={size} />;
+  return icon;
+}
 
 export type BadgeSize = 'xs' | 'sm' | 'md' | 'lg';
 export type BadgeShape = 'rounded' | 'pill';
@@ -104,11 +110,15 @@ export function Badge({
     className: classes,
   } as const;
 
+  const iconSize = size === 'lg' ? 14 : size === 'xs' ? 10 : 12;
+  const resolvedLead = maybeResolveIcon(leadIcon, iconSize);
+  const resolvedTail = maybeResolveIcon(tailIcon, iconSize);
+
   const content = (
     <>
-      {leadIcon ? <span data-component-part="lead-icon">{leadIcon}</span> : null}
+      {resolvedLead ? <span data-component-part="lead-icon">{resolvedLead}</span> : null}
       {children}
-      {tailIcon ? <span data-component-part="tail-icon">{tailIcon}</span> : null}
+      {resolvedTail ? <span data-component-part="tail-icon">{resolvedTail}</span> : null}
     </>
   );
 

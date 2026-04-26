@@ -41,6 +41,16 @@ export function MdxRenderer({ source, className }: MdxRendererProps) {
   );
 }
 
+/**
+ * Render a fragment of MDX without the article wrapper. Used by the
+ * editor's `mdxRaw` NodeView to render opaque JSX blocks (Card, Frame,
+ * Steps, etc.) at full fidelity inside the Tiptap surface.
+ */
+export function MdxFragment({ source }: { source: string }) {
+  const tree = useMemo(() => parseMdx(source), [source]);
+  return <>{renderChildren(tree.children, 'fragment')}</>;
+}
+
 type AnyNode =
   | RootContent
   | PhrasingContent
@@ -113,35 +123,12 @@ function renderNode(node: AnyNode, key: string): ReactNode {
 }
 
 function renderParagraph(node: Paragraph, key: string): ReactNode {
-  return (
-    <p key={key} className="my-4 leading-relaxed">
-      {renderChildren(node.children, key)}
-    </p>
-  );
+  return <p key={key}>{renderChildren(node.children, key)}</p>;
 }
-
-const HEADING_SIZE: Record<1 | 2 | 3 | 4 | 5 | 6, string> = {
-  1: 'text-3xl mt-10 mb-4',
-  2: 'text-2xl mt-8 mb-3',
-  3: 'text-xl mt-6 mb-2',
-  4: 'text-lg mt-4 mb-2',
-  5: 'text-base mt-3 mb-1',
-  6: 'text-sm mt-3 mb-1',
-};
 
 function renderHeading(node: Heading, key: string): ReactNode {
   const Tag = `h${node.depth}` as 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6';
-  return (
-    <Tag
-      key={key}
-      className={cn(
-        'font-semibold tracking-tight text-foreground',
-        HEADING_SIZE[node.depth],
-      )}
-    >
-      {renderChildren(node.children, key)}
-    </Tag>
-  );
+  return <Tag key={key}>{renderChildren(node.children, key)}</Tag>;
 }
 
 function renderText(node: Text, key: string): ReactNode {
@@ -149,38 +136,19 @@ function renderText(node: Text, key: string): ReactNode {
 }
 
 function renderStrong(node: Strong, key: string): ReactNode {
-  return (
-    <strong key={key} className="font-semibold">
-      {renderChildren(node.children, key)}
-    </strong>
-  );
+  return <strong key={key}>{renderChildren(node.children, key)}</strong>;
 }
 
 function renderEmphasis(node: Emphasis, key: string): ReactNode {
-  return (
-    <em key={key} className="italic">
-      {renderChildren(node.children, key)}
-    </em>
-  );
+  return <em key={key}>{renderChildren(node.children, key)}</em>;
 }
 
 function renderDelete(node: Delete, key: string): ReactNode {
-  return (
-    <del key={key} className="line-through opacity-70">
-      {renderChildren(node.children, key)}
-    </del>
-  );
+  return <del key={key}>{renderChildren(node.children, key)}</del>;
 }
 
 function renderInlineCode(node: InlineCode, key: string): ReactNode {
-  return (
-    <code
-      key={key}
-      className="rounded bg-muted px-1.5 py-0.5 font-mono text-[0.85em]"
-    >
-      {node.value}
-    </code>
-  );
+  return <code key={key}>{node.value}</code>;
 }
 
 function renderCode(node: Code, key: string): ReactNode {
@@ -190,10 +158,7 @@ function renderCode(node: Code, key: string): ReactNode {
     return <Mermaid key={key} chart={node.value} />;
   }
   return (
-    <pre
-      key={key}
-      className="my-4 overflow-x-auto rounded-md border bg-muted/60 p-4 font-mono text-xs leading-relaxed"
-    >
+    <pre key={key}>
       {node.lang ? (
         <div className="mb-2 text-[0.7rem] uppercase tracking-wide text-muted-foreground">
           {node.lang}
@@ -208,28 +173,16 @@ function renderCode(node: Code, key: string): ReactNode {
 function renderList(node: List, key: string): ReactNode {
   if (node.ordered) {
     return (
-      <ol
-        key={key}
-        start={node.start ?? undefined}
-        className="my-4 list-decimal pl-6 marker:text-gray-500"
-      >
+      <ol key={key} start={node.start ?? undefined}>
         {renderChildren(node.children, key)}
       </ol>
     );
   }
-  return (
-    <ul key={key} className="my-4 list-disc pl-6">
-      {renderChildren(node.children, key)}
-    </ul>
-  );
+  return <ul key={key}>{renderChildren(node.children, key)}</ul>;
 }
 
 function renderListItem(node: ListItem, key: string): ReactNode {
-  return (
-    <li key={key} className="my-1">
-      {renderChildren(node.children, key)}
-    </li>
-  );
+  return <li key={key}>{renderChildren(node.children, key)}</li>;
 }
 
 function renderLink(node: Link, key: string): ReactNode {
@@ -238,7 +191,6 @@ function renderLink(node: Link, key: string): ReactNode {
       key={key}
       href={node.url}
       title={node.title ?? undefined}
-      className="text-primary underline-offset-4 hover:underline"
       target={node.url.startsWith('http') ? '_blank' : undefined}
       rel={node.url.startsWith('http') ? 'noreferrer' : undefined}
     >
@@ -254,49 +206,35 @@ function renderImage(node: Image, key: string): ReactNode {
       src={node.url}
       alt={node.alt ?? ''}
       title={node.title ?? undefined}
-      className="my-4 max-w-full rounded-md border"
     />
   );
 }
 
 function renderThematicBreak(_node: ThematicBreak, key: string): ReactNode {
-  return <hr key={key} className="my-8 border-border" />;
+  return <hr key={key} />;
 }
 
 function renderBlockquote(node: Blockquote, key: string): ReactNode {
-  return (
-    <blockquote
-      key={key}
-      className="my-4 border-l-2 border-border pl-4 text-stone-600 dark:text-stone-400"
-    >
-      {renderChildren(node.children, key)}
-    </blockquote>
-  );
+  return <blockquote key={key}>{renderChildren(node.children, key)}</blockquote>;
 }
 
 function renderTable(node: Table, key: string): ReactNode {
   const [head, ...body] = node.children;
   return (
-    <div key={key} className="my-4 overflow-x-auto rounded-md border">
-      <table className="w-full text-sm">
-        {head ? (
-          <thead className="bg-muted/40">
-            {renderTableRow(head, `${key}.head`, true)}
-          </thead>
-        ) : null}
-        <tbody>
-          {body.map((row: TableRow, i: number) =>
-            renderTableRow(row, `${key}.row.${i}`, false),
-          )}
-        </tbody>
-      </table>
-    </div>
+    <table key={key}>
+      {head ? <thead>{renderTableRow(head, `${key}.head`, true)}</thead> : null}
+      <tbody>
+        {body.map((row: TableRow, i: number) =>
+          renderTableRow(row, `${key}.row.${i}`, false),
+        )}
+      </tbody>
+    </table>
   );
 }
 
 function renderTableRow(node: TableRow, key: string, isHeader = false): ReactNode {
   return (
-    <tr key={key} className="border-b border-border/60 last:border-0">
+    <tr key={key}>
       {node.children.map((cell, i) =>
         renderTableCell(cell, `${key}.cell.${i}`, isHeader),
       )}
@@ -306,17 +244,7 @@ function renderTableRow(node: TableRow, key: string, isHeader = false): ReactNod
 
 function renderTableCell(node: TableCell, key: string, isHeader = false): ReactNode {
   const Tag = isHeader ? 'th' : 'td';
-  return (
-    <Tag
-      key={key}
-      className={cn(
-        'px-3 py-2 align-top',
-        isHeader ? 'text-left font-semibold' : '',
-      )}
-    >
-      {renderChildren(node.children, key)}
-    </Tag>
-  );
+  return <Tag key={key}>{renderChildren(node.children, key)}</Tag>;
 }
 
 function renderJsx(

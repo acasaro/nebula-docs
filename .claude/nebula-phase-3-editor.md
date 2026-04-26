@@ -201,33 +201,54 @@ These need answers before the editor takes shape:
 
 #### A. Contenteditable directly, or a state-machine library?
 
-- **Plain contenteditable** — minimal deps, full control, but you're hand-rolling
-  selection management, IME handling, paste sanitization, undo/redo. Hard.
-- **ProseMirror / Tiptap** — battle-tested rich-text engine, plugin model
-  similar in spirit to MDXEditor but more flexible. Heavier dep but the
-  selection/IME/undo problems are solved.
-- **Lexical** — Meta's editor framework, also solves the hard parts. Same
-  weight class as ProseMirror.
+**Settled — Tiptap (ProseMirror-based) with custom NodeViews.**
 
-If we hit the second-system problem with MDXEditor (which we did), we should
-not pretend ProseMirror would be different. Plain contenteditable + a small
-custom state model is probably the right answer — slow to start but no
-fights with someone else's mental model. Open question.
+Confirmed by inspecting Mintlify's dashboard editor in DevTools:
+
+- `document.querySelectorAll('[contenteditable="true"]').length === 1` while
+  editing — single editor surface, not per-block.
+- `class="has-focus"` on the focused node — Tiptap's
+  [`FocusClasses`](https://tiptap.dev/docs/editor/extensions/functionality/focus)
+  extension default.
+- `class="ProseMirror-trailingBreak"` on empty-block `<br>` — hardcoded in
+  `prosemirror-view`, only present when ProseMirror is rendering.
+- `data-placeholder` + `is-empty` — Tiptap's Placeholder extension.
+
+Behaviorally, Mintlify's editor supports cross-block drag-selection, multi-block
+copy-paste (heading + blockquote + paragraph at once), and document-wide undo
+across edits in different blocks. None of those are achievable with per-block
+contenteditable without reproducing ProseMirror in our own state machine.
+
+We had a per-block contenteditable POC working (paragraph round-trip via
+`node.position` offsets) before this signal arrived. It was reverted on the
+pivot — the roughly 70 lines of `EditingContext` / `EditableParagraph` /
+plain-text-paragraph helpers in `MdxRenderer.tsx` were thrown away. The
+`draftContent` plumbing in `RepoBrowser.tsx` (and the dirty `●` indicator)
+carries forward to Tiptap.
+
+The phase-3 doc previously warned against MDXEditor — that warning still
+stands. MDXEditor wraps Lexical with MDX-specific opinions, and that
+opinionation is what fought us. **Tiptap-direct is one layer lower**: the
+ProseMirror engine plus our own schema/NodeViews, no MDX-shaped wrapper. That's
+the same place Mintlify lives.
 
 #### B. Source-of-truth model.
 
-The MDX string is the canonical source on disk. Two ways to handle edits:
+**Settled — Tiptap-doc-as-state, MDX as the I/O format.**
 
-- **AST-as-state.** Parse once on load, mutate the MDAST as user edits, serialize
-  on save. Pro: edits map cleanly to AST nodes. Con: round-trip serialization
-  may not match input (formatting drift on save).
-- **String-as-state.** Keep the MDX string in state, treat the AST as derived.
-  Re-parse on every keystroke for re-render. Pro: input ≡ output, no drift.
-  Con: re-parse cost (probably fine for docs-sized files).
+Once we adopt Tiptap, the editor's ProseMirror document is the in-memory state
+during a session. MDX is the boundary format:
 
-Mintlify uses Tiptap with custom node views — closer to AST-as-state. For
-us, given the goal of round-tripping back to git via PR, **string-as-state**
-is probably safer (you save exactly what you can read back). Open question.
+- **Load:** MDX string → MDAST (`parseMdx`) → Tiptap doc JSON (custom converter).
+- **Edit:** Tiptap owns the doc; React re-renders are scoped to NodeViews.
+- **Serialize:** Tiptap doc JSON → MDX string (custom serializer), fired on
+  `onUpdate` so the source view + dirty indicator stay live.
+
+JSX components we don't have a NodeView for yet are wrapped as an opaque
+`mdxRaw` atom node carrying the verbatim source string (sliced via
+`node.position.{start,end}.offset` from MDAST). The serializer emits that
+string back unchanged — round-trip safe even before we've built each
+component's editor.
 
 #### C. Where do edits actually live?
 

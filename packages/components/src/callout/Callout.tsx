@@ -111,7 +111,7 @@ export function Callout({
   return (
     <div
       className={cn(
-        'my-4 flex items-start gap-3 overflow-hidden rounded-2xl px-4 py-3',
+        'my-4 flex items-center gap-3 overflow-hidden rounded-2xl px-5 py-4',
         containerClasses,
         className,
       )}
@@ -119,7 +119,7 @@ export function Callout({
     >
       {renderedIcon ? (
         <div
-          className={cn('mt-0.5 size-4 shrink-0', bodyClasses)}
+          className={cn('size-4 shrink-0', bodyClasses)}
           data-component-part="callout-icon"
         >
           {renderedIcon}

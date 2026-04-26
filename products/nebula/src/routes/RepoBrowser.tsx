@@ -18,7 +18,7 @@ import {
 } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { FileTypeIcon, isBinaryFile } from '@/components/FileTypeIcon';
-import { MdxRenderer } from '@/components/mdx/MdxRenderer';
+import { MdxEditor } from '@/components/mdx/MdxEditor';
 import { cn } from '@/lib/utils';
 import { fetchFileContent, fetchRepoTree } from '@/lib/githubApi';
 import { useGitSettings } from '@/lib/gitSettings';
@@ -111,12 +111,16 @@ interface FileHeaderProps {
   path: string;
   mode: ViewMode | null;
   onModeChange?: (mode: ViewMode) => void;
+  dirty?: boolean;
 }
 
-function FileHeader({ path, mode, onModeChange }: FileHeaderProps) {
+function FileHeader({ path, mode, onModeChange, dirty }: FileHeaderProps) {
   return (
     <div className="flex h-10 items-center justify-between gap-3 border-b bg-muted/30 px-4 text-xs font-mono text-muted-foreground">
-      <span className="truncate">{path}</span>
+      <span className="truncate">
+        {path}
+        {dirty ? <span className="ml-2 text-amber-500" aria-label="unsaved">●</span> : null}
+      </span>
       {mode && onModeChange ? (
         <div className="flex items-center gap-0.5 rounded-md border bg-background p-0.5">
           <ModeButton
@@ -173,6 +177,9 @@ interface FileViewerProps {
   error: string | null;
   mode: ViewMode;
   onModeChange: (mode: ViewMode) => void;
+  onContentChange?: (next: string) => void;
+  onDirtyChange?: (dirty: boolean) => void;
+  dirty?: boolean;
 }
 
 function FileViewer({
@@ -182,6 +189,9 @@ function FileViewer({
   error,
   mode,
   onModeChange,
+  onContentChange,
+  onDirtyChange,
+  dirty,
 }: FileViewerProps) {
   if (!path) {
     return (
@@ -215,10 +225,15 @@ function FileViewer({
   if (isMdxFile(path)) {
     return (
       <div className="flex h-full min-h-0 flex-col">
-        <FileHeader path={path} mode={mode} onModeChange={onModeChange} />
+        <FileHeader path={path} mode={mode} onModeChange={onModeChange} dirty={dirty} />
         {mode === 'visual' ? (
           <div className="flex-1 overflow-auto bg-background">
-            <MdxRenderer source={content} />
+            <MdxEditor
+              key={path}
+              source={content}
+              onSourceChange={onContentChange}
+              onDirtyChange={onDirtyChange}
+            />
           </div>
         ) : (
           <pre className="flex-1 overflow-auto whitespace-pre-wrap break-words p-6 font-mono text-xs leading-relaxed text-foreground/90">
@@ -294,6 +309,8 @@ export function RepoBrowser() {
 
   const [selectedPath, setSelectedPath] = useState<string | null>(null);
   const [fileContent, setFileContent] = useState<string | null>(null);
+  const [draftContent, setDraftContent] = useState<string | null>(null);
+  const [isDirty, setIsDirty] = useState(false);
   const [fileLoading, setFileLoading] = useState(false);
   const [fileError, setFileError] = useState<string | null>(null);
   const [mode, setMode] = useState<ViewMode>('visual');
@@ -328,6 +345,8 @@ export function RepoBrowser() {
     if (!active || !selectedPath) return;
     if (isBinaryFile(selectedPath)) {
       setFileContent(null);
+      setDraftContent(null);
+      setIsDirty(false);
       setFileLoading(false);
       setFileError(null);
       return;
@@ -336,6 +355,8 @@ export function RepoBrowser() {
     setFileLoading(true);
     setFileError(null);
     setFileContent(null);
+    setDraftContent(null);
+    setIsDirty(false);
     fetchFileContent(
       active.installationId,
       active.owner,
@@ -346,6 +367,7 @@ export function RepoBrowser() {
       .then(({ content }) => {
         if (cancelled) return;
         setFileContent(content);
+        setDraftContent(content);
       })
       .catch((err) => {
         if (cancelled) return;
@@ -471,11 +493,14 @@ export function RepoBrowser() {
       <main className="flex-1 overflow-hidden bg-background">
         <FileViewer
           path={selectedPath}
-          content={fileContent}
+          content={draftContent}
           loading={fileLoading}
           error={fileError}
           mode={mode}
           onModeChange={setMode}
+          onContentChange={setDraftContent}
+          onDirtyChange={setIsDirty}
+          dirty={isDirty}
         />
       </main>
     </div>

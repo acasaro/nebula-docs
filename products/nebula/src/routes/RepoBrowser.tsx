@@ -1,12 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, Navigate, useParams } from 'react-router';
-import {
-  ChevronDown,
-  ChevronRight,
-  File as FileIcon,
-  Folder,
-  GitBranch,
-} from 'lucide-react';
+import { ChevronDown, ChevronRight, Folder, GitBranch } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -15,6 +9,8 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { FileTypeIcon, isBinaryFile } from '@/components/FileTypeIcon';
 import { cn } from '@/lib/utils';
 import { fetchFileContent, fetchRepoTree } from '@/lib/githubApi';
 import { useGitSettings } from '@/lib/gitSettings';
@@ -25,13 +21,21 @@ interface TreeItemProps {
   depth: number;
   selectedPath: string | null;
   onSelect: (path: string) => void;
+  hideExtensions?: boolean;
 }
 
-function TreeItem({ node, depth, selectedPath, onSelect }: TreeItemProps) {
+function TreeItem({
+  node,
+  depth,
+  selectedPath,
+  onSelect,
+  hideExtensions = false,
+}: TreeItemProps) {
   const [expanded, setExpanded] = useState(depth < 2);
 
   if (node.type === 'file') {
     const isSelected = selectedPath === node.fullPath;
+    const display = hideExtensions ? stripExtension(node.name) : node.name;
     return (
       <button
         type="button"
@@ -44,8 +48,8 @@ function TreeItem({ node, depth, selectedPath, onSelect }: TreeItemProps) {
         )}
         style={{ paddingLeft: `${depth * 12 + 8}px` }}
       >
-        <FileIcon className="size-3.5 shrink-0 text-muted-foreground" />
-        <span className="truncate">{node.name}</span>
+        <FileTypeIcon name={node.name} />
+        <span className="truncate">{display}</span>
       </button>
     );
   }
@@ -75,12 +79,18 @@ function TreeItem({ node, depth, selectedPath, onSelect }: TreeItemProps) {
               depth={depth + 1}
               selectedPath={selectedPath}
               onSelect={onSelect}
+              hideExtensions={hideExtensions}
             />
           ))}
         </div>
       ) : null}
     </div>
   );
+}
+
+function stripExtension(name: string): string {
+  const idx = name.lastIndexOf('.');
+  return idx > 0 ? name.slice(0, idx) : name;
 }
 
 interface FileViewerProps {
@@ -94,19 +104,29 @@ function FileViewer({ path, content, loading, error }: FileViewerProps) {
   if (!path) {
     return (
       <div className="flex h-full items-center justify-center p-8 text-sm text-muted-foreground">
-        Pick a file from the tree to preview its MDX.
+        Pick a file from the tree to preview it.
       </div>
     );
   }
   if (loading) {
-    return (
-      <div className="p-6 text-sm text-muted-foreground">Loading {path}…</div>
-    );
+    return <div className="p-6 text-sm text-muted-foreground">Loading {path}…</div>;
   }
   if (error) {
     return (
       <div className="p-6 text-sm text-destructive">
         Failed to load {path}: {error}
+      </div>
+    );
+  }
+  if (content === null && isBinaryFile(path)) {
+    return (
+      <div className="flex h-full min-h-0 flex-col">
+        <div className="border-b bg-muted/30 px-4 py-2 text-xs font-mono text-muted-foreground">
+          {path}
+        </div>
+        <div className="flex flex-1 items-center justify-center p-8 text-sm text-muted-foreground">
+          Binary file — preview not available in Phase 2.
+        </div>
       </div>
     );
   }
@@ -122,11 +142,55 @@ function FileViewer({ path, content, loading, error }: FileViewerProps) {
   );
 }
 
+interface FileTreePanelProps {
+  tree: TreeNode[];
+  loading: boolean;
+  error: string | null;
+  emptyMessage: string;
+  selectedPath: string | null;
+  onSelect: (path: string) => void;
+  hideExtensions?: boolean;
+}
+
+function FileTreePanel({
+  tree,
+  loading,
+  error,
+  emptyMessage,
+  selectedPath,
+  onSelect,
+  hideExtensions,
+}: FileTreePanelProps) {
+  if (loading) {
+    return <p className="px-3 py-2 text-sm text-muted-foreground">Loading tree…</p>;
+  }
+  if (error) {
+    return <p className="px-3 py-2 text-sm text-destructive">{error}</p>;
+  }
+  if (tree.length === 0) {
+    return <p className="px-3 py-2 text-sm text-muted-foreground">{emptyMessage}</p>;
+  }
+  return (
+    <div className="px-1 py-2">
+      {tree.map((node) => (
+        <TreeItem
+          key={node.fullPath}
+          node={node}
+          depth={0}
+          selectedPath={selectedPath}
+          onSelect={onSelect}
+          hideExtensions={hideExtensions}
+        />
+      ))}
+    </div>
+  );
+}
+
 export function RepoBrowser() {
   const { owner, repo } = useParams<{ owner: string; repo: string }>();
   const settings = useGitSettings();
 
-  const [tree, setTree] = useState<TreeNode[]>([]);
+  const [allPaths, setAllPaths] = useState<string[]>([]);
   const [treeLoading, setTreeLoading] = useState(true);
   const [treeError, setTreeError] = useState<string | null>(null);
   const [truncated, setTruncated] = useState(false);
@@ -137,8 +201,7 @@ export function RepoBrowser() {
   const [fileError, setFileError] = useState<string | null>(null);
 
   const active = settings.status === 'ready' ? settings.settings : null;
-  const matchesActive =
-    active && active.owner === owner && active.repo === repo;
+  const matchesActive = active && active.owner === owner && active.repo === repo;
 
   useEffect(() => {
     if (!active || !matchesActive) return;
@@ -148,9 +211,7 @@ export function RepoBrowser() {
     fetchRepoTree(active.installationId, active.owner, active.repo, active.defaultBranch)
       .then((result) => {
         if (cancelled) return;
-        const mdx = result.paths.filter((p) => p.endsWith('.mdx') || p.endsWith('.md'));
-        const built = buildTree(mdx, active.docsSubdirectory ?? '');
-        setTree(built);
+        setAllPaths(result.paths);
         setTruncated(result.truncated);
       })
       .catch((err) => {
@@ -167,6 +228,12 @@ export function RepoBrowser() {
 
   useEffect(() => {
     if (!active || !selectedPath) return;
+    if (isBinaryFile(selectedPath)) {
+      setFileContent(null);
+      setFileLoading(false);
+      setFileError(null);
+      return;
+    }
     let cancelled = false;
     setFileLoading(true);
     setFileError(null);
@@ -194,7 +261,16 @@ export function RepoBrowser() {
     };
   }, [active, selectedPath]);
 
-  const fileCount = useMemo(() => countFiles(tree), [tree]);
+  const subdir = active?.docsSubdirectory ?? '';
+
+  const filesTree = useMemo(() => buildTree(allPaths, subdir), [allPaths, subdir]);
+  const navigationTree = useMemo(() => {
+    const docs = allPaths.filter((p) => p.endsWith('.mdx') || p.endsWith('.md'));
+    return buildTree(docs, subdir);
+  }, [allPaths, subdir]);
+
+  const filesCount = useMemo(() => countFiles(filesTree), [filesTree]);
+  const navCount = useMemo(() => countFiles(navigationTree), [navigationTree]);
 
   if (settings.status === 'loading') {
     return (
@@ -253,32 +329,44 @@ export function RepoBrowser() {
             ) : null}
           </div>
         </div>
-        <div className="flex-1 overflow-y-auto px-1 py-2">
-          {treeLoading ? (
-            <p className="px-3 py-2 text-sm text-muted-foreground">
-              Loading tree…
-            </p>
-          ) : treeError ? (
-            <p className="px-3 py-2 text-sm text-destructive">{treeError}</p>
-          ) : tree.length === 0 ? (
-            <p className="px-3 py-2 text-sm text-muted-foreground">
-              No MDX files found
-              {active.docsSubdirectory ? ` in ${active.docsSubdirectory}` : ''}.
-            </p>
-          ) : (
-            tree.map((node) => (
-              <TreeItem
-                key={node.fullPath}
-                node={node}
-                depth={0}
-                selectedPath={selectedPath}
-                onSelect={setSelectedPath}
-              />
-            ))
-          )}
-        </div>
+
+        <Tabs defaultValue="navigation" className="flex flex-1 flex-col overflow-hidden">
+          <TabsList className="mx-3 mt-2 grid w-auto grid-cols-2">
+            <TabsTrigger value="navigation">Navigation</TabsTrigger>
+            <TabsTrigger value="files">Files</TabsTrigger>
+          </TabsList>
+          <TabsContent
+            value="navigation"
+            className="flex-1 overflow-y-auto"
+          >
+            <FileTreePanel
+              tree={navigationTree}
+              loading={treeLoading}
+              error={treeError}
+              emptyMessage={`No MDX files found${subdir ? ` in ${subdir}` : ''}.`}
+              selectedPath={selectedPath}
+              onSelect={setSelectedPath}
+              hideExtensions
+            />
+          </TabsContent>
+          <TabsContent
+            value="files"
+            className="flex-1 overflow-y-auto"
+          >
+            <FileTreePanel
+              tree={filesTree}
+              loading={treeLoading}
+              error={treeError}
+              emptyMessage={`No files found${subdir ? ` in ${subdir}` : ''}.`}
+              selectedPath={selectedPath}
+              onSelect={setSelectedPath}
+            />
+          </TabsContent>
+        </Tabs>
+
         <div className="border-t px-4 py-2 text-xs text-muted-foreground">
-          {fileCount} MDX file{fileCount === 1 ? '' : 's'}
+          {navCount} doc{navCount === 1 ? '' : 's'} · {filesCount} file
+          {filesCount === 1 ? '' : 's'}
           {truncated ? ' · tree truncated' : ''}
         </div>
       </aside>

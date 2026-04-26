@@ -13,6 +13,7 @@ export default defineConfig({
       '@': path.resolve(here, './src'),
     },
   },
+  envPrefix: ['FIREBASE_', 'GITHUB_'],
   server: {
     port: 8081,
     strictPort: true,

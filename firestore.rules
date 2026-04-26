@@ -1,0 +1,41 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // GitHub App installations Nebula has been granted access to.
+    // Phase 1.5: any signed-in user can read/write.
+    // Phase 1.5+ will gate writes on a custom `admin: true` claim.
+    match /installations/{id} {
+      allow read:  if request.auth != null;
+      allow write: if request.auth != null;
+    }
+
+    // Active git connection settings (singleton at settings/git).
+    match /settings/{id} {
+      allow read:  if request.auth != null;
+      allow write: if request.auth != null;
+    }
+
+    // Phase 1 legacy — kept for back-compat reads, will be deleted in a later cleanup.
+    match /connections/{id} {
+      allow read:  if request.auth != null;
+      allow write: if request.auth != null;
+    }
+
+    // Phase 5 collections (githubWebhook writes here, clients read).
+    match /activity/{id} {
+      allow read:  if request.auth != null;
+      allow write: if false;
+    }
+    match /builds/{id} {
+      allow read:  if request.auth != null;
+      allow write: if false;
+    }
+
+    // Default deny.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

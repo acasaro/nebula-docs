@@ -1,12 +1,40 @@
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router';
+import { isFirebaseConfigured } from '@/lib/firebase';
+import { AppShell } from '@/components/AppShell';
+import { ProtectedRoute } from '@/components/ProtectedRoute';
+import { Home } from '@/routes/Home';
+import { InstallCallback } from '@/routes/InstallCallback';
+import { NotConfigured } from '@/routes/NotConfigured';
+import { SettingsGithubApp } from '@/routes/SettingsGithubApp';
+import { SettingsGitRepo } from '@/routes/SettingsGitRepo';
+import { SignIn } from '@/routes/SignIn';
+
 export function App() {
+  if (!isFirebaseConfigured()) {
+    return <NotConfigured />;
+  }
+
   return (
-    <main className="flex min-h-screen items-center justify-center bg-neutral-50 text-neutral-900">
-      <div className="text-center">
-        <h1 className="text-5xl font-bold tracking-tight">Hello Nebula</h1>
-        <p className="mt-3 text-neutral-600">
-          Phase 0 scaffold — Vite + React + Tailwind v4 + shadcn/ui.
-        </p>
-      </div>
-    </main>
+    <BrowserRouter>
+      <Routes>
+        <Route path="/sign-in" element={<SignIn />} />
+
+        <Route element={<ProtectedRoute />}>
+          <Route element={<AppShell />}>
+            <Route index element={<Home />} />
+            <Route path="settings/github-app" element={<SettingsGithubApp />} />
+            <Route path="settings/git" element={<SettingsGitRepo />} />
+            <Route path="install/callback" element={<InstallCallback />} />
+            {/* Legacy redirects */}
+            <Route
+              path="settings/github"
+              element={<Navigate to="/settings/github-app" replace />}
+            />
+          </Route>
+        </Route>
+
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </BrowserRouter>
   );
 }

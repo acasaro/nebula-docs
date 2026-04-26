@@ -1,0 +1,524 @@
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type MouseEvent as ReactMouseEvent,
+  type ReactNode,
+} from 'react';
+import {
+  ChevronRight,
+  CircleAlert,
+  CircleCheck,
+  Copy,
+  GripVertical,
+  Info as InfoIcon,
+  Lightbulb,
+  OctagonAlert,
+  Pencil,
+  Plus,
+  Trash2,
+  TriangleAlert,
+} from 'lucide-react';
+import {
+  DndContext,
+  PointerSensor,
+  useDraggable,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+  type DragMoveEvent,
+} from '@dnd-kit/core';
+import * as Popover from '@radix-ui/react-popover';
+import type { Editor } from '@tiptap/react';
+import type { Node as ProseMirrorNode } from '@tiptap/pm/model';
+import type { CalloutVariant } from '@nebula/components';
+import { cn } from '@/lib/utils';
+
+interface ActiveBlock {
+  pos: number;
+  node: ProseMirrorNode;
+  rect: DOMRect;
+}
+
+interface DropTarget {
+  pos: number;
+  rect: DOMRect;
+  before: boolean;
+}
+
+interface EditorWithBlockHandleProps {
+  editor: Editor | null;
+  children: ReactNode;
+  className?: string;
+}
+
+const HOVER_LEAVE_DELAY_MS = 150;
+
+export function EditorWithBlockHandle({
+  editor,
+  children,
+  className,
+}: EditorWithBlockHandleProps) {
+  const [active, setActive] = useState<ActiveBlock | null>(null);
+  const [dropTarget, setDropTarget] = useState<DropTarget | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const handleAreaRef = useRef<HTMLDivElement>(null);
+  const leaveTimerRef = useRef<number | null>(null);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: { delay: 200, tolerance: 5 },
+    }),
+  );
+
+  useEffect(() => {
+    if (!editor) return;
+
+    const findBlockAt = (clientX: number, clientY: number): ActiveBlock | null => {
+      const editorRect = editor.view.dom.getBoundingClientRect();
+      if (clientY < editorRect.top || clientY > editorRect.bottom) return null;
+      const probeX = Math.max(
+        Math.min(clientX, editorRect.right - 8),
+        editorRect.left + 8,
+      );
+      const result = editor.view.posAtCoords({ left: probeX, top: clientY });
+      if (!result) return null;
+      const $pos = editor.view.state.doc.resolve(result.pos);
+      if ($pos.depth < 1) return null;
+      const blockPos = $pos.before(1);
+      const node = editor.view.state.doc.nodeAt(blockPos);
+      if (!node) return null;
+      const dom = editor.view.nodeDOM(blockPos);
+      if (!(dom instanceof HTMLElement)) return null;
+      return { pos: blockPos, node, rect: dom.getBoundingClientRect() };
+    };
+
+    const handler = (e: PointerEvent) => {
+      const handleArea = handleAreaRef.current;
+      const overHandle =
+        handleArea?.contains(e.target as Node) ||
+        (handleArea
+          ? (() => {
+              const r = handleArea.getBoundingClientRect();
+              return (
+                e.clientX >= r.left &&
+                e.clientX <= r.right &&
+                e.clientY >= r.top &&
+                e.clientY <= r.bottom
+              );
+            })()
+          : false);
+
+      if (overHandle) {
+        if (leaveTimerRef.current !== null) {
+          window.clearTimeout(leaveTimerRef.current);
+          leaveTimerRef.current = null;
+        }
+        return;
+      }
+
+      const found = findBlockAt(e.clientX, e.clientY);
+      if (found) {
+        if (leaveTimerRef.current !== null) {
+          window.clearTimeout(leaveTimerRef.current);
+          leaveTimerRef.current = null;
+        }
+        setActive((prev) => {
+          if (prev && prev.pos === found.pos) {
+            return prev.rect.top === found.rect.top &&
+              prev.rect.height === found.rect.height
+              ? prev
+              : found;
+          }
+          return found;
+        });
+      } else {
+        if (leaveTimerRef.current === null) {
+          leaveTimerRef.current = window.setTimeout(() => {
+            setActive(null);
+            leaveTimerRef.current = null;
+          }, HOVER_LEAVE_DELAY_MS);
+        }
+      }
+    };
+
+    document.addEventListener('pointermove', handler);
+    return () => {
+      document.removeEventListener('pointermove', handler);
+      if (leaveTimerRef.current !== null) {
+        window.clearTimeout(leaveTimerRef.current);
+      }
+    };
+  }, [editor]);
+
+  const handleDragMove = (e: DragMoveEvent) => {
+    if (!editor) return;
+    const activator = e.activatorEvent as PointerEvent;
+    const cursorY = activator.clientY + e.delta.y;
+    const editorRect = editor.view.dom.getBoundingClientRect();
+    const probeX = editorRect.left + Math.min(80, editorRect.width / 2);
+    const result = editor.view.posAtCoords({ left: probeX, top: cursorY });
+    if (!result) {
+      setDropTarget(null);
+      return;
+    }
+    const $pos = editor.view.state.doc.resolve(result.pos);
+    if ($pos.depth < 1) return;
+    const blockPos = $pos.before(1);
+    const node = editor.view.state.doc.nodeAt(blockPos);
+    if (!node) return;
+    const dom = editor.view.nodeDOM(blockPos);
+    if (!(dom instanceof HTMLElement)) return;
+    const rect = dom.getBoundingClientRect();
+    const before = cursorY < rect.top + rect.height / 2;
+    setDropTarget((prev) => {
+      if (
+        prev &&
+        prev.pos === blockPos &&
+        prev.before === before &&
+        prev.rect.top === rect.top
+      ) {
+        return prev;
+      }
+      return { pos: blockPos, rect, before };
+    });
+  };
+
+  const handleDragEnd = (e: DragEndEvent) => {
+    const sourceId = e.active?.id;
+    const target = dropTarget;
+    setDropTarget(null);
+    if (typeof sourceId !== 'number' || !target || !editor) return;
+    const sourcePos = sourceId;
+    const sourceNode = editor.view.state.doc.nodeAt(sourcePos);
+    if (!sourceNode) return;
+    let targetPos = target.pos;
+    if (!target.before) {
+      const targetNode = editor.view.state.doc.nodeAt(target.pos);
+      if (targetNode) targetPos += targetNode.nodeSize;
+    }
+    if (
+      targetPos === sourcePos ||
+      targetPos === sourcePos + sourceNode.nodeSize
+    ) {
+      return;
+    }
+    editor.commands.command(({ tr }) => {
+      const slice = tr.doc.slice(sourcePos, sourcePos + sourceNode.nodeSize);
+      tr.delete(sourcePos, sourcePos + sourceNode.nodeSize);
+      let adjusted = targetPos;
+      if (targetPos > sourcePos) adjusted -= sourceNode.nodeSize;
+      tr.insert(adjusted, slice.content);
+      return true;
+    });
+  };
+
+  const editable = editor?.isEditable ?? false;
+
+  return (
+    <DndContext
+      sensors={sensors}
+      onDragMove={handleDragMove}
+      onDragEnd={handleDragEnd}
+      onDragCancel={() => setDropTarget(null)}
+    >
+      <div ref={containerRef} className={cn('relative', className)}>
+        {children}
+        {editable && active && editor ? (
+          <BlockHandleUI
+            key={active.pos}
+            editor={editor}
+            block={active}
+            containerRef={containerRef}
+            handleAreaRef={handleAreaRef}
+          />
+        ) : null}
+        {dropTarget ? (
+          <DropIndicator dropTarget={dropTarget} containerRef={containerRef} />
+        ) : null}
+      </div>
+    </DndContext>
+  );
+}
+
+function BlockHandleUI({
+  editor,
+  block,
+  containerRef,
+  handleAreaRef,
+}: {
+  editor: Editor;
+  block: ActiveBlock;
+  containerRef: React.RefObject<HTMLDivElement | null>;
+  handleAreaRef: React.RefObject<HTMLDivElement | null>;
+}) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const wasDraggingRef = useRef(false);
+  const dragId = block.pos;
+
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: dragId,
+  });
+
+  useEffect(() => {
+    if (isDragging) {
+      wasDraggingRef.current = true;
+    } else if (wasDraggingRef.current) {
+      const t = window.setTimeout(() => {
+        wasDraggingRef.current = false;
+      }, 80);
+      return () => window.clearTimeout(t);
+    }
+  }, [isDragging]);
+
+  const containerRect = containerRef.current?.getBoundingClientRect();
+  if (!containerRect) return null;
+
+  const top = block.rect.top - containerRect.top;
+  const HANDLE_W = 56;
+  const ideal = block.rect.left - containerRect.left - HANDLE_W;
+  const left = Math.max(ideal, 0);
+
+  const insertBelow = () => {
+    const insertPos = block.pos + block.node.nodeSize;
+    editor
+      .chain()
+      .focus()
+      .insertContentAt(insertPos, { type: 'paragraph' })
+      .setTextSelection(insertPos + 1)
+      .run();
+  };
+
+  const handleGripClick = (e: ReactMouseEvent) => {
+    if (wasDraggingRef.current) {
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
+    setMenuOpen((prev) => !prev);
+  };
+
+  return (
+    <div
+      ref={handleAreaRef}
+      className={cn(
+        'absolute z-30 flex items-center gap-0.5 text-muted-foreground',
+        isDragging ? 'opacity-30' : 'opacity-100',
+        'transition-opacity',
+      )}
+      style={{ top, left, height: Math.min(block.rect.height, 28) }}
+    >
+      <button
+        type="button"
+        aria-label="Insert paragraph below"
+        className="flex size-6 items-center justify-center rounded hover:bg-accent hover:text-foreground"
+        onClick={insertBelow}
+      >
+        <Plus className="size-4" />
+      </button>
+      <Popover.Root open={menuOpen} onOpenChange={setMenuOpen}>
+        <Popover.Anchor asChild>
+          <div
+            ref={setNodeRef}
+            {...listeners}
+            {...attributes}
+            role="button"
+            tabIndex={0}
+            aria-label="Drag or open block menu"
+            className={cn(
+              'flex size-6 cursor-grab select-none items-center justify-center rounded outline-none',
+              'hover:bg-accent hover:text-foreground active:cursor-grabbing',
+            )}
+            onClick={handleGripClick}
+          >
+            <GripVertical className="pointer-events-none size-4" />
+          </div>
+        </Popover.Anchor>
+        <Popover.Portal>
+          <Popover.Content
+            sideOffset={4}
+            align="start"
+            className={cn(
+              'z-50 min-w-[180px] rounded-md border bg-popover p-1 shadow-md',
+              'data-[state=open]:animate-in data-[state=closed]:animate-out',
+              'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
+              'data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95',
+            )}
+            onCloseAutoFocus={(e) => e.preventDefault()}
+          >
+            <BlockMenu
+              editor={editor}
+              block={block}
+              onClose={() => setMenuOpen(false)}
+            />
+          </Popover.Content>
+        </Popover.Portal>
+      </Popover.Root>
+    </div>
+  );
+}
+
+function DropIndicator({
+  dropTarget,
+  containerRef,
+}: {
+  dropTarget: DropTarget;
+  containerRef: React.RefObject<HTMLDivElement | null>;
+}) {
+  const containerRect = containerRef.current?.getBoundingClientRect();
+  if (!containerRect) return null;
+  const lineY = dropTarget.before
+    ? dropTarget.rect.top - containerRect.top
+    : dropTarget.rect.bottom - containerRect.top;
+  const left = dropTarget.rect.left - containerRect.left;
+  return (
+    <div
+      className="pointer-events-none absolute z-20 h-0.5 rounded-full bg-primary"
+      style={{
+        top: lineY - 1,
+        left,
+        width: dropTarget.rect.width,
+      }}
+    />
+  );
+}
+
+const CALLOUT_VARIANTS: ReadonlyArray<{
+  value: CalloutVariant;
+  label: string;
+  Icon: typeof InfoIcon;
+}> = [
+  { value: 'info', label: 'Info', Icon: InfoIcon },
+  { value: 'check', label: 'Check', Icon: CircleCheck },
+  { value: 'note', label: 'Note', Icon: CircleAlert },
+  { value: 'tip', label: 'Tip', Icon: Lightbulb },
+  { value: 'warning', label: 'Warning', Icon: TriangleAlert },
+  { value: 'danger', label: 'Danger', Icon: OctagonAlert },
+  { value: 'custom', label: 'Custom', Icon: Pencil },
+];
+
+function BlockMenu({
+  editor,
+  block,
+  onClose,
+}: {
+  editor: Editor;
+  block: ActiveBlock;
+  onClose: () => void;
+}) {
+  const [submenu, setSubmenu] = useState<'change-to' | null>(null);
+  const isCallout = block.node.type.name === 'mdxCallout';
+
+  const items = useMemo(() => {
+    const list: Array<
+      | { kind: 'item'; label: string; Icon?: typeof InfoIcon; onClick: () => void; submenuKey?: 'change-to' }
+      | { kind: 'separator' }
+    > = [];
+    if (isCallout) {
+      list.push({
+        kind: 'item',
+        label: 'Change to',
+        Icon: ChevronRight,
+        submenuKey: 'change-to',
+        onClick: () => setSubmenu('change-to'),
+      });
+      list.push({ kind: 'separator' });
+    }
+    list.push({
+      kind: 'item',
+      label: 'Duplicate',
+      Icon: Copy,
+      onClick: () => {
+        editor
+          .chain()
+          .focus()
+          .insertContentAt(block.pos + block.node.nodeSize, block.node.toJSON())
+          .run();
+        onClose();
+      },
+    });
+    list.push({
+      kind: 'item',
+      label: 'Delete',
+      Icon: Trash2,
+      onClick: () => {
+        editor
+          .chain()
+          .focus()
+          .deleteRange({ from: block.pos, to: block.pos + block.node.nodeSize })
+          .run();
+        onClose();
+      },
+    });
+    return list;
+  }, [editor, block, isCallout, onClose]);
+
+  if (submenu === 'change-to') {
+    const currentVariant = block.node.attrs.variant as CalloutVariant;
+    return (
+      <div className="flex flex-col gap-0.5">
+        <button
+          type="button"
+          className="flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm text-muted-foreground hover:bg-accent"
+          onClick={() => setSubmenu(null)}
+        >
+          <ChevronRight className="size-4 rotate-180" />
+          Back
+        </button>
+        <div className="px-2 pt-1 pb-0.5 text-xs text-muted-foreground">
+          Change to
+        </div>
+        {CALLOUT_VARIANTS.map(({ value, label, Icon }) => (
+          <button
+            key={value}
+            type="button"
+            className={cn(
+              'flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent',
+              value === currentVariant && 'bg-accent',
+            )}
+            onClick={() => {
+              editor
+                .chain()
+                .focus()
+                .setNodeSelection(block.pos)
+                .updateAttributes('mdxCallout', { variant: value })
+                .run();
+              onClose();
+            }}
+          >
+            <Icon className="size-4" />
+            {label}
+          </button>
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-0.5">
+      {items.map((item, i) => {
+        if (item.kind === 'separator') {
+          return <div key={i} className="my-1 h-px bg-border" />;
+        }
+        const Icon = item.Icon;
+        return (
+          <button
+            key={i}
+            type="button"
+            className="flex w-full items-center justify-between gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent"
+            onClick={item.onClick}
+          >
+            <span className="flex items-center gap-2">
+              {Icon && item.label !== 'Change to' ? (
+                <Icon className="size-4" />
+              ) : null}
+              {item.label}
+            </span>
+            {item.submenuKey ? <ChevronRight className="size-4" /> : null}
+          </button>
+        );
+      })}
+    </div>
+  );
+}

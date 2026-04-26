@@ -4,6 +4,7 @@ import { StarterKit } from '@tiptap/starter-kit';
 import { mdxToTiptapDoc } from '@/lib/mdx/mdastToTiptap';
 import { tiptapDocToMdx } from '@/lib/mdx/tiptapToMdx';
 import { cn } from '@/lib/utils';
+import { EditorWithBlockHandle } from './BlockHandle';
 import { MdxCallout } from './MdxCalloutNode';
 import { MdxRaw } from './MdxRawNode';
 
@@ -55,8 +56,12 @@ export function MdxEditor({
   }, [editor]);
 
   return (
-    <div className={cn('mdx-prose mx-auto max-w-3xl px-8 py-10', className)}>
-      <EditorContent editor={editor} />
+    <div className={cn('mdx-prose mx-auto max-w-3xl py-10', className)}>
+      <EditorWithBlockHandle editor={onSourceChange ? editor : null}>
+        <div className="px-16">
+          <EditorContent editor={editor} />
+        </div>
+      </EditorWithBlockHandle>
     </div>
   );
 }

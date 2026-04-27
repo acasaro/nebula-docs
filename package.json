@@ -18,6 +18,9 @@
     "firebase": "pnpm dlx firebase-tools",
     "deploy:rules": "pnpm dlx firebase-tools deploy --only firestore:rules",
     "deploy:functions": "pnpm dlx firebase-tools deploy --only functions",
+    "icons:build": "pnpm --filter @nebula/firebase build:icons",
+    "icons:clean": "pnpm --filter @nebula/firebase clean:icons",
+    "icons:deploy": "pnpm -w run icons:build && pnpm dlx firebase-tools deploy --only hosting:icons && pnpm -w run icons:clean",
     "emulators": "pnpm dlx firebase-tools emulators:start --only auth,firestore,functions"
   },
   "pnpm": {

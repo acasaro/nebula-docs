@@ -9,7 +9,10 @@
     ".": "./src/index.ts"
   },
   "scripts": {
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "typecheck:scripts": "tsc --noEmit -p tsconfig.scripts.json",
+    "build:icons": "tsx scripts/build-icons.ts",
+    "clean:icons": "rm -rf public/icons public/manifest"
   },
   "dependencies": {
     "@nebula/schemas": "workspace:*",
@@ -18,7 +21,13 @@
     "zod": "^4.1.13"
   },
   "devDependencies": {
+    "@material-design-icons/svg": "^0.14.13",
+    "@material-symbols/svg-400": "^0.34.0",
+    "@types/node": "^22.10.0",
     "@types/react": "^19.2.7",
+    "lucide-static": "^0.545.0",
+    "svgo": "^3.3.2",
+    "tsx": "^4.19.2",
     "typescript": "^5.9.3"
   },
   "peerDependencies": {

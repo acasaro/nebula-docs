@@ -1,5 +1,14 @@
 {
   "projects": {
     "default": "mcoe-d"
+  },
+  "targets": {
+    "mcoe-d": {
+      "hosting": {
+        "icons": [
+          "mcoe-icons"
+        ]
+      }
+    }
   }
 }

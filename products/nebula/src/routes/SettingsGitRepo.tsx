@@ -22,6 +22,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
+import { PageLoader } from '@/components/ui/PageLoader';
 import { useInstallations, type InstallationDoc } from '@/lib/installations';
 import {
   listBranches,
@@ -341,7 +342,9 @@ export function SettingsGitRepo() {
             Pick the docs repo Nebula edits and the branch it commits to.
           </p>
         </header>
-        <p className="text-sm text-muted-foreground">Loading…</p>
+        <div className="flex justify-center py-10">
+          <PageLoader size={48} />
+        </div>
       </div>
     );
   }

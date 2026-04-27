@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { InlineSpinner } from "@/components/ui/NebulaLoader";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useIconManifest } from "@/lib/iconManifest";
 import { cn } from "@/lib/utils";
@@ -260,7 +261,12 @@ function IconGrid({
   });
 
   if (!manifest) {
-    return <p className='p-2 text-xs text-muted-foreground'>Loading icons…</p>;
+    return (
+      <p className='flex items-center gap-2 p-2 text-xs text-muted-foreground'>
+        <InlineSpinner size={12} />
+        Loading icons…
+      </p>
+    );
   }
   if (filtered.length === 0) {
     return <p className='p-2 text-xs text-muted-foreground'>No icons match.</p>;

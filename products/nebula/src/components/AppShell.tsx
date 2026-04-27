@@ -22,7 +22,7 @@ export function AppShell() {
               ) : null}
               <div
                 className={cn(
-                  "flex flex-1 items-center gap-3 min-w-0 px-6",
+                  "flex flex-1 items-center gap-3 min-w-0 px-2.5",
                   !leading && "border-b",
                 )}>
                 {slot}

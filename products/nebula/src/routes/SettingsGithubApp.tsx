@@ -8,6 +8,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { PageLoader } from '@/components/ui/PageLoader';
 import { removeInstallation, useInstallations } from '@/lib/installations';
 
 const installUrl = import.meta.env.GITHUB_APP_INSTALL_URL;
@@ -58,7 +59,9 @@ export function SettingsGithubApp() {
         </CardHeader>
         <CardContent className="flex flex-col gap-2">
           {installs.status === 'loading' ? (
-            <p className="text-sm text-muted-foreground">Loading…</p>
+            <div className="flex justify-center py-6">
+              <PageLoader size={40} />
+            </div>
           ) : installs.installations.length === 0 ? null : (
             installs.installations.map((it) => (
               <div

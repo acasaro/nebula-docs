@@ -1,6 +1,4 @@
-import { Link } from 'react-router';
-import { ArrowRight, FolderTree, GitBranch, PenLine } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardAction,
@@ -8,22 +6,27 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from '@/components/ui/card';
-import { useGitSettings } from '@/lib/gitSettings';
+} from "@/components/ui/card";
+import { PageLoader } from "@/components/ui/PageLoader";
+import { useGitSettings } from "@/lib/gitSettings";
+import { ArrowRight, FolderTree, GitBranch, PenLine } from "lucide-react";
+import { Link } from "react-router";
 
 export function Home() {
   const settings = useGitSettings();
 
   return (
-    <div className="mx-auto flex max-w-3xl flex-col gap-6">
+    <div className='mx-auto flex max-w-3xl flex-col gap-6'>
       <header>
-        <h1 className="text-3xl font-semibold tracking-tight">Nebula</h1>
-        <p className="text-muted-foreground">Edit MDX, commit through a PR.</p>
+        <h1 className='text-3xl font-semibold tracking-tight'>Nebula</h1>
+        <p className='text-muted-foreground'>Edit MDX, commit through a PR.</p>
       </header>
 
-      {settings.status === 'loading' ? (
-        <p className="text-sm text-muted-foreground">Loading…</p>
-      ) : settings.status === 'missing' ? (
+      {settings.status === "loading" ? (
+        <div className='flex justify-center py-10'>
+          <PageLoader size={48} />
+        </div>
+      ) : settings.status === "missing" ? (
         <Card>
           <CardHeader>
             <CardTitle>No docs repo connected</CardTitle>
@@ -33,7 +36,7 @@ export function Home() {
           </CardHeader>
           <CardContent>
             <Button asChild>
-              <Link to="/settings/github-app">
+              <Link to='/settings/github-app'>
                 Get started
                 <ArrowRight />
               </Link>
@@ -43,26 +46,26 @@ export function Home() {
       ) : (
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <GitBranch className="size-4 text-primary" />
+            <CardTitle className='flex items-center gap-2'>
+              <GitBranch className='size-4 text-primary' />
               {settings.settings.owner}/{settings.settings.repo}
             </CardTitle>
             <CardDescription>
               Branch <code>{settings.settings.defaultBranch}</code>
               {settings.settings.docsSubdirectory ? (
                 <>
-                  {' · '}docs in{' '}
-                  <code className="inline-flex items-center gap-1">
-                    <FolderTree className="size-3" />
+                  {" · "}docs in{" "}
+                  <code className='inline-flex items-center gap-1'>
+                    <FolderTree className='size-3' />
                     {settings.settings.docsSubdirectory}
                   </code>
                 </>
               ) : null}
-              {' · '}installation {settings.settings.installationId}
+              {" · "}installation {settings.settings.installationId}
             </CardDescription>
             <CardAction>
-              <Button variant="outline" size="sm" asChild>
-                <Link to="/settings/git">Manage</Link>
+              <Button variant='outline' size='sm' asChild>
+                <Link to='/settings/git'>Manage</Link>
               </Button>
             </CardAction>
           </CardHeader>

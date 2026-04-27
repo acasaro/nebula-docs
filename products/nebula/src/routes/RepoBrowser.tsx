@@ -1,19 +1,13 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Navigate, useNavigate, useParams } from 'react-router';
-import {
-  ChevronDown,
-  ChevronRight,
-  Code2,
-  Eye,
-  Folder,
-} from 'lucide-react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { BranchPicker } from '@/components/BranchPicker';
-import { FileTypeIcon, isBinaryFile } from '@/components/FileTypeIcon';
-import { useHeaderLeading, useHeaderSlot } from '@/components/HeaderSlot';
-import { MdxEditor, normalizeMdx } from '@/components/mdx/MdxEditor';
-import { PublishMenu, type PublishChange } from '@/components/PublishMenu';
-import { cn } from '@/lib/utils';
+import { BranchPicker } from "@/components/BranchPicker";
+import { FileTypeIcon, isBinaryFile } from "@/components/FileTypeIcon";
+import { useHeaderLeading, useHeaderSlot } from "@/components/HeaderSlot";
+import { MdxEditor, normalizeMdx } from "@/components/mdx/MdxEditor";
+import { MintlifyNavTree } from "@/components/MintlifyNavTree";
+import { PublishMenu, type PublishChange } from "@/components/PublishMenu";
+import { InlineSpinner } from "@/components/ui/NebulaLoader";
+import { PageLoader } from "@/components/ui/PageLoader";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useDocsConfig } from "@/lib/docsConfig";
 import {
   commitFiles,
   createBranch,
@@ -21,9 +15,13 @@ import {
   fetchFileContent,
   fetchRepoTree,
   listBranches,
-} from '@/lib/githubApi';
-import { useGitSettings } from '@/lib/gitSettings';
-import { buildTree, type TreeNode } from '@/lib/repoTree';
+} from "@/lib/githubApi";
+import { useGitSettings } from "@/lib/gitSettings";
+import { buildTree, type TreeNode } from "@/lib/repoTree";
+import { cn } from "@/lib/utils";
+import { ChevronDown, ChevronRight, Code2, Eye, Folder } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Navigate, useNavigate, useParams } from "react-router";
 
 interface FileEntry {
   /** Canonical content from GitHub, normalized through the MDX serializer
@@ -37,10 +35,10 @@ interface FileEntry {
 }
 
 function isMdxFile(name: string): boolean {
-  return name.endsWith('.mdx') || name.endsWith('.md');
+  return name.endsWith(".mdx") || name.endsWith(".md");
 }
 
-type ViewMode = 'visual' | 'source';
+type ViewMode = "visual" | "source";
 
 interface TreeItemProps {
   node: TreeNode;
@@ -50,32 +48,25 @@ interface TreeItemProps {
   hideExtensions?: boolean;
 }
 
-function TreeItem({
-  node,
-  depth,
-  selectedPath,
-  onSelect,
-  hideExtensions = false,
-}: TreeItemProps) {
+function TreeItem({ node, depth, selectedPath, onSelect, hideExtensions = false }: TreeItemProps) {
   const [expanded, setExpanded] = useState(false);
 
-  if (node.type === 'file') {
+  if (node.type === "file") {
     const isSelected = selectedPath === node.fullPath;
     const display = hideExtensions ? stripExtension(node.name) : node.name;
     return (
       <button
-        type="button"
+        type='button'
         onClick={() => onSelect(node.fullPath)}
         className={cn(
-          'flex w-full items-center gap-1.5 rounded-md px-2 py-1 text-left text-sm transition-colors',
+          "flex w-full items-center gap-1.5 rounded-md px-2 py-1 text-left text-sm transition-colors",
           isSelected
-            ? 'bg-accent text-accent-foreground font-medium'
-            : 'hover:bg-accent/60 text-foreground/80',
+            ? "bg-accent text-accent-foreground font-medium"
+            : "hover:bg-accent/60 text-foreground/80",
         )}
-        style={{ paddingLeft: `${depth * 12 + 8}px` }}
-      >
+        style={{ paddingLeft: `${depth * 12 + 8}px` }}>
         <FileTypeIcon name={node.name} />
-        <span className="truncate">{display}</span>
+        <span className='truncate'>{display}</span>
       </button>
     );
   }
@@ -83,18 +74,17 @@ function TreeItem({
   return (
     <div>
       <button
-        type="button"
+        type='button'
         onClick={() => setExpanded((e) => !e)}
-        className="flex w-full items-center gap-1.5 rounded-md px-2 py-1 text-left text-sm text-foreground/80 transition-colors hover:bg-accent/60"
-        style={{ paddingLeft: `${depth * 12 + 4}px` }}
-      >
+        className='flex w-full items-center gap-1.5 rounded-md px-2 py-1 text-left text-sm text-foreground/80 transition-colors hover:bg-accent/60'
+        style={{ paddingLeft: `${depth * 12 + 4}px` }}>
         {expanded ? (
-          <ChevronDown className="size-3.5 shrink-0 text-muted-foreground" />
+          <ChevronDown className='size-3.5 shrink-0 text-muted-foreground' />
         ) : (
-          <ChevronRight className="size-3.5 shrink-0 text-muted-foreground" />
+          <ChevronRight className='size-3.5 shrink-0 text-muted-foreground' />
         )}
-        <Folder className="size-3.5 shrink-0 text-muted-foreground" />
-        <span className="truncate font-medium">{node.name}</span>
+        <Folder className='size-3.5 shrink-0 text-muted-foreground' />
+        <span className='truncate font-medium'>{node.name}</span>
       </button>
       {expanded ? (
         <div>
@@ -115,7 +105,7 @@ function TreeItem({
 }
 
 function stripExtension(name: string): string {
-  const idx = name.lastIndexOf('.');
+  const idx = name.lastIndexOf(".");
   return idx > 0 ? name.slice(0, idx) : name;
 }
 
@@ -128,27 +118,31 @@ interface FileHeaderProps {
 
 function FileHeader({ path, mode, onModeChange, dirty }: FileHeaderProps) {
   return (
-    <div className="flex flex-1 items-center justify-between gap-3 min-w-0 text-xs font-mono text-muted-foreground">
-      <span className="truncate">
-        {path}
-        {dirty ? <span className="ml-2 text-amber-500" aria-label="unsaved">●</span> : null}
-      </span>
+    <div className='flex flex-1 items-center gap-3 min-w-0 text-xs font-mono text-muted-foreground'>
       {mode && onModeChange ? (
-        <div className="flex items-center gap-0.5 rounded-md border bg-background p-0.5">
+        <div className='flex shrink-0 items-center gap-0.5 rounded-md border bg-background p-0.5'>
           <ModeButton
-            active={mode === 'visual'}
-            onClick={() => onModeChange('visual')}
-            icon={<Eye className="size-3.5" />}
-            label="Visual"
+            active={mode === "visual"}
+            onClick={() => onModeChange("visual")}
+            icon={<Eye className='size-3.5' />}
+            label='Visual'
           />
           <ModeButton
-            active={mode === 'source'}
-            onClick={() => onModeChange('source')}
-            icon={<Code2 className="size-3.5" />}
-            label="Source"
+            active={mode === "source"}
+            onClick={() => onModeChange("source")}
+            icon={<Code2 className='size-3.5' />}
+            label='Source'
           />
         </div>
       ) : null}
+      <span className='truncate'>
+        {path}
+        {dirty ? (
+          <span className='ml-2 text-amber-500' aria-label='unsaved'>
+            ●
+          </span>
+        ) : null}
+      </span>
     </div>
   );
 }
@@ -166,18 +160,16 @@ function ModeButton({
 }) {
   return (
     <button
-      type="button"
+      type='button'
       onClick={onClick}
-      className={cn(
-        'flex items-center gap-1 rounded-sm px-2 py-1 font-sans text-xs transition-colors',
-        active
-          ? 'bg-accent text-accent-foreground'
-          : 'text-muted-foreground hover:text-foreground',
-      )}
+      aria-label={label}
       aria-pressed={active}
-    >
+      title={label}
+      className={cn(
+        "flex size-7 items-center justify-center rounded-md transition-colors",
+        active ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:text-foreground",
+      )}>
       {icon}
-      {label}
     </button>
   );
 }
@@ -203,24 +195,28 @@ function FileViewer({
 }: FileViewerProps) {
   if (!path) {
     return (
-      <div className="flex h-full items-center justify-center p-8 text-sm text-muted-foreground">
+      <div className='flex h-full items-center justify-center p-8 text-sm text-muted-foreground'>
         Pick a file from the tree to open it.
       </div>
     );
   }
   if (loading) {
-    return <div className="p-6 text-sm text-muted-foreground">Loading {path}…</div>;
+    return (
+      <div className='flex h-full items-center justify-center p-8'>
+        <PageLoader ringStyle='crisp' />
+      </div>
+    );
   }
   if (error) {
     return (
-      <div className="p-6 text-sm text-destructive">
+      <div className='p-6 text-sm text-destructive'>
         Failed to load {path}: {error}
       </div>
     );
   }
   if (content === null && isBinaryFile(path)) {
     return (
-      <div className="flex flex-1 items-center justify-center p-8 text-sm text-muted-foreground">
+      <div className='flex flex-1 items-center justify-center p-8 text-sm text-muted-foreground'>
         Binary file — preview not available.
       </div>
     );
@@ -228,8 +224,8 @@ function FileViewer({
   if (content === null) return null;
 
   if (isMdxFile(path)) {
-    return mode === 'visual' ? (
-      <div className="flex-1 overflow-auto bg-background">
+    return mode === "visual" ? (
+      <div className='flex-1 overflow-auto bg-background'>
         <MdxEditor
           key={`${path}:${revertNonce}`}
           source={content}
@@ -237,14 +233,14 @@ function FileViewer({
         />
       </div>
     ) : (
-      <pre className="flex-1 overflow-auto whitespace-pre-wrap break-words p-6 font-mono text-xs leading-relaxed text-foreground/90">
+      <pre className='flex-1 overflow-auto whitespace-pre-wrap break-words p-6 font-mono text-xs leading-relaxed text-foreground/90'>
         {content}
       </pre>
     );
   }
 
   return (
-    <pre className="flex-1 overflow-auto whitespace-pre-wrap break-words p-6 font-mono text-xs leading-relaxed text-foreground/90">
+    <pre className='flex-1 overflow-auto whitespace-pre-wrap break-words p-6 font-mono text-xs leading-relaxed text-foreground/90'>
       {content}
     </pre>
   );
@@ -270,16 +266,21 @@ function FileTreePanel({
   hideExtensions,
 }: FileTreePanelProps) {
   if (loading) {
-    return <p className="px-3 py-2 text-sm text-muted-foreground">Loading tree…</p>;
+    return (
+      <p className='flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground'>
+        <InlineSpinner size={14} />
+        Loading tree…
+      </p>
+    );
   }
   if (error) {
-    return <p className="px-3 py-2 text-sm text-destructive">{error}</p>;
+    return <p className='px-3 py-2 text-sm text-destructive'>{error}</p>;
   }
   if (tree.length === 0) {
-    return <p className="px-3 py-2 text-sm text-muted-foreground">{emptyMessage}</p>;
+    return <p className='px-3 py-2 text-sm text-muted-foreground'>{emptyMessage}</p>;
   }
   return (
-    <div className="px-3 py-2">
+    <div className='px-3 py-2'>
       {tree.map((node) => (
         <TreeItem
           key={node.fullPath}
@@ -300,7 +301,7 @@ export function RepoBrowser() {
   const settings = useGitSettings();
 
   const branchParam = (params.branch as string | undefined) ?? null;
-  const splatPath = (params['*'] as string | undefined) ?? '';
+  const splatPath = (params["*"] as string | undefined) ?? "";
   const selectedPath = splatPath || null;
 
   const [allPaths, setAllPaths] = useState<string[]>([]);
@@ -312,7 +313,7 @@ export function RepoBrowser() {
   const fetchedPathsRef = useRef<Set<string>>(new Set());
   const [fileLoading, setFileLoading] = useState(false);
   const [fileError, setFileError] = useState<string | null>(null);
-  const [mode, setMode] = useState<ViewMode>('visual');
+  const [mode, setMode] = useState<ViewMode>("visual");
 
   const currentBranch = branchParam;
   const [branches, setBranches] = useState<string[]>([]);
@@ -348,12 +349,17 @@ export function RepoBrowser() {
         .map(([path]) => path),
     [files],
   );
-  const isCurrentDirty = currentEntry
-    ? currentEntry.original !== currentEntry.draft
-    : false;
+  const isCurrentDirty = currentEntry ? currentEntry.original !== currentEntry.draft : false;
 
-  const active = settings.status === 'ready' ? settings.settings : null;
+  const active = settings.status === "ready" ? settings.settings : null;
   const matchesActive = !!active;
+
+  const docsConfigState = useDocsConfig({
+    installationId: active?.installationId ?? null,
+    owner: active?.owner ?? null,
+    repo: active?.repo ?? null,
+    ref: currentBranch,
+  });
 
   useEffect(() => {
     if (!active || !currentBranch) return;
@@ -368,7 +374,7 @@ export function RepoBrowser() {
       })
       .catch((err) => {
         if (cancelled) return;
-        setTreeError(err instanceof Error ? err.message : 'Failed to load tree.');
+        setTreeError(err instanceof Error ? err.message : "Failed to load tree.");
       })
       .finally(() => {
         if (!cancelled) setTreeLoading(false);
@@ -416,18 +422,10 @@ export function RepoBrowser() {
     let cancelled = false;
     setFileLoading(true);
     setFileError(null);
-    fetchFileContent(
-      active.installationId,
-      active.owner,
-      active.repo,
-      selectedPath,
-      currentBranch,
-    )
+    fetchFileContent(active.installationId, active.owner, active.repo, selectedPath, currentBranch)
       .then(({ content, sha }) => {
         if (cancelled) return;
-        const normalized = isMdxFile(selectedPath)
-          ? normalizeMdx(content)
-          : content;
+        const normalized = isMdxFile(selectedPath) ? normalizeMdx(content) : content;
         setFiles((prev) => ({
           ...prev,
           [selectedPath]: { original: normalized, draft: normalized, sha, revertNonce: 0 },
@@ -436,7 +434,7 @@ export function RepoBrowser() {
       .catch((err) => {
         if (cancelled) return;
         fetchedPathsRef.current.delete(selectedPath);
-        setFileError(err instanceof Error ? err.message : 'Failed to load file.');
+        setFileError(err instanceof Error ? err.message : "Failed to load file.");
       })
       .finally(() => {
         if (!cancelled) setFileLoading(false);
@@ -502,11 +500,7 @@ export function RepoBrowser() {
     navigateToBranch(branch, true);
   };
 
-  const handleCreateBranch = async (
-    name: string,
-    base: string,
-    bringChanges: boolean,
-  ) => {
+  const handleCreateBranch = async (name: string, base: string, bringChanges: boolean) => {
     if (!active) return;
     await createBranch(active.installationId, active.owner, active.repo, base, name);
     setBranches((prev) => (prev.includes(name) ? prev : [...prev, name].sort()));
@@ -529,9 +523,7 @@ export function RepoBrowser() {
       }
       if (changes.length === 0) return;
       const message =
-        changes.length === 1
-          ? `Update ${changes[0]!.path}`
-          : `Update ${changes.length} files`;
+        changes.length === 1 ? `Update ${changes[0]!.path}` : `Update ${changes.length} files`;
       await commitFiles(
         active.installationId,
         active.owner,
@@ -549,12 +541,10 @@ export function RepoBrowser() {
         return next;
       });
       setSaveMessage(
-        `Saved ${changes.length} file${changes.length === 1 ? '' : 's'} to ${currentBranch}.`,
+        `Saved ${changes.length} file${changes.length === 1 ? "" : "s"} to ${currentBranch}.`,
       );
     } catch (err) {
-      setSaveMessage(
-        err instanceof Error ? `Save failed: ${err.message}` : 'Save failed.',
-      );
+      setSaveMessage(err instanceof Error ? `Save failed: ${err.message}` : "Save failed.");
     } finally {
       setSaving(false);
     }
@@ -580,7 +570,7 @@ export function RepoBrowser() {
       );
       setSaveMessage(`Opened PR #${number}: ${url}`);
     } catch (err) {
-      const detail = err instanceof Error ? err.message : 'Failed to create PR.';
+      const detail = err instanceof Error ? err.message : "Failed to create PR.";
       setSaveMessage(`PR failed: ${detail}`);
       throw err instanceof Error ? err : new Error(detail);
     } finally {
@@ -589,43 +579,73 @@ export function RepoBrowser() {
   };
 
   const publishChanges = useMemo<PublishChange[]>(
-    () => dirtyPaths.map((path) => ({ path, status: 'modified' as const })),
+    () => dirtyPaths.map((path) => ({ path, status: "modified" as const })),
     [dirtyPaths],
   );
 
   const headerSlot = useMemo(() => {
-    const fileNode = selectedPath ? (
-      <FileHeader
-        path={selectedPath}
-        mode={isMdxFile(selectedPath) ? mode : null}
-        onModeChange={isMdxFile(selectedPath) ? setMode : undefined}
-        dirty={isCurrentDirty}
-      />
-    ) : (
-      <div className="flex-1" />
-    );
-    if (!active || !currentBranch) return fileNode;
+    const showModeToggle = selectedPath && isMdxFile(selectedPath);
     return (
       <>
-        {fileNode}
-        <PublishMenu
-          currentBranch={currentBranch}
-          defaultBranch={active.defaultBranch}
-          changes={publishChanges}
-          saving={saving}
-          creatingPr={creatingPr}
-          message={saveMessage}
-          onSave={handleSave}
-          onCreatePr={handleCreatePr}
-          onRevert={handleRevert}
-          onRevertAll={handleRevertAll}
-        />
+        {showModeToggle ? (
+          <div className='flex shrink-0 items-center gap-0.5 rounded-md border bg-background p-0.5'>
+            <ModeButton
+              active={mode === "visual"}
+              onClick={() => setMode("visual")}
+              icon={<Eye className='size-3.5' />}
+              label='Visual'
+            />
+            <ModeButton
+              active={mode === "source"}
+              onClick={() => setMode("source")}
+              icon={<Code2 className='size-3.5' />}
+              label='Source'
+            />
+          </div>
+        ) : null}
+        {active && currentBranch ? (
+          <BranchPicker
+            currentBranch={currentBranch}
+            defaultBranch={active.defaultBranch}
+            branches={branches}
+            loading={branchesLoading}
+            hasDirty={dirtyPaths.length > 0}
+            onSwitch={handleSwitchBranch}
+            onCreate={handleCreateBranch}
+          />
+        ) : null}
+        <div className='flex flex-1 items-center min-w-0 text-xs font-mono text-muted-foreground'>
+          {selectedPath ? (
+            <span className='truncate'>
+              {selectedPath}
+              {isCurrentDirty ? (
+                <span className='ml-2 text-amber-500' aria-label='unsaved'>
+                  ●
+                </span>
+              ) : null}
+            </span>
+          ) : null}
+        </div>
+        {active && currentBranch ? (
+          <PublishMenu
+            currentBranch={currentBranch}
+            defaultBranch={active.defaultBranch}
+            changes={publishChanges}
+            saving={saving}
+            creatingPr={creatingPr}
+            message={saveMessage}
+            onSave={handleSave}
+            onCreatePr={handleCreatePr}
+            onRevert={handleRevert}
+            onRevertAll={handleRevertAll}
+          />
+        ) : null}
       </>
     );
-    // handleSave / handleCreatePr close over current state but are
-    // re-derived each render; including them as deps would re-run the
-    // memo on every keystroke. The deps below cover the actual inputs
-    // those handlers read.
+    // handleSave / handleCreatePr / handleSwitchBranch / handleCreateBranch
+    // close over current state but are re-derived each render; including them
+    // as deps would re-run the memo on every keystroke. The deps below cover
+    // the actual inputs those handlers read.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     selectedPath,
@@ -633,6 +653,9 @@ export function RepoBrowser() {
     isCurrentDirty,
     active,
     currentBranch,
+    branches,
+    branchesLoading,
+    dirtyPaths.length,
     publishChanges,
     saving,
     creatingPr,
@@ -640,105 +663,98 @@ export function RepoBrowser() {
   ]);
   useHeaderSlot(headerSlot);
 
-  const headerLeading = useMemo(() => {
-    if (!active || !currentBranch) return null;
-    return (
-      <BranchPicker
-        currentBranch={currentBranch}
-        defaultBranch={active.defaultBranch}
-        branches={branches}
-        loading={branchesLoading}
-        hasDirty={dirtyPaths.length > 0}
-        onSwitch={handleSwitchBranch}
-        onCreate={handleCreateBranch}
-      />
-    );
-    // handleSwitchBranch / handleCreateBranch close over current state but
-    // are re-derived each render; including them as deps would re-run the
-    // memo and rebuild the BranchPicker subtree on every keystroke.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    active,
-    currentBranch,
-    branches,
-    branchesLoading,
-    dirtyPaths.length,
-  ]);
+  // Empty leading placeholder so AppShell shifts the main slot right by w-72.
+  // The repo sidebar (`-mt-14`) extends up to fill this column visually.
+  const headerLeading = useMemo(() => <span aria-hidden="true" />, []);
   useHeaderLeading(headerLeading);
 
-  const subdir = active?.docsSubdirectory ?? '';
+  const subdir = active?.docsSubdirectory ?? "";
 
   const filesTree = useMemo(() => buildTree(allPaths, subdir), [allPaths, subdir]);
   const navigationTree = useMemo(() => {
-    const docs = allPaths.filter((p) => p.endsWith('.mdx') || p.endsWith('.md'));
+    const docs = allPaths.filter((p) => p.endsWith(".mdx") || p.endsWith(".md"));
     return buildTree(docs, subdir);
   }, [allPaths, subdir]);
 
   const filesCount = useMemo(() => countFiles(filesTree), [filesTree]);
   const navCount = useMemo(() => countFiles(navigationTree), [navigationTree]);
 
-  if (settings.status === 'loading') {
+  if (settings.status === "loading") {
     return (
-      <div className="-m-8 flex h-[calc(100vh-3.5rem)] items-center justify-center text-sm text-muted-foreground">
-        Loading…
+      <div className='-m-8 flex h-[calc(100vh-3.5rem)] items-center justify-center'>
+        <PageLoader size={64} />
       </div>
     );
   }
 
-  if (settings.status === 'missing' || !active) {
-    return <Navigate to="/settings/git" replace />;
+  if (settings.status === "missing" || !active) {
+    return <Navigate to='/settings/git' replace />;
   }
 
   return (
-    <div className="-m-8 flex h-[calc(100vh-3.5rem)] min-h-0">
-      <aside className="flex w-72 shrink-0 flex-col overflow-hidden border-r bg-muted/30">
+    <div className='-m-8 flex h-[calc(100vh-3.5rem)] min-h-0'>
+      <aside className='-mt-14 flex h-screen w-72 shrink-0 flex-col overflow-hidden border-r bg-muted/30'>
         {active.docsSubdirectory ? (
-          <div className="border-b border-border/40 px-4 py-2 text-xs text-muted-foreground">
+          <div className='border-b border-border/40 px-4 py-2 text-xs text-muted-foreground'>
             <code>{active.docsSubdirectory}</code>
           </div>
         ) : null}
 
-        <Tabs defaultValue="navigation" className="flex flex-1 flex-col overflow-hidden">
-          <TabsList className="mx-3 mt-2 grid w-auto grid-cols-2">
-            <TabsTrigger value="navigation">Navigation</TabsTrigger>
-            <TabsTrigger value="files">Files</TabsTrigger>
+        <Tabs defaultValue='navigation' className='flex flex-1 flex-col overflow-hidden gap-0'>
+          <TabsList className='grid h-11 w-full shrink-0 grid-cols-2 rounded-none border-b bg-transparent p-0'>
+            <TabsTrigger
+              value='navigation'
+              className='relative h-full rounded-none border-0 px-4 text-sm font-semibold text-muted-foreground transition-colors hover:text-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none after:absolute after:bottom-[-1px] after:left-0 after:right-0 after:h-0.5 after:bg-foreground after:opacity-0 data-[state=active]:after:opacity-100'>
+              Navigation
+            </TabsTrigger>
+            <TabsTrigger
+              value='files'
+              className='relative h-full rounded-none border-0 px-4 text-sm font-semibold text-muted-foreground transition-colors hover:text-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none after:absolute after:bottom-[-1px] after:left-0 after:right-0 after:h-0.5 after:bg-foreground after:opacity-0 data-[state=active]:after:opacity-100'>
+              Files
+            </TabsTrigger>
           </TabsList>
-          <TabsContent
-            value="navigation"
-            className="flex-1 overflow-y-auto"
-          >
-            <FileTreePanel
-              tree={navigationTree}
-              loading={treeLoading}
-              error={treeError}
-              emptyMessage={`No MDX files found${subdir ? ` in ${subdir}` : ''}.`}
-              selectedPath={selectedPath}
-              onSelect={handleSelectPath}
-              hideExtensions
-            />
+          <TabsContent value='navigation' className='flex-1 overflow-y-auto'>
+            {docsConfigState.loading ? (
+              <p className='px-3 py-2 text-sm text-muted-foreground'>Loading navigation…</p>
+            ) : docsConfigState.error ? (
+              <p className='px-3 py-2 text-sm text-destructive'>{docsConfigState.error}</p>
+            ) : docsConfigState.config ? (
+              <MintlifyNavTree
+                config={docsConfigState.config}
+                selectedPath={selectedPath}
+                onSelectPath={handleSelectPath}
+              />
+            ) : (
+              <FileTreePanel
+                tree={navigationTree}
+                loading={treeLoading}
+                error={treeError}
+                emptyMessage={`No docs.json found${subdir ? ` in ${subdir}` : ""}.`}
+                selectedPath={selectedPath}
+                onSelect={handleSelectPath}
+                hideExtensions
+              />
+            )}
           </TabsContent>
-          <TabsContent
-            value="files"
-            className="flex-1 overflow-y-auto"
-          >
+          <TabsContent value='files' className='flex-1 overflow-y-auto'>
             <FileTreePanel
               tree={filesTree}
               loading={treeLoading}
               error={treeError}
-              emptyMessage={`No files found${subdir ? ` in ${subdir}` : ''}.`}
+              emptyMessage={`No files found${subdir ? ` in ${subdir}` : ""}.`}
               selectedPath={selectedPath}
               onSelect={handleSelectPath}
             />
           </TabsContent>
         </Tabs>
 
-        <div className="border-t px-4 py-2 text-xs text-muted-foreground">
-          {navCount} doc{navCount === 1 ? '' : 's'} · {filesCount} file
-          {filesCount === 1 ? '' : 's'}
-          {truncated ? ' · tree truncated' : ''}
+        <div className='border-t px-4 py-2 text-xs text-muted-foreground'>
+          {navCount} doc{navCount === 1 ? "" : "s"} · {filesCount} file
+          {filesCount === 1 ? "" : "s"}
+          {truncated ? " · tree truncated" : ""}
         </div>
       </aside>
-      <main className="flex flex-1 flex-col overflow-hidden bg-background">
+      <main className='flex flex-1 flex-col overflow-hidden bg-background'>
         <FileViewer
           path={selectedPath}
           content={currentEntry?.draft ?? null}
@@ -756,7 +772,7 @@ export function RepoBrowser() {
 function countFiles(nodes: TreeNode[]): number {
   let n = 0;
   for (const node of nodes) {
-    if (node.type === 'file') n++;
+    if (node.type === "file") n++;
     else if (node.children) n += countFiles(node.children);
   }
   return n;

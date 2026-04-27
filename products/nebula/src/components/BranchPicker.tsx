@@ -10,6 +10,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { InlineSpinner } from '@/components/ui/NebulaLoader';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
@@ -47,13 +48,13 @@ export function BranchPicker({
           <button
             type="button"
             className={cn(
-              'flex w-full items-center gap-2 rounded-md border bg-background px-3 py-2',
+              'flex shrink-0 items-center gap-2 rounded-md border bg-background px-3 py-1.5',
               'text-sm font-medium transition-colors hover:bg-accent/60',
             )}
           >
             <GitBranch className="size-4 shrink-0 text-muted-foreground" />
             <span className="truncate">{currentBranch}</span>
-            <ChevronDown className="ml-auto size-3.5 shrink-0 text-muted-foreground" />
+            <ChevronDown className="size-3.5 shrink-0 text-muted-foreground" />
           </button>
         </Popover.Trigger>
         <Popover.Portal>
@@ -68,7 +69,8 @@ export function BranchPicker({
           >
             <div className="max-h-72 overflow-y-auto py-1">
               {loading ? (
-                <div className="px-3 py-2 text-sm text-muted-foreground">
+                <div className="flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground">
+                  <InlineSpinner size={14} />
                   Loading branches…
                 </div>
               ) : branches.length === 0 ? (

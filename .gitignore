@@ -5,7 +5,7 @@ node_modules/
 # Build outputs
 build/
 dist/
-lib/
+/packages/*/lib/
 out/
 .docusaurus/
 .cache-loader/

@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { Link, Navigate, useParams } from 'react-router';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Navigate, useNavigate, useParams } from 'react-router';
 import {
   ChevronDown,
   ChevronRight,
@@ -7,14 +7,6 @@ import {
   Eye,
   Folder,
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { BranchPicker } from '@/components/BranchPicker';
 import { FileTypeIcon, isBinaryFile } from '@/components/FileTypeIcon';
@@ -65,7 +57,7 @@ function TreeItem({
   onSelect,
   hideExtensions = false,
 }: TreeItemProps) {
-  const [expanded, setExpanded] = useState(depth < 2);
+  const [expanded, setExpanded] = useState(false);
 
   if (node.type === 'file') {
     const isSelected = selectedPath === node.fullPath;
@@ -287,7 +279,7 @@ function FileTreePanel({
     return <p className="px-3 py-2 text-sm text-muted-foreground">{emptyMessage}</p>;
   }
   return (
-    <div className="px-1 py-2">
+    <div className="px-3 py-2">
       {tree.map((node) => (
         <TreeItem
           key={node.fullPath}
@@ -303,27 +295,50 @@ function FileTreePanel({
 }
 
 export function RepoBrowser() {
-  const { owner, repo } = useParams<{ owner: string; repo: string }>();
+  const params = useParams();
+  const navigate = useNavigate();
   const settings = useGitSettings();
+
+  const branchParam = (params.branch as string | undefined) ?? null;
+  const splatPath = (params['*'] as string | undefined) ?? '';
+  const selectedPath = splatPath || null;
 
   const [allPaths, setAllPaths] = useState<string[]>([]);
   const [treeLoading, setTreeLoading] = useState(true);
   const [treeError, setTreeError] = useState<string | null>(null);
   const [truncated, setTruncated] = useState(false);
 
-  const [selectedPath, setSelectedPath] = useState<string | null>(null);
   const [files, setFiles] = useState<Record<string, FileEntry>>({});
   const fetchedPathsRef = useRef<Set<string>>(new Set());
   const [fileLoading, setFileLoading] = useState(false);
   const [fileError, setFileError] = useState<string | null>(null);
   const [mode, setMode] = useState<ViewMode>('visual');
 
-  const [currentBranch, setCurrentBranch] = useState<string | null>(null);
+  const currentBranch = branchParam;
   const [branches, setBranches] = useState<string[]>([]);
   const [branchesLoading, setBranchesLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [creatingPr, setCreatingPr] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
+
+  // Drop file caches when branch changes — same path may differ between branches.
+  const lastBranchRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (lastBranchRef.current !== null && lastBranchRef.current !== currentBranch) {
+      setFiles({});
+      fetchedPathsRef.current = new Set();
+      setSaveMessage(null);
+    }
+    lastBranchRef.current = currentBranch;
+  }, [currentBranch]);
+
+  const handleSelectPath = useCallback(
+    (path: string) => {
+      if (!currentBranch) return;
+      navigate(`/editor/${currentBranch}/~/${path}`);
+    },
+    [currentBranch, navigate],
+  );
 
   const currentEntry = selectedPath ? (files[selectedPath] ?? null) : null;
   const dirtyPaths = useMemo(
@@ -338,15 +353,10 @@ export function RepoBrowser() {
     : false;
 
   const active = settings.status === 'ready' ? settings.settings : null;
-  const matchesActive = active && active.owner === owner && active.repo === repo;
+  const matchesActive = !!active;
 
   useEffect(() => {
-    if (!active || !matchesActive) return;
-    if (currentBranch === null) setCurrentBranch(active.defaultBranch);
-  }, [active, matchesActive, currentBranch]);
-
-  useEffect(() => {
-    if (!active || !matchesActive || !currentBranch) return;
+    if (!active || !currentBranch) return;
     let cancelled = false;
     setTreeLoading(true);
     setTreeError(null);
@@ -479,13 +489,17 @@ export function RepoBrowser() {
     });
   };
 
+  const navigateToBranch = (nextBranch: string, keepPath: boolean) => {
+    if (keepPath && selectedPath) {
+      navigate(`/editor/${nextBranch}/~/${selectedPath}`);
+    } else {
+      navigate(`/editor/${nextBranch}`);
+    }
+  };
+
   const handleSwitchBranch = (branch: string) => {
     if (!active) return;
-    setCurrentBranch(branch);
-    // Drop cached file content — same path may differ between branches.
-    setFiles({});
-    fetchedPathsRef.current = new Set();
-    setSaveMessage(null);
+    navigateToBranch(branch, true);
   };
 
   const handleCreateBranch = async (
@@ -496,15 +510,11 @@ export function RepoBrowser() {
     if (!active) return;
     await createBranch(active.installationId, active.owner, active.repo, base, name);
     setBranches((prev) => (prev.includes(name) ? prev : [...prev, name].sort()));
-    setCurrentBranch(name);
-    if (!bringChanges) {
-      // Drop in-progress drafts so they stay on the prior branch.
-      setFiles({});
-      fetchedPathsRef.current = new Set();
+    if (bringChanges) {
+      // Dirty file drafts ride along — they're in our `files` map and will
+      // commit to the new branch when navigation lands there.
     }
-    // If bringChanges is true, dirty file drafts ride along — they're
-    // already in our `files` map and will commit to the new branch.
-    setSaveMessage(null);
+    navigateToBranch(name, true);
   };
 
   const handleSave = async () => {
@@ -679,33 +689,6 @@ export function RepoBrowser() {
     return <Navigate to="/settings/git" replace />;
   }
 
-  if (!matchesActive) {
-    return (
-      <div className="-m-8 flex h-[calc(100vh-3.5rem)] items-center justify-center p-8">
-        <Card className="max-w-md">
-          <CardHeader>
-            <CardTitle>Wrong repo</CardTitle>
-            <CardDescription>
-              Nebula's active repo is{' '}
-              <code>
-                {active.owner}/{active.repo}
-              </code>
-              , not <code>{owner}/{repo}</code>. Switch in Git settings to edit a
-              different repo.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button asChild>
-              <Link to={`/repo/${active.owner}/${active.repo}`}>
-                Open {active.owner}/{active.repo}
-              </Link>
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
   return (
     <div className="-m-8 flex h-[calc(100vh-3.5rem)] min-h-0">
       <aside className="flex w-72 shrink-0 flex-col overflow-hidden border-r bg-muted/30">
@@ -730,7 +713,7 @@ export function RepoBrowser() {
               error={treeError}
               emptyMessage={`No MDX files found${subdir ? ` in ${subdir}` : ''}.`}
               selectedPath={selectedPath}
-              onSelect={setSelectedPath}
+              onSelect={handleSelectPath}
               hideExtensions
             />
           </TabsContent>
@@ -744,7 +727,7 @@ export function RepoBrowser() {
               error={treeError}
               emptyMessage={`No files found${subdir ? ` in ${subdir}` : ''}.`}
               selectedPath={selectedPath}
-              onSelect={setSelectedPath}
+              onSelect={handleSelectPath}
             />
           </TabsContent>
         </Tabs>

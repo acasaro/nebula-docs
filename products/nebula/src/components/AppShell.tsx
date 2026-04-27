@@ -1,6 +1,5 @@
 import { HeaderSlotProvider } from "@/components/HeaderSlot";
 import { Sidebar } from "@/components/Sidebar";
-import { ThemeToggle } from "@/components/ThemeToggle";
 import { UserMenu } from "@/components/UserMenu";
 import { cn } from "@/lib/utils";
 import { useCurrentUser } from "@nebula/firebase";
@@ -29,7 +28,6 @@ export function AppShell() {
                 {slot}
               </div>
               <div className={cn("flex shrink-0 items-center gap-2 pr-6", !leading && "border-b")}>
-                <ThemeToggle />
                 {auth.status === "authenticated" ? <UserMenu user={auth.user} /> : null}
               </div>
             </header>

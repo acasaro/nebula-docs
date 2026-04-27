@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router';
 import { signOut, type User } from '@nebula/firebase';
-import { LogOut, Settings } from 'lucide-react';
+import { LogOut, Moon, Settings, Sun } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   DropdownMenu,
@@ -10,6 +10,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { useTheme } from '@/lib/theme';
+import { cn } from '@/lib/utils';
 
 function initialsFor(user: User): string {
   const source = user.displayName || user.email || '?';
@@ -27,6 +29,7 @@ interface UserMenuProps {
 
 export function UserMenu({ user }: UserMenuProps) {
   const navigate = useNavigate();
+  const { theme, setTheme } = useTheme();
 
   const handleSignOut = async () => {
     await signOut();
@@ -53,6 +56,45 @@ export function UserMenu({ user }: UserMenuProps) {
           <Settings />
           GitHub settings
         </DropdownMenuItem>
+        <div className="flex items-center justify-between px-2 py-1.5 text-sm">
+          <span>Theme</span>
+          <div className="flex items-center rounded-full border bg-muted/40 p-0.5">
+            <button
+              type="button"
+              aria-label="Light theme"
+              aria-pressed={theme === 'light'}
+              onClick={(e) => {
+                e.preventDefault();
+                setTheme('light');
+              }}
+              className={cn(
+                'flex size-7 items-center justify-center rounded-full transition-colors',
+                theme === 'light'
+                  ? 'bg-background text-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground',
+              )}
+            >
+              <Sun className="size-3.5" />
+            </button>
+            <button
+              type="button"
+              aria-label="Dark theme"
+              aria-pressed={theme === 'dark'}
+              onClick={(e) => {
+                e.preventDefault();
+                setTheme('dark');
+              }}
+              className={cn(
+                'flex size-7 items-center justify-center rounded-full transition-colors',
+                theme === 'dark'
+                  ? 'bg-background text-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground',
+              )}
+            >
+              <Moon className="size-3.5" />
+            </button>
+          </div>
+        </div>
         <DropdownMenuSeparator />
         <DropdownMenuItem variant="destructive" onSelect={handleSignOut}>
           <LogOut />

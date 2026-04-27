@@ -68,9 +68,7 @@ export function Home() {
           </CardHeader>
           <CardContent>
             <Button asChild>
-              <Link
-                to={`/repo/${settings.settings.owner}/${settings.settings.repo}`}
-              >
+              <Link to={`/editor/${settings.settings.defaultBranch}`}>
                 <PenLine />
                 Open editor
               </Link>

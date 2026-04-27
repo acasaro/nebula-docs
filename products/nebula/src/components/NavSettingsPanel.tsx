@@ -1,11 +1,27 @@
 import { Trash2, X } from 'lucide-react';
 import type { OpenNavSettings } from '@/components/NavTree';
+import {
+  GroupSettingsForm,
+  PageSettingsForm,
+  TabSettingsForm,
+} from '@/components/nav-settings';
 
 const PANEL_TITLE: Record<OpenNavSettings['kind'], string> = {
   page: 'Page settings',
   group: 'Group settings',
   tab: 'Tab settings',
 };
+
+function SettingsBody({ kind }: { kind: OpenNavSettings['kind'] }) {
+  switch (kind) {
+    case 'page':
+      return <PageSettingsForm />;
+    case 'group':
+      return <GroupSettingsForm />;
+    case 'tab':
+      return <TabSettingsForm />;
+  }
+}
 
 interface NavSettingsPanelProps {
   settings: OpenNavSettings;
@@ -64,10 +80,8 @@ export function NavSettingsPanel({ settings, onClose }: NavSettingsPanelProps) {
         <p className="text-xs uppercase tracking-wide text-muted-foreground">
           Editing
         </p>
-        <p className="mt-1 text-base font-semibold">{settings.title}</p>
-        <p className="mt-6 rounded-md border border-dashed border-border/60 px-3 py-6 text-center text-sm text-muted-foreground">
-          {PANEL_TITLE[settings.kind]} form coming next.
-        </p>
+        <p className="mb-6 mt-1 text-base font-semibold">{settings.title}</p>
+        <SettingsBody kind={settings.kind} />
       </div>
     </aside>
   );

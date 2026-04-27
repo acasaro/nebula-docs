@@ -1,6 +1,7 @@
 import {
   useEffect,
   useMemo,
+  useReducer,
   useRef,
   useState,
   type MouseEvent as ReactMouseEvent,
@@ -14,6 +15,7 @@ import {
   GripVertical,
   Info as InfoIcon,
   Lightbulb,
+  MoreVertical,
   OctagonAlert,
   Pencil,
   Plus,
@@ -33,6 +35,9 @@ import * as Popover from '@radix-ui/react-popover';
 import type { Editor } from '@tiptap/react';
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model';
 import type { CalloutVariant } from '@nebula/components';
+import { AttributesForm } from '@/components/AttributesForm';
+import { AttributesPopover } from '@/components/AttributesPopover';
+import { getBlockSchema, type BlockAttrSchema } from '@/lib/blockSchemas';
 import { cn } from '@/lib/utils';
 
 interface ActiveBlock {
@@ -62,9 +67,65 @@ export function EditorWithBlockHandle({
 }: EditorWithBlockHandleProps) {
   const [active, setActive] = useState<ActiveBlock | null>(null);
   const [dropTarget, setDropTarget] = useState<DropTarget | null>(null);
+  const [editing, setEditing] = useState<{
+    blockPos: number;
+    schema: BlockAttrSchema;
+  } | null>(null);
+  const [, forceEditingTick] = useReducer((n: number) => n + 1, 0);
   const containerRef = useRef<HTMLDivElement>(null);
   const handleAreaRef = useRef<HTMLDivElement>(null);
   const leaveTimerRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (!editing || !editor) return;
+    const handler = () => forceEditingTick();
+    editor.on('transaction', handler);
+    return () => {
+      editor.off('transaction', handler);
+    };
+  }, [editor, editing]);
+
+  useEffect(() => {
+    if (!editing || !editor) return;
+    const node = editor.view.state.doc.nodeAt(editing.blockPos);
+    if (!node || node.type.name !== editing.schema.blockType) {
+      setEditing(null);
+    }
+  }, [editing, editor]);
+
+  const editingNode =
+    editing && editor ? editor.view.state.doc.nodeAt(editing.blockPos) : null;
+  const editingDom =
+    editing && editor ? editor.view.nodeDOM(editing.blockPos) : null;
+  const editingAnchor = editingDom instanceof HTMLElement ? editingDom : null;
+  const editingAttrs = editingNode?.attrs ?? {};
+
+  const applyEditingPatch = (patch: Record<string, unknown>) => {
+    if (!editing || !editor) return;
+    editor.commands.command(({ tr }) => {
+      const node = tr.doc.nodeAt(editing.blockPos);
+      if (!node) return false;
+      tr.setNodeMarkup(editing.blockPos, undefined, { ...node.attrs, ...patch });
+      return true;
+    });
+  };
+
+  const deleteEditingBlock = () => {
+    if (!editing || !editor) return;
+    const node = editor.view.state.doc.nodeAt(editing.blockPos);
+    if (!node) {
+      setEditing(null);
+      return;
+    }
+    editor
+      .chain()
+      .deleteRange({
+        from: editing.blockPos,
+        to: editing.blockPos + node.nodeSize,
+      })
+      .run();
+    setEditing(null);
+  };
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -95,20 +156,18 @@ export function EditorWithBlockHandle({
     };
 
     const handler = (e: PointerEvent) => {
-      const handleArea = handleAreaRef.current;
-      const overHandle =
-        handleArea?.contains(e.target as Node) ||
-        (handleArea
-          ? (() => {
-              const r = handleArea.getBoundingClientRect();
-              return (
-                e.clientX >= r.left &&
-                e.clientX <= r.right &&
-                e.clientY >= r.top &&
-                e.clientY <= r.bottom
-              );
-            })()
-          : false);
+      const overEl = (el: HTMLElement | null) => {
+        if (!el) return false;
+        if (el.contains(e.target as Node)) return true;
+        const r = el.getBoundingClientRect();
+        return (
+          e.clientX >= r.left &&
+          e.clientX <= r.right &&
+          e.clientY >= r.top &&
+          e.clientY <= r.bottom
+        );
+      };
+      const overHandle = overEl(handleAreaRef.current);
 
       if (overHandle) {
         if (leaveTimerRef.current !== null) {
@@ -232,12 +291,33 @@ export function EditorWithBlockHandle({
             block={active}
             containerRef={containerRef}
             handleAreaRef={handleAreaRef}
+            onOpenEdit={(blockPos, schema) =>
+              setEditing({ blockPos, schema })
+            }
           />
         ) : null}
         {dropTarget ? (
           <DropIndicator dropTarget={dropTarget} containerRef={containerRef} />
         ) : null}
       </div>
+      {editing && editor ? (
+        <AttributesPopover
+          open={!!editing}
+          onOpenChange={(next) => {
+            if (!next) setEditing(null);
+          }}
+          anchorEl={editingAnchor}
+          title={editing.schema.title}
+          titleIcon={editing.schema.headerIcon}
+          onDelete={deleteEditingBlock}
+        >
+          <AttributesForm
+            schema={editing.schema}
+            values={editingAttrs}
+            onChange={applyEditingPatch}
+          />
+        </AttributesPopover>
+      ) : null}
     </DndContext>
   );
 }
@@ -247,15 +327,18 @@ function BlockHandleUI({
   block,
   containerRef,
   handleAreaRef,
+  onOpenEdit,
 }: {
   editor: Editor;
   block: ActiveBlock;
   containerRef: React.RefObject<HTMLDivElement | null>;
   handleAreaRef: React.RefObject<HTMLDivElement | null>;
+  onOpenEdit: (blockPos: number, schema: BlockAttrSchema) => void;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const wasDraggingRef = useRef(false);
   const dragId = block.pos;
+  const schema = getBlockSchema(block.node.type.name);
 
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: dragId,
@@ -279,6 +362,7 @@ function BlockHandleUI({
   const HANDLE_W = 56;
   const ideal = block.rect.left - containerRect.left - HANDLE_W;
   const left = Math.max(ideal, 0);
+  const rightLeft = block.rect.right - containerRect.left + 8;
 
   const insertBelow = () => {
     const insertPos = block.pos + block.node.nodeSize;
@@ -300,62 +384,83 @@ function BlockHandleUI({
   };
 
   return (
-    <div
-      ref={handleAreaRef}
-      className={cn(
-        'absolute z-30 flex items-center gap-0.5 text-muted-foreground',
-        isDragging ? 'opacity-30' : 'opacity-100',
-        'transition-opacity',
-      )}
-      style={{ top, left, height: Math.min(block.rect.height, 28) }}
-    >
-      <button
-        type="button"
-        aria-label="Insert paragraph below"
-        className="flex size-6 items-center justify-center rounded hover:bg-accent hover:text-foreground"
-        onClick={insertBelow}
+    <>
+      <div
+        ref={handleAreaRef}
+        className={cn(
+          'absolute z-30 flex items-center gap-0.5 text-muted-foreground',
+          isDragging ? 'opacity-30' : 'opacity-100',
+          'transition-opacity',
+        )}
+        style={{ top, left, height: Math.min(block.rect.height, 28) }}
       >
-        <Plus className="size-4" />
-      </button>
-      <Popover.Root open={menuOpen} onOpenChange={setMenuOpen}>
-        <Popover.Anchor asChild>
-          <div
-            ref={setNodeRef}
-            {...listeners}
-            {...attributes}
-            role="button"
-            tabIndex={0}
-            aria-label="Drag or open block menu"
-            className={cn(
-              'flex size-6 cursor-grab select-none items-center justify-center rounded outline-none',
-              'hover:bg-accent hover:text-foreground active:cursor-grabbing',
-            )}
-            onClick={handleGripClick}
+        <button
+          type="button"
+          aria-label="Insert paragraph below"
+          className="flex size-6 items-center justify-center rounded hover:bg-accent hover:text-foreground"
+          onClick={insertBelow}
+        >
+          <Plus className="size-4" />
+        </button>
+        <Popover.Root open={menuOpen} onOpenChange={setMenuOpen}>
+          <Popover.Anchor asChild>
+            <div
+              ref={setNodeRef}
+              {...listeners}
+              {...attributes}
+              role="button"
+              tabIndex={0}
+              aria-label="Drag or open block menu"
+              className={cn(
+                'flex size-6 cursor-grab select-none items-center justify-center rounded outline-none',
+                'hover:bg-accent hover:text-foreground active:cursor-grabbing',
+              )}
+              onClick={handleGripClick}
+            >
+              <GripVertical className="pointer-events-none size-4" />
+            </div>
+          </Popover.Anchor>
+          <Popover.Portal>
+            <Popover.Content
+              sideOffset={4}
+              align="start"
+              className={cn(
+                'z-50 min-w-[180px] rounded-md border bg-popover p-1 shadow-md',
+                'data-[state=open]:animate-in data-[state=closed]:animate-out',
+                'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
+                'data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95',
+              )}
+              onCloseAutoFocus={(e) => e.preventDefault()}
+            >
+              <BlockMenu
+                editor={editor}
+                block={block}
+                onClose={() => setMenuOpen(false)}
+              />
+            </Popover.Content>
+          </Popover.Portal>
+        </Popover.Root>
+      </div>
+      {schema && block.node.type.name !== 'mdxCard' ? (
+        <div
+          className={cn(
+            'absolute z-30 flex items-center text-muted-foreground',
+            isDragging ? 'opacity-30' : 'opacity-100',
+            'transition-opacity',
+          )}
+          style={{ top, left: rightLeft, height: Math.min(block.rect.height, 28) }}
+        >
+          <button
+            type="button"
+            aria-label={`Open ${schema.title}`}
+            className="flex size-6 items-center justify-center rounded hover:bg-accent hover:text-foreground"
+            onClick={() => onOpenEdit(block.pos, schema)}
           >
-            <GripVertical className="pointer-events-none size-4" />
-          </div>
-        </Popover.Anchor>
-        <Popover.Portal>
-          <Popover.Content
-            sideOffset={4}
-            align="start"
-            className={cn(
-              'z-50 min-w-[180px] rounded-md border bg-popover p-1 shadow-md',
-              'data-[state=open]:animate-in data-[state=closed]:animate-out',
-              'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
-              'data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95',
-            )}
-            onCloseAutoFocus={(e) => e.preventDefault()}
-          >
-            <BlockMenu
-              editor={editor}
-              block={block}
-              onClose={() => setMenuOpen(false)}
-            />
-          </Popover.Content>
-        </Popover.Portal>
-      </Popover.Root>
-    </div>
+            <MoreVertical className="size-4" />
+          </button>
+        </div>
+      ) : null}
+    </>
   );
 }
 

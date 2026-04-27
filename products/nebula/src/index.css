@@ -135,7 +135,18 @@
   @apply my-4 border-l-2 border-border pl-4 text-stone-600 dark:text-stone-400;
 }
 :where(.mdx-prose) pre {
-  @apply my-4 overflow-x-auto rounded-md border bg-muted/60 p-4 font-mono text-xs leading-relaxed;
+  @apply my-4 overflow-x-auto rounded-md border p-4 font-mono text-xs leading-relaxed;
+}
+/* Three different `<pre>` elements end up rendered for codeblocks:
+ *   1. Shiki preview      — `<pre class="shiki ...">` with inline bg
+ *   2. Editable raw pre   — `<pre class="bg-muted/60 ...">` (visible while editing)
+ *   3. Shiki loading pre  — `<pre class="bg-muted/60 ...">` (flashes before highlight)
+ * Each paints a slightly different shade than the page bg and reads as a
+ * faint gray bar. Drop the fill on all of them — the border + padding still
+ * demarcate the block, and the text colors are unaffected. !important is
+ * needed to beat Shiki's inline style and the Tailwind utility class. */
+:where(.mdx-prose) pre {
+  background: transparent !important;
 }
 :where(.mdx-prose) :not(pre) > code {
   @apply rounded bg-muted px-1.5 py-0.5 font-mono text-[0.85em];

@@ -2,6 +2,7 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router';
 import { isFirebaseConfigured } from '@/lib/firebase';
 import { AppShell } from '@/components/AppShell';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
+import { DevIconPicker } from '@/routes/DevIconPicker';
 import { Home } from '@/routes/Home';
 import { InstallCallback } from '@/routes/InstallCallback';
 import { NotConfigured } from '@/routes/NotConfigured';
@@ -27,6 +28,7 @@ export function App() {
             <Route path="settings/github-app" element={<SettingsGithubApp />} />
             <Route path="settings/git" element={<SettingsGitRepo />} />
             <Route path="install/callback" element={<InstallCallback />} />
+            <Route path="dev/icons" element={<DevIconPicker />} />
             {/* Legacy redirects */}
             <Route
               path="settings/github"

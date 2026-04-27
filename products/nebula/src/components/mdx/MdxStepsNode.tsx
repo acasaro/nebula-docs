@@ -1,4 +1,5 @@
-import { Plus } from 'lucide-react';
+import { useRef, useState } from 'react';
+import { EllipsisVertical, Plus } from 'lucide-react';
 import { Node, mergeAttributes } from '@tiptap/core';
 import {
   NodeViewContent,
@@ -6,8 +7,13 @@ import {
   ReactNodeViewRenderer,
   type NodeViewProps,
 } from '@tiptap/react';
-import { Step } from '@nebula/components';
+import { Icon, type IconLibrary, type IconType } from '@nebula/components';
+import { AttributesPopover } from '@/components/AttributesPopover';
+import { AttributesForm } from '@/components/AttributesForm';
+import { stepSchema } from '@/lib/blockSchemas/step';
 import { cn } from '@/lib/utils';
+
+type StepTitleSize = 'p' | 'h2' | 'h3' | 'h4';
 
 export const MdxSteps = Node.create({
   name: 'mdxSteps',
@@ -49,6 +55,9 @@ export const MdxStep = Node.create({
       title: { default: null },
       titleSize: { default: null },
       icon: { default: null },
+      iconLibrary: { default: null },
+      iconType: { default: null },
+      stepNumber: { default: null },
     };
   },
 
@@ -140,48 +149,171 @@ function MdxStepsView({ node, selected, editor, getPos }: NodeViewProps) {
   );
 }
 
-function MdxStepView({ node, selected, editor, getPos }: NodeViewProps) {
+function MdxStepView({
+  node,
+  selected,
+  editor,
+  getPos,
+  updateAttributes,
+  deleteNode,
+}: NodeViewProps) {
   const titleAttr = (node.attrs.title as string | null) ?? '';
-  const titleSize = (node.attrs.titleSize as string | null) ?? undefined;
-  const icon = (node.attrs.icon as string | null) ?? undefined;
+  const iconName = (node.attrs.icon as string | null) ?? undefined;
+  const iconLibrary = (node.attrs.iconLibrary as IconLibrary | null) ?? undefined;
+  const iconType = (node.attrs.iconType as IconType | null) ?? undefined;
+  const stepNumberOverride = node.attrs.stepNumber as string | number | null | undefined;
 
-  let stepNumber = 1;
+  const [attrOpen, setAttrOpen] = useState(false);
+  const stepRef = useRef<HTMLDivElement>(null);
+
+  let autoStepNumber = 1;
   let isLast = true;
+  let parentTitleSize: StepTitleSize | undefined;
   if (typeof getPos === 'function') {
     const pos = getPos();
     if (pos != null) {
       const $pos = editor.state.doc.resolve(pos);
       const indexInParent = $pos.index();
-      stepNumber = indexInParent + 1;
+      autoStepNumber = indexInParent + 1;
       const isLastInParent = indexInParent === $pos.parent.childCount - 1;
-      // When editable, an append button visually continues below; keep the
-      // connector line solid (don't taper) so the last step "connects" to it.
       isLast = isLastInParent && !editor.isEditable;
+      const parentTitleSizeAttr = $pos.parent.attrs.titleSize;
+      if (
+        parentTitleSizeAttr === 'p' ||
+        parentTitleSizeAttr === 'h2' ||
+        parentTitleSizeAttr === 'h3' ||
+        parentTitleSizeAttr === 'h4'
+      ) {
+        parentTitleSize = parentTitleSizeAttr;
+      }
     }
   }
 
-  const titleNode = titleAttr.trim() ? (
-    titleAttr
-  ) : (
-    <span className="text-muted-foreground/55" data-placeholder-title>
-      Step {stepNumber}
-    </span>
+  const ownTitleSize = node.attrs.titleSize as StepTitleSize | null;
+  const titleSize: StepTitleSize = ownTitleSize ?? parentTitleSize ?? 'p';
+
+  let stepNumber = autoStepNumber;
+  if (stepNumberOverride != null && stepNumberOverride !== '') {
+    const parsed = Number(stepNumberOverride);
+    if (Number.isFinite(parsed)) stepNumber = parsed;
+  }
+
+  const stopPm = (e: React.SyntheticEvent) => {
+    e.stopPropagation();
+  };
+
+  const iconNode = iconName ? (
+    <Icon
+      icon={iconName}
+      iconLibrary={iconLibrary}
+      iconType={iconType}
+      size={12}
+    />
+  ) : null;
+
+  const titleClass = cn(
+    'not-prose mt-2 w-full border-0 bg-transparent p-0 outline-none placeholder:text-muted-foreground/55',
+    titleSize === 'p' &&
+      'font-semibold text-base text-stone-900 dark:text-stone-200',
+    titleSize === 'h2' &&
+      'text-2xl font-bold text-stone-900 dark:text-stone-200',
+    titleSize === 'h3' &&
+      'text-xl font-bold text-stone-900 dark:text-stone-200',
+    titleSize === 'h4' &&
+      'text-lg font-bold text-stone-900 dark:text-stone-200',
   );
 
   return (
     <NodeViewWrapper
       data-mdx-step=""
-      className={cn(selected && 'rounded ring-2 ring-primary/40')}
+      className={cn(
+        'relative group/step-edit',
+        selected && 'rounded ring-2 ring-primary/40',
+      )}
     >
-      <Step
-        title={titleNode}
-        titleSize={titleSize as never}
-        icon={icon}
-        stepNumber={stepNumber}
-        isLast={isLast}
+      <div
+        ref={stepRef}
+        role="listitem"
+        className="group/step relative flex items-start pb-5"
+        data-component-part="step-item"
       >
-        <NodeViewContent />
-      </Step>
+        <div
+          aria-hidden="true"
+          contentEditable={false}
+          className={cn(
+            'absolute top-11 h-[calc(100%-2.75rem)] w-px',
+            isLast
+              ? 'bg-linear-to-b from-stone-200 via-80% via-stone-200 to-transparent dark:from-white/10 dark:via-white/10'
+              : 'bg-stone-200/70 dark:bg-white/10',
+          )}
+          data-component-part="step-line"
+        />
+        <div
+          aria-hidden="true"
+          contentEditable={false}
+          className="absolute -ml-3 py-2"
+          data-component-part="step-number"
+        >
+          <div className="relative flex size-7 shrink-0 items-center justify-center rounded-full bg-stone-50 font-semibold text-stone-900 text-xs dark:bg-white/10 dark:text-stone-50">
+            {iconNode ?? stepNumber}
+          </div>
+        </div>
+        <div className="w-full overflow-hidden pr-10 pl-8">
+          <input
+            value={titleAttr}
+            placeholder={`Step ${stepNumber}`}
+            onChange={(e) =>
+              updateAttributes({ title: e.target.value || null })
+            }
+            onClick={stopPm}
+            onMouseDown={stopPm}
+            className={titleClass}
+          />
+          <div
+            className="mt-2 text-stone-700 dark:text-stone-300"
+            data-component-part="step-content"
+          >
+            <NodeViewContent />
+          </div>
+        </div>
+      </div>
+
+      <div
+        contentEditable={false}
+        className="absolute top-2 right-2 z-10"
+      >
+        <button
+          type="button"
+          aria-label="Edit step attributes"
+          onMouseDown={stopPm}
+          onClick={(e) => {
+            stopPm(e);
+            setAttrOpen(true);
+          }}
+          className={cn(
+            'flex size-6 items-center justify-center rounded text-stone-400 transition-all dark:text-stone-500',
+            'opacity-0 group-hover/step-edit:opacity-100 hover:bg-stone-100 hover:text-stone-700 dark:hover:bg-stone-800 dark:hover:text-stone-200',
+            attrOpen && 'opacity-100',
+          )}
+        >
+          <EllipsisVertical className="size-4" />
+        </button>
+      </div>
+
+      <AttributesPopover
+        open={attrOpen}
+        onOpenChange={setAttrOpen}
+        anchorEl={stepRef.current}
+        title={stepSchema.title}
+        titleIcon={stepSchema.headerIcon}
+        onDelete={deleteNode}
+      >
+        <AttributesForm
+          schema={stepSchema}
+          values={node.attrs}
+          onChange={updateAttributes}
+        />
+      </AttributesPopover>
     </NodeViewWrapper>
   );
 }

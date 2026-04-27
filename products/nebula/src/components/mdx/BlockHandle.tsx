@@ -441,7 +441,9 @@ function BlockHandleUI({
           </Popover.Portal>
         </Popover.Root>
       </div>
-      {schema && block.node.type.name !== 'mdxCard' ? (
+      {schema &&
+      block.node.type.name !== 'mdxCard' &&
+      block.node.type.name !== 'mdxStep' ? (
         <div
           className={cn(
             'absolute z-30 flex items-center text-muted-foreground',

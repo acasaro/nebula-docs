@@ -5,7 +5,7 @@ import {
   ReactNodeViewRenderer,
   type NodeViewProps,
 } from '@tiptap/react';
-import { Callout, type CalloutVariant } from '@nebula/components';
+import { Callout, Icon, type CalloutVariant, type IconLibrary, type IconType } from '@nebula/components';
 import { cn } from '@/lib/utils';
 
 const PRESET_VARIANTS: ReadonlyArray<CalloutVariant> = [
@@ -43,6 +43,11 @@ export const MdxCallout = Node.create({
           'data-variant': attrs.variant,
         }),
       },
+      title: { default: null },
+      color: { default: null },
+      icon: { default: null },
+      iconLibrary: { default: null },
+      iconType: { default: null },
     };
   },
 
@@ -67,6 +72,14 @@ function MdxCalloutView({ node, selected }: NodeViewProps) {
   const variant = isCalloutVariant(node.attrs.variant)
     ? node.attrs.variant
     : 'note';
+  const title = (node.attrs.title as string | null) ?? undefined;
+  const iconName = (node.attrs.icon as string | null) ?? undefined;
+  const iconLibrary = (node.attrs.iconLibrary as IconLibrary | null) ?? undefined;
+  const iconType = (node.attrs.iconType as IconType | null) ?? undefined;
+
+  const iconElement = iconName ? (
+    <Icon icon={iconName} iconLibrary={iconLibrary} iconType={iconType} size={16} />
+  ) : undefined;
 
   return (
     <NodeViewWrapper
@@ -76,7 +89,7 @@ function MdxCalloutView({ node, selected }: NodeViewProps) {
         selected && 'rounded-2xl ring-2 ring-primary/40',
       )}
     >
-      <Callout variant={variant} className="my-0">
+      <Callout variant={variant} title={title} icon={iconElement} className="my-0">
         <NodeViewContent />
       </Callout>
     </NodeViewWrapper>

@@ -1,38 +1,28 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
-import { Link } from 'react-router';
-import { ArrowRight, CheckCircle2, Github, Settings as SettingsIcon } from 'lucide-react';
-import { useCurrentUser } from '@nebula/firebase';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Separator } from '@/components/ui/separator';
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { PageLoader } from "@/components/ui/PageLoader";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
-import { PageLoader } from '@/components/ui/PageLoader';
-import { useInstallations, type InstallationDoc } from '@/lib/installations';
-import {
-  listBranches,
-  listInstallationRepos,
-  type InstallationRepo,
-} from '@/lib/githubApi';
-import { saveGitSettings, useGitSettings, type GitSettings } from '@/lib/gitSettings';
+} from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
+import { Switch } from "@/components/ui/switch";
+import { listBranches, listInstallationRepos, type InstallationRepo } from "@/lib/githubApi";
+import { saveGitSettings, useGitSettings, type GitSettings } from "@/lib/gitSettings";
+import { useInstallations, type InstallationDoc } from "@/lib/installations";
+import { useCurrentUser } from "@nebula/firebase";
+import { ArrowRight, CheckCircle2, Github, Settings as SettingsIcon } from "lucide-react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { Link } from "react-router";
 
 const successBadgeClasses =
-  'bg-emerald-500/15 text-emerald-700 border-emerald-500/20 dark:text-emerald-400 dark:bg-emerald-500/20';
+  "bg-emerald-500/15 text-emerald-700 border-emerald-500/20 dark:text-emerald-400 dark:bg-emerald-500/20";
 
 interface GitRepoFormProps {
   installations: InstallationDoc[];
@@ -46,11 +36,11 @@ function GitRepoForm({ installations, initial }: GitRepoFormProps) {
     initial?.installationId ?? installations[0]!.installationId,
   );
   const [selectedRepo, setSelectedRepo] = useState<string>(
-    initial ? `${initial.owner}/${initial.repo}` : '',
+    initial ? `${initial.owner}/${initial.repo}` : "",
   );
-  const [selectedBranch, setSelectedBranch] = useState<string>(initial?.defaultBranch ?? '');
+  const [selectedBranch, setSelectedBranch] = useState<string>(initial?.defaultBranch ?? "");
   const [subdirEnabled, setSubdirEnabled] = useState<boolean>(!!initial?.docsSubdirectory);
-  const [subdir, setSubdir] = useState<string>(initial?.docsSubdirectory ?? '');
+  const [subdir, setSubdir] = useState<string>(initial?.docsSubdirectory ?? "");
 
   const [repos, setRepos] = useState<InstallationRepo[]>([]);
   const [reposLoading, setReposLoading] = useState(false);
@@ -79,7 +69,7 @@ function GitRepoForm({ installations, initial }: GitRepoFormProps) {
       })
       .catch((err) => {
         if (cancelled) return;
-        setReposError(err instanceof Error ? err.message : 'Failed to list repos.');
+        setReposError(err instanceof Error ? err.message : "Failed to list repos.");
       })
       .finally(() => {
         if (!cancelled) setReposLoading(false);
@@ -122,9 +112,9 @@ function GitRepoForm({ installations, initial }: GitRepoFormProps) {
     setSavedAt(null);
     setSaving(true);
     try {
-      if (auth.status !== 'authenticated') throw new Error('Sign in required.');
-      if (!selectedRepoMeta) throw new Error('Pick a repository.');
-      if (!selectedBranch) throw new Error('Pick a branch.');
+      if (auth.status !== "authenticated") throw new Error("Sign in required.");
+      if (!selectedRepoMeta) throw new Error("Pick a repository.");
+      if (!selectedBranch) throw new Error("Pick a branch.");
 
       await saveGitSettings(
         {
@@ -138,7 +128,7 @@ function GitRepoForm({ installations, initial }: GitRepoFormProps) {
       );
       setSavedAt(Date.now());
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Save failed.');
+      setError(err instanceof Error ? err.message : "Save failed.");
     } finally {
       setSaving(false);
     }
@@ -147,11 +137,11 @@ function GitRepoForm({ installations, initial }: GitRepoFormProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Github className="size-4" />
+        <CardTitle className='flex items-center gap-2'>
+          <Github className='size-4' />
           GitHub
           <Badge className={successBadgeClasses}>
-            <CheckCircle2 className="size-3" />
+            <CheckCircle2 className='size-3' />
             Active
           </Badge>
         </CardTitle>
@@ -161,22 +151,21 @@ function GitRepoForm({ installations, initial }: GitRepoFormProps) {
       </CardHeader>
       <Separator />
       <CardContent>
-        <form onSubmit={handleSave} className="flex flex-col gap-5">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="installation">GitHub organization</Label>
+        <form onSubmit={handleSave} className='flex flex-col gap-5'>
+          <div className='grid grid-cols-1 gap-4 sm:grid-cols-2'>
+            <div className='flex flex-col gap-1.5'>
+              <Label htmlFor='installation'>GitHub organization</Label>
               <Select
                 value={String(installationId)}
                 onValueChange={(v) => {
                   const next = Number(v);
                   if (next === installationId) return;
                   setInstallationId(next);
-                  setSelectedRepo('');
-                  setSelectedBranch('');
-                }}
-              >
-                <SelectTrigger id="installation" className="w-full">
-                  <SelectValue placeholder="Select organization" />
+                  setSelectedRepo("");
+                  setSelectedBranch("");
+                }}>
+                <SelectTrigger id='installation' className='w-full'>
+                  <SelectValue placeholder='Select organization' />
                 </SelectTrigger>
                 <SelectContent>
                   {installations.map((it) => (
@@ -188,25 +177,24 @@ function GitRepoForm({ installations, initial }: GitRepoFormProps) {
               </Select>
             </div>
 
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="repo">Repository</Label>
+            <div className='flex flex-col gap-1.5'>
+              <Label htmlFor='repo'>Repository</Label>
               <Select
                 value={selectedRepo}
                 onValueChange={(v) => {
                   if (v === selectedRepo) return;
                   setSelectedRepo(v);
-                  setSelectedBranch('');
+                  setSelectedBranch("");
                 }}
-                disabled={reposLoading || repos.length === 0}
-              >
-                <SelectTrigger id="repo" className="w-full">
+                disabled={reposLoading || repos.length === 0}>
+                <SelectTrigger id='repo' className='w-full'>
                   <SelectValue
                     placeholder={
                       reposLoading
-                        ? 'Loading…'
+                        ? "Loading…"
                         : repos.length === 0
-                          ? 'No repos accessible'
-                          : 'Select repository'
+                          ? "No repos accessible"
+                          : "Select repository"
                     }
                   />
                 </SelectTrigger>
@@ -218,23 +206,18 @@ function GitRepoForm({ installations, initial }: GitRepoFormProps) {
                   ))}
                 </SelectContent>
               </Select>
-              {reposError ? (
-                <p className="text-xs text-destructive">{reposError}</p>
-              ) : null}
+              {reposError ? <p className='text-xs text-destructive'>{reposError}</p> : null}
             </div>
           </div>
 
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="branch">Branch</Label>
+          <div className='flex flex-col gap-1.5'>
+            <Label htmlFor='branch'>Branch</Label>
             <Select
               value={selectedBranch}
               onValueChange={(v) => setSelectedBranch(v)}
-              disabled={branchesLoading || branches.length === 0}
-            >
-              <SelectTrigger id="branch" className="w-full">
-                <SelectValue
-                  placeholder={branchesLoading ? 'Loading…' : 'Select branch'}
-                />
+              disabled={branchesLoading || branches.length === 0}>
+              <SelectTrigger id='branch' className='w-full'>
+                <SelectValue placeholder={branchesLoading ? "Loading…" : "Select branch"} />
               </SelectTrigger>
               <SelectContent>
                 {branches.map((b) => (
@@ -246,41 +229,40 @@ function GitRepoForm({ installations, initial }: GitRepoFormProps) {
             </Select>
           </div>
 
-          <div className="flex flex-col gap-3">
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex flex-col gap-0.5">
-                <Label htmlFor="subdir-toggle" className="cursor-pointer">
+          <div className='flex flex-col gap-3'>
+            <div className='flex items-center justify-between gap-3'>
+              <div className='flex flex-col gap-0.5'>
+                <Label htmlFor='subdir-toggle' className='cursor-pointer'>
                   Docs are in a subdirectory
                 </Label>
-                <p className="text-xs text-muted-foreground">
-                  Required for monorepos like this one (
-                  <code>products/docs/docs</code>).
+                <p className='text-xs text-muted-foreground'>
+                  Required for monorepos like this one (<code>products/docs/docs</code>).
                 </p>
               </div>
               <Switch
-                id="subdir-toggle"
+                id='subdir-toggle'
                 checked={subdirEnabled}
                 onCheckedChange={(v) => {
                   setSubdirEnabled(v);
-                  if (!v) setSubdir('');
+                  if (!v) setSubdir("");
                 }}
               />
             </div>
             {subdirEnabled ? (
               <Input
-                placeholder="products/docs/docs"
+                placeholder='products/docs/docs'
                 value={subdir}
                 onChange={(e) => setSubdir(e.target.value)}
               />
             ) : null}
           </div>
 
-          {error ? <p className="text-sm text-destructive">{error}</p> : null}
-          {savedAt ? <p className="text-sm text-muted-foreground">Saved.</p> : null}
+          {error ? <p className='text-sm text-destructive'>{error}</p> : null}
+          {savedAt ? <p className='text-sm text-muted-foreground'>Saved.</p> : null}
 
-          <div className="flex justify-end pt-2">
-            <Button type="submit" disabled={saving}>
-              {saving ? 'Saving…' : 'Save changes'}
+          <div className='flex justify-end pt-2'>
+            <Button type='submit' disabled={saving}>
+              {saving ? "Saving…" : "Save changes"}
             </Button>
           </div>
         </form>
@@ -295,25 +277,25 @@ interface GithubAppCardProps {
 
 function GithubAppCard({ installations }: GithubAppCardProps) {
   const installed = installations.length > 0;
-  const accountList = installations.map((i) => i.account.login).join(', ');
+  const accountList = installations.map((i) => i.account.login).join(", ");
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Github className="size-4" />
+        <CardTitle className='flex items-center gap-2'>
+          <Github className='size-4' />
           Configure GitHub App
           {installed ? (
             <Badge className={successBadgeClasses}>
-              <CheckCircle2 className="size-3" />
+              <CheckCircle2 className='size-3' />
               Installed
             </Badge>
           ) : (
-            <Badge variant="secondary">Not installed</Badge>
+            <Badge variant='secondary'>Not installed</Badge>
           )}
-          <span className="ml-auto">
-            <Button asChild variant="ghost" size="icon-sm" title="Manage installations">
-              <Link to="/settings/github-app">
+          <span className='ml-auto'>
+            <Button asChild variant='ghost' size='icon-sm' title='Manage installations'>
+              <Link to='/settings/github-app'>
                 <SettingsIcon />
               </Link>
             </Button>
@@ -322,7 +304,7 @@ function GithubAppCard({ installations }: GithubAppCardProps) {
         <CardDescription>
           {installed
             ? `GitHub app installed to ${accountList}. Ready to sync documentation.`
-            : 'Install the GitHub app on a repo to enable Nebula to read and commit MDX.'}
+            : "Install the GitHub app on a repo to enable Nebula to read and commit MDX."}
         </CardDescription>
       </CardHeader>
     </Card>
@@ -333,35 +315,35 @@ export function SettingsGitRepo() {
   const installs = useInstallations();
   const settings = useGitSettings();
 
-  if (installs.status === 'loading' || settings.status === 'loading') {
+  if (installs.status === "loading" || settings.status === "loading") {
     return (
-      <div className="mx-auto flex max-w-3xl flex-col gap-6">
+      <div className='mx-auto flex max-w-3xl flex-col gap-6'>
         <header>
-          <h1 className="text-2xl font-semibold tracking-tight">Git settings</h1>
-          <p className="text-sm text-muted-foreground">
+          <h1 className='text-2xl font-semibold tracking-tight'>Git settings</h1>
+          <p className='text-sm text-muted-foreground'>
             Pick the docs repo Nebula edits and the branch it commits to.
           </p>
         </header>
-        <div className="flex justify-center py-10">
-          <PageLoader size={48} />
+        <div className='flex justify-center py-10'>
+          <PageLoader />
         </div>
       </div>
     );
   }
 
   return (
-    <div className="mx-auto flex max-w-3xl flex-col gap-10">
+    <div className='mx-auto flex max-w-3xl flex-col gap-10'>
       <header>
-        <h1 className="text-2xl font-semibold tracking-tight">Git settings</h1>
-        <p className="text-sm text-muted-foreground">
+        <h1 className='text-2xl font-semibold tracking-tight'>Git settings</h1>
+        <p className='text-sm text-muted-foreground'>
           Pick the docs repo Nebula edits and the branch it commits to.
         </p>
       </header>
 
-      <section className="flex flex-col gap-4">
+      <section className='flex flex-col gap-4'>
         <header>
-          <h2 className="text-base font-semibold tracking-tight">Repo settings</h2>
-          <p className="text-sm text-muted-foreground">Connect your docs repo</p>
+          <h2 className='text-base font-semibold tracking-tight'>Repo settings</h2>
+          <p className='text-sm text-muted-foreground'>Connect your docs repo</p>
         </header>
         {installs.installations.length === 0 ? (
           <Card>
@@ -373,7 +355,7 @@ export function SettingsGitRepo() {
             </CardHeader>
             <CardContent>
               <Button asChild>
-                <Link to="/settings/github-app">
+                <Link to='/settings/github-app'>
                   Go to GitHub app
                   <ArrowRight />
                 </Link>
@@ -383,15 +365,15 @@ export function SettingsGitRepo() {
         ) : (
           <GitRepoForm
             installations={installs.installations}
-            initial={settings.status === 'ready' ? settings.settings : null}
+            initial={settings.status === "ready" ? settings.settings : null}
           />
         )}
       </section>
 
-      <section className="flex flex-col gap-4">
+      <section className='flex flex-col gap-4'>
         <header>
-          <h2 className="text-base font-semibold tracking-tight">GitHub app</h2>
-          <p className="text-sm text-muted-foreground">
+          <h2 className='text-base font-semibold tracking-tight'>GitHub app</h2>
+          <p className='text-sm text-muted-foreground'>
             Install the GitHub app to enable automatic updates.
           </p>
         </header>

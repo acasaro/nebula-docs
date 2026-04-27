@@ -1,6 +1,3 @@
-import { ArrowRight, RefreshCw } from "lucide-react";
-import { useState } from "react";
-import { Link } from "react-router";
 import {
   ActivitySection,
   DashboardHeader,
@@ -8,15 +5,12 @@ import {
   type DashboardTab,
 } from "@/components/dashboard";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageLoader } from "@/components/ui/PageLoader";
 import { useDashboardData } from "@/lib/dashboard";
+import { ArrowRight, RefreshCw } from "lucide-react";
+import { useState } from "react";
+import { Link } from "react-router";
 
 export function DashboardHomePage() {
   const data = useDashboardData();
@@ -25,7 +19,7 @@ export function DashboardHomePage() {
   if (data.status === "loading") {
     return (
       <div className='mx-auto flex max-w-5xl justify-center py-16'>
-        <PageLoader size={48} />
+        <PageLoader />
       </div>
     );
   }
@@ -77,10 +71,7 @@ export function DashboardHomePage() {
   return (
     <div className='mx-auto flex max-w-5xl flex-col gap-10'>
       <DashboardHeader />
-      <DeploymentHeroCard
-        deployment={data.data.deployment}
-        onRefresh={data.refresh}
-      />
+      <DeploymentHeroCard deployment={data.data.deployment} onRefresh={data.refresh} />
       <ActivitySection
         tab={tab}
         onTabChange={setTab}

@@ -2,8 +2,8 @@ import { BranchPicker } from "@/components/BranchPicker";
 import { FileTypeIcon, isBinaryFile } from "@/components/FileTypeIcon";
 import { useHeaderLeading, useHeaderSlot } from "@/components/HeaderSlot";
 import { MdxEditor, normalizeMdx } from "@/components/mdx/MdxEditor";
-import { NavTree, type OpenNavSettings } from "@/components/NavTree";
 import { NavSettingsPanel } from "@/components/NavSettingsPanel";
+import { NavTree, type OpenNavSettings } from "@/components/NavTree";
 import { PublishMenu, type PublishChange } from "@/components/PublishMenu";
 import { InlineSpinner } from "@/components/ui/NebulaLoader";
 import { PageLoader } from "@/components/ui/PageLoader";
@@ -669,7 +669,7 @@ export function RepoBrowser() {
 
   // Empty leading placeholder so AppShell shifts the main slot right by w-72.
   // The repo sidebar (`-mt-12`) extends up to fill this column visually.
-  const headerLeading = useMemo(() => <span aria-hidden="true" />, []);
+  const headerLeading = useMemo(() => <span aria-hidden='true' />, []);
   useHeaderLeading(headerLeading);
 
   const subdir = active?.docsSubdirectory ?? "";
@@ -686,7 +686,7 @@ export function RepoBrowser() {
   if (settings.status === "loading") {
     return (
       <div className='-m-8 flex h-[calc(100vh-3rem)] items-center justify-center'>
-        <PageLoader size={64} />
+        <PageLoader />
       </div>
     );
   }
@@ -763,10 +763,7 @@ export function RepoBrowser() {
         </div>
       </aside>
       {settingsOpen ? (
-        <NavSettingsPanel
-          settings={settingsOpen}
-          onClose={() => setSettingsOpen(null)}
-        />
+        <NavSettingsPanel settings={settingsOpen} onClose={() => setSettingsOpen(null)} />
       ) : null}
       <main className='flex flex-1 flex-col overflow-hidden bg-background'>
         <FileViewer

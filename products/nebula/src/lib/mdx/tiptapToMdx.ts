@@ -1,0 +1,193 @@
+import type { TiptapDoc, TiptapMark, TiptapNode } from './mdastToTiptap';
+
+const MARK_INNER_TO_OUTER = ['code', 'strike', 'italic', 'bold'];
+
+export function tiptapDocToMdx(doc: TiptapDoc): string {
+  // Drop trailing empty paragraphs. ProseMirror auto-inserts one on focus
+  // when the doc ends with an atom; without this strip, focus + undo would
+  // leave the draft serializing differently than its load state and falsely
+  // mark the file dirty.
+  const content = doc.content ?? [];
+  let end = content.length;
+  while (end > 0) {
+    const last = content[end - 1];
+    if (last?.type === 'paragraph' && !(last.content?.length ?? 0)) {
+      end--;
+    } else {
+      break;
+    }
+  }
+  const blocks = content.slice(0, end).map(serializeBlock).filter((b) => b !== null);
+  return blocks.join('\n\n') + '\n';
+}
+
+function serializeBlock(node: TiptapNode): string {
+  switch (node.type) {
+    case 'paragraph':
+      return serializeInline(node.content);
+    case 'heading':
+      return (
+        '#'.repeat((node.attrs?.level as number | undefined) ?? 1) +
+        ' ' +
+        serializeInline(node.content)
+      );
+    case 'bulletList':
+      return (node.content ?? [])
+        .map((item) => serializeListItem(item, '- '))
+        .join('\n');
+    case 'orderedList': {
+      const start = (node.attrs?.start as number | undefined) ?? 1;
+      return (node.content ?? [])
+        .map((item, i) => serializeListItem(item, `${start + i}. `))
+        .join('\n');
+    }
+    case 'blockquote':
+      return (node.content ?? [])
+        .map(serializeBlock)
+        .filter(Boolean)
+        .join('\n\n')
+        .split('\n')
+        .map((line) => (line.length ? '> ' + line : '>'))
+        .join('\n');
+    case 'codeBlock': {
+      const lang = (node.attrs?.language as string | null | undefined) ?? '';
+      const text = (node.content ?? []).map((c) => c.text ?? '').join('');
+      return '```' + lang + '\n' + text + '\n```';
+    }
+    case 'horizontalRule':
+      return '---';
+    case 'mdxRaw':
+      return ((node.attrs?.source as string | undefined) ?? '').replace(/\n+$/, '');
+    case 'mdxCallout':
+      return serializeCallout(node);
+    case 'mdxCard':
+      return serializeJsxBlock(node, 'Card');
+    case 'mdxFrame':
+      return serializeJsxBlock(node, 'Frame');
+    case 'mdxUpdate':
+      return serializeJsxBlock(node, 'Update');
+    case 'mdxSteps':
+      return serializeSteps(node);
+    case 'mdxStep':
+      return serializeJsxBlock(node, 'Step');
+    case 'hardBreak':
+      return '  \n';
+    default:
+      return '';
+  }
+}
+
+const PRESET_VARIANTS = new Set([
+  'note',
+  'tip',
+  'info',
+  'check',
+  'warning',
+  'danger',
+]);
+
+function serializeAttrs(attrs: Record<string, unknown> | undefined): string {
+  if (!attrs) return '';
+  const parts: string[] = [];
+  for (const [k, v] of Object.entries(attrs)) {
+    if (v == null || v === false) continue;
+    if (v === true) {
+      parts.push(k);
+    } else if (typeof v === 'string') {
+      parts.push(`${k}="${v.replace(/"/g, '\\"')}"`);
+    } else if (
+      typeof v === 'object' &&
+      v !== null &&
+      '__expression' in v &&
+      typeof (v as { __expression: unknown }).__expression === 'string'
+    ) {
+      parts.push(`${k}={${(v as { __expression: string }).__expression}}`);
+    } else {
+      parts.push(`${k}={${JSON.stringify(v)}}`);
+    }
+  }
+  return parts.length ? ' ' + parts.join(' ') : '';
+}
+
+function serializeJsxBlock(node: TiptapNode, tag: string): string {
+  const attrs = serializeAttrs(node.attrs);
+  const body = (node.content ?? [])
+    .map(serializeBlock)
+    .filter(Boolean)
+    .join('\n\n');
+  return `<${tag}${attrs}>\n${body}\n</${tag}>`;
+}
+
+function serializeSteps(node: TiptapNode): string {
+  const attrs = serializeAttrs(node.attrs);
+  const stepBlocks = (node.content ?? [])
+    .map((child) =>
+      child.type === 'mdxStep' ? serializeJsxBlock(child, 'Step') : '',
+    )
+    .filter(Boolean)
+    .join('\n\n');
+  return `<Steps${attrs}>\n${stepBlocks}\n</Steps>`;
+}
+
+function serializeCallout(node: TiptapNode): string {
+  const variant = (node.attrs?.variant as string | undefined) ?? 'note';
+  const body = (node.content ?? [])
+    .map(serializeBlock)
+    .filter(Boolean)
+    .join('\n\n');
+  if (PRESET_VARIANTS.has(variant)) {
+    const tag = variant.charAt(0).toUpperCase() + variant.slice(1);
+    return `<${tag}>\n${body}\n</${tag}>`;
+  }
+  return `<Callout type="${variant}">\n${body}\n</Callout>`;
+}
+
+function serializeListItem(item: TiptapNode, prefix: string): string {
+  const blocks = (item.content ?? []).map(serializeBlock).filter(Boolean);
+  if (blocks.length === 0) return prefix.trimEnd();
+  const [first, ...rest] = blocks;
+  const indent = ' '.repeat(prefix.length);
+  const tail = rest
+    .map((b) => b.split('\n').map((l) => indent + l).join('\n'))
+    .join('\n\n');
+  return prefix + first + (tail ? '\n\n' + tail : '');
+}
+
+function serializeInline(content?: TiptapNode[]): string {
+  if (!content) return '';
+  return content.map(serializeInlineNode).join('');
+}
+
+function serializeInlineNode(node: TiptapNode): string {
+  if (node.type === 'hardBreak') return '  \n';
+  if (node.type !== 'text') return '';
+  let text = node.text ?? '';
+  const marks = sortMarks(node.marks ?? []);
+  for (const mark of marks) {
+    text = applyMark(text, mark);
+  }
+  return text;
+}
+
+function sortMarks(marks: TiptapMark[]): TiptapMark[] {
+  return [...marks].sort((a, b) => {
+    const ai = MARK_INNER_TO_OUTER.indexOf(a.type);
+    const bi = MARK_INNER_TO_OUTER.indexOf(b.type);
+    return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
+  });
+}
+
+function applyMark(text: string, mark: TiptapMark): string {
+  switch (mark.type) {
+    case 'bold':
+      return `**${text}**`;
+    case 'italic':
+      return `*${text}*`;
+    case 'code':
+      return `\`${text}\``;
+    case 'strike':
+      return `~~${text}~~`;
+    default:
+      return text;
+  }
+}

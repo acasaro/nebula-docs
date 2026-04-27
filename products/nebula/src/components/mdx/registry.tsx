@@ -31,9 +31,9 @@ import {
 } from '@nebula/components';
 
 /**
- * Components are registered by JSX tag name. Phase 3 ports Mintlify's set
- * one-by-one from `vendor/mintlify-components/`. Until a component is
- * registered, JSX nodes render via the fallback placeholder.
+ * Components are registered by JSX tag name. The set ships in
+ * `@nebula/components`; until a component is registered here, JSX nodes
+ * render via the fallback placeholder.
  *
  * Inline (`<Icon />` next to text) and block (`<Frame>...</Frame>`) blocks
  * share the same registry — the renderer chooses inline vs block based on

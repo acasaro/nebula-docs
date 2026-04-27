@@ -14,7 +14,7 @@ export function AppShell() {
         <div className='flex min-h-screen bg-background text-foreground'>
           <Sidebar />
           <div className='flex flex-1 flex-col'>
-            <header className='flex h-14 items-stretch bg-background'>
+            <header className='flex h-12 items-stretch bg-background'>
               {leading ? (
                 <div className='flex w-72 shrink-0 items-center border-r border-b border-border/40 bg-muted/30 px-3'>
                   {leading}

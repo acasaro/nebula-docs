@@ -9,15 +9,31 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  /* shadcn/ui theme — neutral palette, with @nebula/theme brand primary. */
+  /* Nebula brand. `--brand` is the single source of truth — every consumer
+   * (primary buttons, focus rings, sidebar accents, link color, the editor's
+   * selection ring) cascades from here. Optional shade variants are exposed
+   * for hover/surface use. Foreground tokens flip to dark text because the
+   * lime is too light to carry white at AA contrast. */
+  --brand: #cedc00;
+  --brand-hover: #a3af00;
+  --brand-soft: #e1ec5c;
+
+  /* Brand-as-text accent. Pure `--brand` (lime) is too light to be legible
+   * on a white surface, so light mode uses a deeper companion teal. Dark
+   * mode flips back to the bright lime — it pops against dark surfaces.
+   * Use this for accent text/icons (e.g. the active nav item) that should
+   * read as "brand" without dropping below ~4.5:1 contrast. */
+  --brand-text: #00665e;
+
+  /* shadcn/ui surface tokens — neutral palette. */
   --background: oklch(1 0 0);
   --foreground: oklch(0.141 0.005 285.823);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.141 0.005 285.823);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.141 0.005 285.823);
-  --primary: var(--mcoe-brand-primary);
-  --primary-foreground: oklch(0.985 0 0);
+  --primary: var(--brand);
+  --primary-foreground: oklch(0.141 0.005 285.823);
   --secondary: oklch(0.967 0.001 286.375);
   --secondary-foreground: oklch(0.21 0.006 285.885);
   --muted: oklch(0.967 0.001 286.375);
@@ -27,27 +43,30 @@
   --destructive: oklch(0.577 0.245 27.325);
   --border: oklch(0.92 0.004 286.32);
   --input: oklch(0.92 0.004 286.32);
-  --ring: var(--mcoe-brand-primary);
+  --ring: var(--brand);
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.141 0.005 285.823);
-  --sidebar-primary: var(--mcoe-brand-primary);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-primary: var(--brand);
+  --sidebar-primary-foreground: oklch(0.141 0.005 285.823);
   --sidebar-accent: oklch(0.967 0.001 286.375);
   --sidebar-accent-foreground: oklch(0.21 0.006 285.885);
   --sidebar-border: oklch(0.92 0.004 286.32);
-  --sidebar-ring: var(--mcoe-brand-primary);
+  --sidebar-ring: var(--brand);
   --radius: 0.625rem;
 }
 
 .dark {
+  /* Dark surfaces let the bright lime carry text legibly. */
+  --brand-text: var(--brand);
+
   --background: oklch(0.141 0.005 285.823);
   --foreground: oklch(0.985 0 0);
   --card: oklch(0.21 0.006 285.885);
   --card-foreground: oklch(0.985 0 0);
   --popover: oklch(0.21 0.006 285.885);
   --popover-foreground: oklch(0.985 0 0);
-  --primary: var(--mcoe-brand-primary-on-dark);
-  --primary-foreground: oklch(0.21 0.006 285.885);
+  --primary: var(--brand);
+  --primary-foreground: oklch(0.141 0.005 285.823);
   --secondary: oklch(0.274 0.006 286.033);
   --secondary-foreground: oklch(0.985 0 0);
   --muted: oklch(0.274 0.006 286.033);
@@ -57,18 +76,20 @@
   --destructive: oklch(0.704 0.191 22.216);
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
-  --ring: var(--mcoe-brand-primary-on-dark);
+  --ring: var(--brand);
   --sidebar: oklch(0.21 0.006 285.885);
   --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: var(--mcoe-brand-primary-on-dark);
-  --sidebar-primary-foreground: oklch(0.21 0.006 285.885);
+  --sidebar-primary: var(--brand);
+  --sidebar-primary-foreground: oklch(0.141 0.005 285.823);
   --sidebar-accent: oklch(0.274 0.006 286.033);
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.552 0.016 285.938);
+  --sidebar-ring: var(--brand);
 }
 
 @theme inline {
+  --color-brand: var(--brand);
+  --color-brand-text: var(--brand-text);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -152,7 +173,7 @@
   @apply rounded bg-muted px-1.5 py-0.5 font-mono text-[0.85em];
 }
 :where(.mdx-prose) hr { @apply my-8 border-border; }
-:where(.mdx-prose) a { @apply text-primary underline-offset-4 hover:underline; }
+:where(.mdx-prose) a { @apply text-brand-text underline-offset-4 hover:underline; }
 :where(.mdx-prose) strong { @apply font-semibold; }
 :where(.mdx-prose) em { @apply italic; }
 :where(.mdx-prose) del { @apply line-through opacity-70; }

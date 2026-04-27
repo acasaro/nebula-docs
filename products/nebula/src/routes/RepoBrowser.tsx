@@ -2,7 +2,8 @@ import { BranchPicker } from "@/components/BranchPicker";
 import { FileTypeIcon, isBinaryFile } from "@/components/FileTypeIcon";
 import { useHeaderLeading, useHeaderSlot } from "@/components/HeaderSlot";
 import { MdxEditor, normalizeMdx } from "@/components/mdx/MdxEditor";
-import { MintlifyNavTree } from "@/components/MintlifyNavTree";
+import { NavTree, type OpenNavSettings } from "@/components/NavTree";
+import { NavSettingsPanel } from "@/components/NavSettingsPanel";
 import { PublishMenu, type PublishChange } from "@/components/PublishMenu";
 import { InlineSpinner } from "@/components/ui/NebulaLoader";
 import { PageLoader } from "@/components/ui/PageLoader";
@@ -19,7 +20,7 @@ import {
 import { useGitSettings } from "@/lib/gitSettings";
 import { buildTree, type TreeNode } from "@/lib/repoTree";
 import { cn } from "@/lib/utils";
-import { ChevronDown, ChevronRight, Code2, Eye, Folder } from "lucide-react";
+import { ChevronDown, ChevronRight, Code2, Eye, Files, Folder, Map } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Navigate, useNavigate, useParams } from "react-router";
 
@@ -314,6 +315,7 @@ export function RepoBrowser() {
   const [fileLoading, setFileLoading] = useState(false);
   const [fileError, setFileError] = useState<string | null>(null);
   const [mode, setMode] = useState<ViewMode>("visual");
+  const [settingsOpen, setSettingsOpen] = useState<OpenNavSettings | null>(null);
 
   const currentBranch = branchParam;
   const [branches, setBranches] = useState<string[]>([]);
@@ -336,6 +338,8 @@ export function RepoBrowser() {
   const handleSelectPath = useCallback(
     (path: string) => {
       if (!currentBranch) return;
+      // Close any open settings panel — choosing a page is a fresh context.
+      setSettingsOpen(null);
       navigate(`/editor/${currentBranch}/~/${path}`);
     },
     [currentBranch, navigate],
@@ -664,7 +668,7 @@ export function RepoBrowser() {
   useHeaderSlot(headerSlot);
 
   // Empty leading placeholder so AppShell shifts the main slot right by w-72.
-  // The repo sidebar (`-mt-14`) extends up to fill this column visually.
+  // The repo sidebar (`-mt-12`) extends up to fill this column visually.
   const headerLeading = useMemo(() => <span aria-hidden="true" />, []);
   useHeaderLeading(headerLeading);
 
@@ -681,7 +685,7 @@ export function RepoBrowser() {
 
   if (settings.status === "loading") {
     return (
-      <div className='-m-8 flex h-[calc(100vh-3.5rem)] items-center justify-center'>
+      <div className='-m-8 flex h-[calc(100vh-3rem)] items-center justify-center'>
         <PageLoader size={64} />
       </div>
     );
@@ -692,8 +696,8 @@ export function RepoBrowser() {
   }
 
   return (
-    <div className='-m-8 flex h-[calc(100vh-3.5rem)] min-h-0'>
-      <aside className='-mt-14 flex h-screen w-72 shrink-0 flex-col overflow-hidden border-r bg-muted/30'>
+    <div className='-m-8 flex h-[calc(100vh-3rem)] min-h-0'>
+      <aside className='-mt-12 flex h-screen w-72 shrink-0 flex-col overflow-hidden border-r border-border/20 bg-muted/30'>
         {active.docsSubdirectory ? (
           <div className='border-b border-border/40 px-4 py-2 text-xs text-muted-foreground'>
             <code>{active.docsSubdirectory}</code>
@@ -701,15 +705,17 @@ export function RepoBrowser() {
         ) : null}
 
         <Tabs defaultValue='navigation' className='flex flex-1 flex-col overflow-hidden gap-0'>
-          <TabsList className='grid h-11 w-full shrink-0 grid-cols-2 rounded-none border-b bg-transparent p-0'>
+          <TabsList className='grid w-full shrink-0 grid-cols-2 rounded-none border-b bg-transparent p-0 group-data-[orientation=horizontal]/tabs:h-12'>
             <TabsTrigger
               value='navigation'
-              className='relative h-full rounded-none border-0 px-4 text-sm font-semibold text-muted-foreground transition-colors hover:text-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none after:absolute after:bottom-[-1px] after:left-0 after:right-0 after:h-0.5 after:bg-foreground after:opacity-0 data-[state=active]:after:opacity-100'>
+              className='relative h-[calc(100%-1px)] gap-1.5 rounded-none border-0 px-4 text-sm font-semibold text-muted-foreground transition-colors hover:text-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none after:absolute group-data-[orientation=horizontal]/tabs:after:bottom-[-1px] after:left-0 after:right-0 after:h-0.5 after:bg-foreground after:opacity-0 data-[state=active]:after:opacity-100'>
+              <Map className='size-4' />
               Navigation
             </TabsTrigger>
             <TabsTrigger
               value='files'
-              className='relative h-full rounded-none border-0 px-4 text-sm font-semibold text-muted-foreground transition-colors hover:text-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none after:absolute after:bottom-[-1px] after:left-0 after:right-0 after:h-0.5 after:bg-foreground after:opacity-0 data-[state=active]:after:opacity-100'>
+              className='relative h-[calc(100%-1px)] gap-1.5 rounded-none border-0 px-4 text-sm font-semibold text-muted-foreground transition-colors hover:text-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none after:absolute group-data-[orientation=horizontal]/tabs:after:bottom-[-1px] after:left-0 after:right-0 after:h-0.5 after:bg-foreground after:opacity-0 data-[state=active]:after:opacity-100'>
+              <Files className='size-4' />
               Files
             </TabsTrigger>
           </TabsList>
@@ -719,10 +725,12 @@ export function RepoBrowser() {
             ) : docsConfigState.error ? (
               <p className='px-3 py-2 text-sm text-destructive'>{docsConfigState.error}</p>
             ) : docsConfigState.config ? (
-              <MintlifyNavTree
+              <NavTree
                 config={docsConfigState.config}
                 selectedPath={selectedPath}
                 onSelectPath={handleSelectPath}
+                settingsOpenKey={settingsOpen?.key ?? null}
+                onOpenSettings={setSettingsOpen}
               />
             ) : (
               <FileTreePanel
@@ -754,6 +762,12 @@ export function RepoBrowser() {
           {truncated ? " · tree truncated" : ""}
         </div>
       </aside>
+      {settingsOpen ? (
+        <NavSettingsPanel
+          settings={settingsOpen}
+          onClose={() => setSettingsOpen(null)}
+        />
+      ) : null}
       <main className='flex flex-1 flex-col overflow-hidden bg-background'>
         <FileViewer
           path={selectedPath}

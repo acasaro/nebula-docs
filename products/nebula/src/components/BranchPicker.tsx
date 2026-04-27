@@ -91,7 +91,7 @@ export function BranchPicker({
                       className={cn(
                         'flex w-full items-center justify-between gap-2 rounded-md px-3 py-2 text-left text-sm transition-colors',
                         isActive
-                          ? 'bg-primary/10 text-primary'
+                          ? 'bg-brand/10 text-brand-text'
                           : 'hover:bg-accent hover:text-accent-foreground',
                       )}
                     >
@@ -99,7 +99,7 @@ export function BranchPicker({
                         <GitBranch
                           className={cn(
                             'size-4 shrink-0',
-                            isActive ? 'text-primary' : 'text-muted-foreground',
+                            isActive ? 'text-brand-text' : 'text-muted-foreground',
                           )}
                         />
                         <span className="truncate font-medium">{b}</span>
@@ -108,7 +108,7 @@ export function BranchPicker({
                             className={cn(
                               'rounded px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide',
                               isActive
-                                ? 'bg-primary/20 text-primary'
+                                ? 'bg-brand/20 text-brand-text'
                                 : 'bg-muted text-muted-foreground',
                             )}
                           >
@@ -117,7 +117,7 @@ export function BranchPicker({
                         ) : null}
                       </span>
                       {isActive ? (
-                        <Check className="size-4 shrink-0 text-primary" />
+                        <Check className="size-4 shrink-0 text-brand-text" />
                       ) : null}
                     </button>
                   );

@@ -9,7 +9,7 @@ import { NebulaLoaderBlock, type NebulaLoaderProps } from "./NebulaLoader";
 export function PageLoader(props: Omit<NebulaLoaderProps, "theme">) {
   const { theme } = useTheme();
   return (
-    <div className='h-full w-120'>
+    <div className='h-full w-90'>
       <NebulaLoaderBlock label='Syncing' theme={theme} {...props} />
     </div>
   );

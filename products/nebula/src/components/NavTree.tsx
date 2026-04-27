@@ -1,5 +1,5 @@
 import { useState, type MouseEvent as ReactMouseEvent, type ReactNode } from 'react';
-import { ChevronDown, Folder, Plus, Settings } from 'lucide-react';
+import { ChevronDown, ChevronRight, Folder, Plus, Settings } from 'lucide-react';
 import { Icon } from '@nebula/components';
 import { cn } from '@/lib/utils';
 import {
@@ -15,10 +15,34 @@ import {
   type Tab,
 } from '@/lib/docsConfig';
 
-interface MintlifyNavTreeProps {
+/**
+ * Identifier for the row whose settings panel is currently open. The format
+ * is `<kind>:<key>` so the same string can disambiguate between a tab, a
+ * group, and a page that happen to share a label.
+ *   - "tab:Documentation"
+ *   - "group:tab0/0/Create content"
+ *   - "page:documentation/overview.mdx"
+ */
+export type NavSettingsKey = string;
+
+export type NavSettingsKind = 'tab' | 'group' | 'page';
+
+export interface OpenNavSettings {
+  key: NavSettingsKey;
+  kind: NavSettingsKind;
+  title: string;
+}
+
+interface NavTreeProps {
   config: DocsConfig;
   selectedPath: string | null;
   onSelectPath: (path: string) => void;
+  /** Identifier of the row whose settings panel is open, or `null`. */
+  settingsOpenKey: NavSettingsKey | null;
+  /** Called with the row that was clicked, or `null` to close. Pass an open
+   * descriptor (kind + title + key) so the parent can render the right panel
+   * without re-walking the tree. */
+  onOpenSettings: (next: OpenNavSettings | null) => void;
 }
 
 // Pixel widths used to compute the cascading text-indent. The pattern:
@@ -32,11 +56,13 @@ const GAP = 4;
 const TAB_TEXT_OFFSET = ICON + GAP;             // icon + gap
 const GROUP_TEXT_OFFSET = CHEVRON + GAP + ICON + GAP;
 
-export function MintlifyNavTree({
+export function NavTree({
   config,
   selectedPath,
   onSelectPath,
-}: MintlifyNavTreeProps) {
+  settingsOpenKey,
+  onOpenSettings,
+}: NavTreeProps) {
   const tabs = (config.navigation?.tabs ?? []).filter((t) => !t.hidden);
 
   return (
@@ -51,14 +77,17 @@ export function MintlifyNavTree({
           <Plus className="size-3.5" />
         </button>
       </div>
-      <div className="flex flex-col">
+      <div className="flex flex-col gap-0.5">
         {tabs.map((tab, i) => (
           <TabSection
             key={`${tab.tab}-${i}`}
             tab={tab}
+            tabIndex={i}
             indent={ROOT_PL}
             selectedPath={selectedPath}
             onSelectPath={onSelectPath}
+            settingsOpenKey={settingsOpenKey}
+            onOpenSettings={onOpenSettings}
           />
         ))}
       </div>
@@ -66,23 +95,52 @@ export function MintlifyNavTree({
   );
 }
 
+interface SectionCommon {
+  selectedPath: string | null;
+  onSelectPath: (path: string) => void;
+  settingsOpenKey: NavSettingsKey | null;
+  onOpenSettings: (next: OpenNavSettings | null) => void;
+}
+
 function TabSection({
   tab,
+  tabIndex,
   indent,
   selectedPath,
   onSelectPath,
+  settingsOpenKey,
+  onOpenSettings,
 }: {
   tab: Tab;
+  tabIndex: number;
   indent: number;
-  selectedPath: string | null;
-  onSelectPath: (path: string) => void;
-}) {
+} & SectionCommon) {
   const groups = (tab.groups ?? []).filter((g) => !g.hidden);
   const hasIcon = !!iconNameOf(tab.icon);
   const tabTextX = indent + (hasIcon ? TAB_TEXT_OFFSET : 0);
+  const settingsKey: NavSettingsKey = `tab:${tab.tab}`;
+  const settingsOpen = settingsOpenKey === settingsKey;
+  const groupKeyBase = `tab${tabIndex}`;
   return (
     <div className="flex flex-col gap-0.5">
-      <Row paddingLeft={indent} showActions={false}>
+      <Row
+        paddingLeft={indent}
+        settingsOpen={settingsOpen}
+        showActions
+        actions={
+          <SettingsToggle
+            label={tab.tab}
+            isOpen={settingsOpen}
+            onToggle={() =>
+              onOpenSettings(
+                settingsOpen
+                  ? null
+                  : { key: settingsKey, kind: 'tab', title: tab.tab },
+              )
+            }
+          />
+        }
+      >
         {hasIcon ? <NavIcon icon={tab.icon} fallback={null} /> : null}
         <Title>{tab.tab}</Title>
       </Row>
@@ -92,8 +150,11 @@ function TabSection({
             key={`${group.group}-${i}`}
             group={group}
             indent={tabTextX}
+            keyPath={`${groupKeyBase}/${i}/${group.group}`}
             selectedPath={selectedPath}
             onSelectPath={onSelectPath}
+            settingsOpenKey={settingsOpenKey}
+            onOpenSettings={onOpenSettings}
           />
         ))}
       </div>
@@ -104,21 +165,26 @@ function TabSection({
 function GroupSection({
   group,
   indent,
+  keyPath,
   selectedPath,
   onSelectPath,
+  settingsOpenKey,
+  onOpenSettings,
 }: {
   group: Group;
   indent: number;
-  selectedPath: string | null;
-  onSelectPath: (path: string) => void;
-}) {
+  keyPath: string;
+} & SectionCommon) {
   const [expanded, setExpanded] = useState(group.expanded ?? true);
   const pages = group.pages ?? [];
   const childIndent = indent + GROUP_TEXT_OFFSET;
+  const settingsKey: NavSettingsKey = `group:${keyPath}`;
+  const settingsOpen = settingsOpenKey === settingsKey;
   return (
     <div className="flex flex-col gap-0.5">
       <Row
         paddingLeft={indent}
+        settingsOpen={settingsOpen}
         onClick={() => setExpanded((e) => !e)}
         showActions
         actions={
@@ -131,14 +197,17 @@ function GroupSection({
             >
               <Plus className="size-3.5" />
             </ActionButton>
-            <ActionButton
-              ariaLabel={`Edit ${group.group}`}
-              onClick={(e) => {
-                e.stopPropagation();
-              }}
-            >
-              <Settings className="size-3.5" />
-            </ActionButton>
+            <SettingsToggle
+              label={group.group}
+              isOpen={settingsOpen}
+              onToggle={() =>
+                onOpenSettings(
+                  settingsOpen
+                    ? null
+                    : { key: settingsKey, kind: 'group', title: group.group },
+                )
+              }
+            />
           </>
         }
       >
@@ -153,8 +222,11 @@ function GroupSection({
               key={pageKey(entry, i)}
               entry={entry}
               indent={childIndent}
+              keyPath={`${keyPath}/p${i}`}
               selectedPath={selectedPath}
               onSelectPath={onSelectPath}
+              settingsOpenKey={settingsOpenKey}
+              onOpenSettings={onOpenSettings}
             />
           ))}
         </div>
@@ -166,21 +238,26 @@ function GroupSection({
 function PageOrGroup({
   entry,
   indent,
+  keyPath,
   selectedPath,
   onSelectPath,
+  settingsOpenKey,
+  onOpenSettings,
 }: {
   entry: PageEntry;
   indent: number;
-  selectedPath: string | null;
-  onSelectPath: (path: string) => void;
-}) {
+  keyPath: string;
+} & SectionCommon) {
   if (isGroup(entry)) {
     return (
       <GroupSection
         group={entry}
         indent={indent}
+        keyPath={keyPath}
         selectedPath={selectedPath}
         onSelectPath={onSelectPath}
+        settingsOpenKey={settingsOpenKey}
+        onOpenSettings={onOpenSettings}
       />
     );
   }
@@ -193,21 +270,30 @@ function PageOrGroup({
   const icon = isPageObject(entry) ? entry.icon : undefined;
   const hasIcon = !!iconNameOf(icon);
 
+  // Page settings keys prefer file path so settings persist across renders
+  // even when the docs.json position shifts.
+  const settingsKey: NavSettingsKey = `page:${filePath ?? keyPath}`;
+  const settingsOpen = settingsOpenKey === settingsKey;
+
   return (
     <Row
       paddingLeft={indent}
       selected={isSelected}
+      settingsOpen={settingsOpen}
       onClick={filePath ? () => onSelectPath(filePath) : undefined}
       showActions
       actions={
-        <ActionButton
-          ariaLabel={`Edit ${title}`}
-          onClick={(e) => {
-            e.stopPropagation();
-          }}
-        >
-          <Settings className="size-3.5" />
-        </ActionButton>
+        <SettingsToggle
+          label={title}
+          isOpen={settingsOpen}
+          onToggle={() =>
+            onOpenSettings(
+              settingsOpen
+                ? null
+                : { key: settingsKey, kind: 'page', title },
+            )
+          }
+        />
       }
     >
       {hasIcon ? <NavIcon icon={icon} fallback={null} /> : null}
@@ -219,6 +305,10 @@ function PageOrGroup({
 interface RowProps {
   paddingLeft: number;
   selected?: boolean;
+  /** When true, this row's settings panel is open. Renders as a persistent
+   * highlighted pill (same look as `selected`) so both pieces of state can
+   * coexist (e.g. file open in editor vs. settings open on a different row). */
+  settingsOpen?: boolean;
   onClick?: () => void;
   showActions?: boolean;
   actions?: ReactNode;
@@ -228,11 +318,13 @@ interface RowProps {
 function Row({
   paddingLeft,
   selected,
+  settingsOpen,
   onClick,
   showActions,
   actions,
   children,
 }: RowProps) {
+  const highlighted = selected || settingsOpen;
   return (
     <div
       role={onClick ? 'button' : undefined}
@@ -248,7 +340,7 @@ function Row({
       className={cn(
         'group/nav-row relative flex h-8 items-center justify-between rounded-xl pl-2 pr-1 text-sm font-semibold transition-colors select-none outline-none',
         onClick && 'cursor-pointer',
-        selected
+        highlighted
           ? 'bg-accent text-accent-foreground'
           : 'text-foreground/70 hover:bg-accent hover:text-accent-foreground focus-visible:bg-accent focus-visible:text-accent-foreground',
       )}
@@ -259,7 +351,10 @@ function Row({
         <div
           className={cn(
             'flex shrink-0 items-center gap-0.5 transition-opacity',
-            selected
+            // Only the settings-open state pins the actions visible (because
+            // the gear has flipped to the chevron, signalling "panel open"
+            // for this row). Selected rows still show actions only on hover.
+            settingsOpen
               ? 'opacity-100'
               : 'opacity-0 group-hover/nav-row:opacity-100 focus-within:opacity-100',
           )}
@@ -309,6 +404,34 @@ function NavIcon({
 
 function Title({ children }: { children: ReactNode }) {
   return <span className="truncate">{children}</span>;
+}
+
+/** Gear ↔ chevron-right icon swap. Closed = gear (open settings); open =
+ * chevron-right (settings panel is showing this row, click to close). */
+function SettingsToggle({
+  label,
+  isOpen,
+  onToggle,
+}: {
+  label: string;
+  isOpen: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <ActionButton
+      ariaLabel={isOpen ? `Close settings for ${label}` : `Edit ${label}`}
+      onClick={(e) => {
+        e.stopPropagation();
+        onToggle();
+      }}
+    >
+      {isOpen ? (
+        <ChevronRight className="size-3.5" />
+      ) : (
+        <Settings className="size-3.5" />
+      )}
+    </ActionButton>
+  );
 }
 
 function ActionButton({

@@ -456,7 +456,7 @@ export function NebulaLoaderBlock({
   ...loaderProps
 }: NebulaLoaderBlockProps) {
   const isDark = theme === "dark";
-  const bg = backdrop === "none" ? "transparent" : isDark ? "#0c0a09" : "#fafaf9";
+  const bg = backdrop === "none" ? "transparent" : "transparent";
   const fg = isDark ? "#fafaf9" : "#1c1917";
   const muted = isDark ? "rgba(250,250,249,0.6)" : "rgba(28,25,23,0.6)";
   const trackCol = isDark ? "rgba(250,250,249,0.12)" : "rgba(28,25,23,0.10)";

@@ -275,14 +275,18 @@ docs build), and is load-bearing for the next phase. Don't redo any of it.
    to know which version it's editing. Currently single-version
    (`current`). Probably stays that way; flag if not.
 
-5. **OOSS bucket for Nebula.** Likely a new bucket like `mcoe-dev-nebula`,
-   parallel to `mcoe-dev-docs`. Confirm naming + provisioning steps with
-   UHG infra.
+5. ~~**OOSS bucket for Nebula.**~~ **Resolved:** bucket name is
+   `mcoe-dev-nebula`, parallel to `mcoe-dev-docs`. Wired into
+   [.github/workflows/deploy-nebula.yml](../.github/workflows/deploy-nebula.yml)
+   via the same JFrog → vault → `ooss-deploy@v1.1.2` chain as the docs
+   site. Still TBD with UHG infra: bucket provisioning + SPA fallback
+   routing (the bucket needs to serve `index.html` for unknown paths so
+   react-router routes survive a hard reload).
 
-6. **Where does the GitHub App live?** UHG's GitHub Enterprise instance,
-   not github.com. Need to confirm whether you can register a GitHub App
-   on your enterprise GitHub and how the install flow works in the
-   enterprise admin UI.
+6. ~~**Where does the GitHub App live?**~~ **Resolved:** GitHub Enterprise
+   **Cloud** — same host as `github.com`, just a UHG-owned org plan. No
+   `baseUrl` overrides needed on Octokit; install URL is
+   `https://github.com/apps/<slug>/installations/new`.
 
 ## Build phases for the next chat
 

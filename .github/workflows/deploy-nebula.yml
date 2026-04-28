@@ -1,4 +1,4 @@
-name: Build & Deploy Nebula CMS to Firebase Hosting
+name: Build & Deploy Nebula CMS to OOSS
 
 on:
   workflow_dispatch:
@@ -12,8 +12,6 @@ on:
       - 'pnpm-lock.yaml'
       - 'package.json'
       - '.github/workflows/deploy-nebula.yml'
-      - 'firebase.json'
-      - '.firebaserc'
 
 permissions:
   id-token: write
@@ -24,9 +22,8 @@ jobs:
     runs-on: uhg-runner
 
     env:
+      OOSS_BUCKET_NAME: mcoe-dev-nebula
       PNPM_VERSION: 10.33.0
-      # TODO: set FIREBASE_PROJECT_ID once provisioned
-      FIREBASE_PROJECT_ID: ''
 
     steps:
       - name: Checkout
@@ -60,7 +57,6 @@ jobs:
       - name: Build
         run: pnpm --filter @nebula/cms build
         env:
-          # TODO: wire up Firebase secrets once project is provisioned
           FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
           FIREBASE_AUTH_DOMAIN: ${{ secrets.FIREBASE_AUTH_DOMAIN }}
           FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
@@ -70,12 +66,19 @@ jobs:
           FIREBASE_MEASUREMENT_ID: ${{ secrets.FIREBASE_MEASUREMENT_ID }}
           GITHUB_APP_INSTALL_URL: ${{ secrets.GITHUB_APP_INSTALL_URL }}
 
-      # TODO: replace with the deploy mechanism once Firebase project is provisioned.
-      # Options under consideration:
-      #   - firebase-tools deploy via service account
-      #   - GitHub OIDC + Firebase CLI
-      - name: Deploy to Firebase Hosting
-        if: env.FIREBASE_PROJECT_ID != ''
-        run: |
-          echo "TODO: deploy products/nebula/dist to Firebase Hosting"
-          echo "FIREBASE_PROJECT_ID=$FIREBASE_PROJECT_ID"
+      - name: Get OOSS Credentials
+        uses: uhg-pipelines/immerse-actions/vaults/get-secrets@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          required-secrets: '["OOSS_AWS_ACCESS_KEY_ID", "OOSS_AWS_SECRET_ACCESS_KEY"]'
+          environment: dev
+
+      - name: Deploy to OOSS
+        uses: uhg-pipelines/cd-workflows/actions/ooss-deploy@v1.1.2
+        with:
+          OOSS_AWS_ACCESS_KEY_ID: ${{ env.OOSS_AWS_ACCESS_KEY_ID }}
+          OOSS_AWS_SECRET_ACCESS_KEY: ${{ env.OOSS_AWS_SECRET_ACCESS_KEY }}
+          build-directory: products/nebula/dist
+          ooss-custom-bucket-name: ${{ env.OOSS_BUCKET_NAME }}
+          enable-sync-delete: true

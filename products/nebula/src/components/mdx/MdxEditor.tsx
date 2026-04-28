@@ -6,12 +6,16 @@ import { mdxToTiptapDoc } from '@/lib/mdx/mdastToTiptap';
 import { tiptapDocToMdx } from '@/lib/mdx/tiptapToMdx';
 import { cn } from '@/lib/utils';
 import { EditorWithBlockHandle } from './BlockHandle';
+import { MdxAccordion, MdxAccordionGroup } from './MdxAccordionNode';
 import { MdxCallout } from './MdxCalloutNode';
 import { MdxCard } from './MdxCardNode';
 import { MdxCodeBlock } from './MdxCodeBlockNode';
+import { MdxColumn, MdxColumns } from './MdxColumnsNode';
+import { MdxExpandable } from './MdxExpandableNode';
 import { MdxFrame } from './MdxFrameNode';
 import { MdxRaw } from './MdxRawNode';
 import { MdxStep, MdxSteps } from './MdxStepsNode';
+import { MdxTab, MdxTabs } from './MdxTabsNode';
 import { MdxUpdate } from './MdxUpdateNode';
 import { SlashCommand } from './slashCommand';
 
@@ -38,6 +42,13 @@ export function MdxEditor({
       MdxUpdate,
       MdxSteps,
       MdxStep,
+      MdxTabs,
+      MdxTab,
+      MdxAccordionGroup,
+      MdxAccordion,
+      MdxColumns,
+      MdxColumn,
+      MdxExpandable,
       MdxRaw,
       SlashCommand,
       Placeholder.configure({

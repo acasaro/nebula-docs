@@ -9,6 +9,15 @@
         "source ~/.nvm/nvm.sh && nvm use 22 >/dev/null && exec pnpm --filter @nebula/cms dev"
       ],
       "port": 8081
+    },
+    {
+      "name": "nebula-cms-verify",
+      "runtimeExecutable": "/bin/bash",
+      "runtimeArgs": [
+        "-lc",
+        "source ~/.nvm/nvm.sh && nvm use 22 >/dev/null && exec pnpm --filter @nebula/cms dev --port 8086 --strictPort"
+      ],
+      "port": 8086
     }
   ]
 }

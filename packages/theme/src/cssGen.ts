@@ -63,7 +63,7 @@ export function generateTokensCss(
 ): string {
   const root = { ...flatTheme(theme), ...flatGlobals(globals) };
   return [
-    '/* AUTO-GENERATED from @nebula/theme — do not edit by hand. */',
+    '/* AUTO-GENERATED from @nebula-docs/theme — do not edit by hand. */',
     '/* Source: packages/theme/src/themes + globals.ts */',
     '',
     ':root {',

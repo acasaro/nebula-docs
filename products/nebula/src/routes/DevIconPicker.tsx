@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Icon } from '@nebula/components';
+import { Icon } from '@nebula-docs/components';
 import { IconField, type IconValue } from '@/components/IconField';
 
 /** Dev-only sandbox for the IconField. Removed once attribute menus land. */

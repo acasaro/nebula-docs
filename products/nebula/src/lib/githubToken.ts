@@ -1,4 +1,4 @@
-import { getApp } from '@nebula/firebase';
+import { getApp } from '@nebula-docs/firebase';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 
 export interface MintTokenRequest {

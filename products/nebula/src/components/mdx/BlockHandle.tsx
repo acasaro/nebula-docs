@@ -34,7 +34,7 @@ import {
 import * as Popover from '@radix-ui/react-popover';
 import type { Editor } from '@tiptap/react';
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model';
-import type { CalloutVariant } from '@nebula/components';
+import type { CalloutVariant } from '@nebula-docs/components';
 import { AttributesForm } from '@/components/AttributesForm';
 import { AttributesPopover } from '@/components/AttributesPopover';
 import { getBlockSchema, type BlockAttrSchema } from '@/lib/blockSchemas';

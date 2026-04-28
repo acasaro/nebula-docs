@@ -10,7 +10,7 @@ import {
   Icon,
   type IconLibrary,
   type IconType,
-} from '@nebula/components';
+} from '@nebula-docs/components';
 import { ArrowRight, ArrowUpRight, EllipsisVertical } from 'lucide-react';
 import { IconPickerPopover, type IconValue } from '@/components/IconField';
 import { AttributesPopover } from '@/components/AttributesPopover';

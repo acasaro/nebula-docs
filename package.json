@@ -8,9 +8,9 @@
   },
   "scripts": {
     "dev:docs": "pnpm --filter @mcoe/docs start",
-    "dev:nebula": "pnpm --filter @nebula/cms dev",
+    "dev:nebula": "pnpm --filter @nebula-docs/platform dev",
     "build:docs": "pnpm --filter @mcoe/docs build",
-    "build:nebula": "pnpm --filter @nebula/cms build",
+    "build:nebula": "pnpm --filter @nebula-docs/platform build",
     "build": "pnpm -r build",
     "typecheck": "pnpm -r typecheck",
     "lint": "pnpm -r lint",
@@ -18,8 +18,8 @@
     "firebase": "pnpm dlx firebase-tools",
     "deploy:rules": "pnpm dlx firebase-tools deploy --only firestore:rules",
     "deploy:functions": "pnpm dlx firebase-tools deploy --only functions",
-    "icons:build": "pnpm --filter @nebula/firebase build:icons",
-    "icons:clean": "pnpm --filter @nebula/firebase clean:icons",
+    "icons:build": "pnpm --filter @nebula-docs/firebase build:icons",
+    "icons:clean": "pnpm --filter @nebula-docs/firebase clean:icons",
     "icons:deploy": "pnpm -w run icons:build && pnpm dlx firebase-tools deploy --only hosting:icons && pnpm -w run icons:clean",
     "emulators": "pnpm dlx firebase-tools emulators:start --only auth,firestore,functions"
   },

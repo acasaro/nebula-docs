@@ -70,41 +70,11 @@ function serializeBlock(node: TiptapNode): string {
       return serializeSteps(node);
     case 'mdxStep':
       return serializeJsxBlock(node, 'Step');
-    case 'mdxAccordion':
-      return serializeJsxBlock(node, 'Accordion');
-    case 'mdxAccordionGroup':
-      return serializeParentList(node, 'AccordionGroup', 'mdxAccordion', 'Accordion');
-    case 'mdxTabs':
-      return serializeParentList(node, 'Tabs', 'mdxTab', 'Tab');
-    case 'mdxTab':
-      return serializeJsxBlock(node, 'Tab');
-    case 'mdxColumns':
-      return serializeParentList(node, 'Columns', 'mdxColumn', 'Column');
-    case 'mdxColumn':
-      return serializeJsxBlock(node, 'Column');
-    case 'mdxExpandable':
-      return serializeJsxBlock(node, 'Expandable');
     case 'hardBreak':
       return '  \n';
     default:
       return '';
   }
-}
-
-function serializeParentList(
-  node: TiptapNode,
-  parentTag: string,
-  childType: string,
-  childTag: string,
-): string {
-  const attrs = serializeAttrs(node.attrs);
-  const childBlocks = (node.content ?? [])
-    .map((child) =>
-      child.type === childType ? serializeJsxBlock(child, childTag) : '',
-    )
-    .filter(Boolean)
-    .join('\n\n');
-  return `<${parentTag}${attrs}>\n${childBlocks}\n</${parentTag}>`;
 }
 
 const PRESET_VARIANTS = new Set([

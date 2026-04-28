@@ -5,7 +5,7 @@ import {
   ReactNodeViewRenderer,
   type NodeViewProps,
 } from '@tiptap/react';
-import { Callout, Icon, type CalloutVariant, type IconLibrary, type IconType } from '@nebula/components';
+import { Callout, Icon, type CalloutVariant, type IconLibrary, type IconType } from '@nebula-docs/components';
 import { cn } from '@/lib/utils';
 
 const PRESET_VARIANTS: ReadonlyArray<CalloutVariant> = [

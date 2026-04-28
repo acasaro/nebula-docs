@@ -28,11 +28,11 @@ import {
   Tree,
   Update,
   Warning,
-} from '@nebula/components';
+} from '@nebula-docs/components';
 
 /**
  * Components are registered by JSX tag name. The set ships in
- * `@nebula/components`; until a component is registered here, JSX nodes
+ * `@nebula-docs/components`; until a component is registered here, JSX nodes
  * render via the fallback placeholder.
  *
  * Inline (`<Icon />` next to text) and block (`<Frame>...</Frame>`) blocks

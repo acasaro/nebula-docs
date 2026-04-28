@@ -1,11 +1,11 @@
 /*
  * MCoE Docusaurus / Infima Overrides
  *
- * Token fallback values come from @nebula/theme (auto-generated from TS).
+ * Token fallback values come from @nebula-docs/theme (auto-generated from TS).
  * This file maps MCoE tokens to Infima variables and adds component overrides.
  */
 
-@import "@nebula/theme/dist/tokens.css";
+@import "@nebula-docs/theme/dist/tokens.css";
 
 /* Docusaurus / Infima — driven by MCoE tokens */
 :root {

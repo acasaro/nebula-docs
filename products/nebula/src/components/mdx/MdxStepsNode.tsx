@@ -7,7 +7,7 @@ import {
   ReactNodeViewRenderer,
   type NodeViewProps,
 } from '@tiptap/react';
-import { Icon, type IconLibrary, type IconType } from '@nebula/components';
+import { Icon, type IconLibrary, type IconType } from '@nebula-docs/components';
 import { AttributesPopover } from '@/components/AttributesPopover';
 import { AttributesForm } from '@/components/AttributesForm';
 import { stepSchema } from '@/lib/blockSchemas/step';

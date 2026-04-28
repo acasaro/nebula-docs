@@ -2,7 +2,7 @@
 /**
  * Generate dist/tokens.css from the TS theme + globals.
  *
- * Run via: pnpm --filter @nebula/theme build:css
+ * Run via: pnpm --filter @nebula-docs/theme build:css
  * Output: tokens.css containing :root + [data-theme="dark"] blocks.
  */
 

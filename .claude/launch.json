@@ -2,22 +2,13 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "nebula-cms",
+      "name": "nebula-platform",
       "runtimeExecutable": "/bin/bash",
       "runtimeArgs": [
         "-lc",
-        "source ~/.nvm/nvm.sh && nvm use 22 >/dev/null && exec pnpm --filter @nebula/cms dev"
+        "source ~/.nvm/nvm.sh && nvm use 22 >/dev/null && exec pnpm --filter @nebula-docs/platform dev"
       ],
       "port": 8081
-    },
-    {
-      "name": "nebula-cms-verify",
-      "runtimeExecutable": "/bin/bash",
-      "runtimeArgs": [
-        "-lc",
-        "source ~/.nvm/nvm.sh && nvm use 22 >/dev/null && exec pnpm --filter @nebula/cms dev --port 8086 --strictPort"
-      ],
-      "port": 8086
     }
   ]
 }

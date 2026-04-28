@@ -1,5 +1,5 @@
 import { PageLoader } from "@/components/ui/PageLoader";
-import { useCurrentUser } from "@nebula/firebase";
+import { useCurrentUser } from "@nebula-docs/firebase";
 import { Navigate, Outlet, useLocation } from "react-router";
 
 export function ProtectedRoute() {

@@ -1,4 +1,4 @@
-import { initializeFirebase, type FirebaseOptions } from '@nebula/firebase';
+import { initializeFirebase, type FirebaseOptions } from '@nebula-docs/firebase';
 
 function readConfig(): FirebaseOptions | null {
   const env = import.meta.env;

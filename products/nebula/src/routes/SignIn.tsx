@@ -1,17 +1,17 @@
 import { useState, type FormEvent } from 'react';
 import { Navigate, useLocation, useNavigate } from 'react-router';
-import { signInWithEmail, signInWithGoogle, useCurrentUser } from '@nebula/firebase';
+import { signInWithEmail, useCurrentUser } from '@nebula-docs/firebase';
 import { FirebaseError } from 'firebase/app';
 import { Button } from '@/components/ui/button';
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { NebulaLogomark } from '@/components/NebulaLogomark';
 
 interface LocationState {
   from?: { pathname?: string };
@@ -46,40 +46,14 @@ export function SignIn() {
     }
   };
 
-  const handleGoogle = async () => {
-    setError(null);
-    setSubmitting(true);
-    try {
-      await signInWithGoogle();
-      navigate(redirectTo, { replace: true });
-    } catch (err) {
-      setError(formatAuthError(err));
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
   return (
     <main className="flex min-h-screen items-center justify-center bg-muted/40 p-6">
       <Card className="w-full max-w-sm">
-        <CardHeader className="text-center">
-          <CardTitle className="text-2xl">Sign in to Nebula</CardTitle>
-          <CardDescription>Edit MDX docs and ship via PR.</CardDescription>
+        <CardHeader className="flex flex-col items-center gap-3 text-center">
+          <NebulaLogomark className="size-12" />
+          <CardTitle className="text-2xl">Sign in to Nebula Docs</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-5">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={handleGoogle}
-            disabled={submitting || auth.status === 'loading'}
-          >
-            Continue with Google
-          </Button>
-          <div className="flex items-center gap-3 text-xs text-muted-foreground">
-            <div className="h-px flex-1 bg-border" />
-            or
-            <div className="h-px flex-1 bg-border" />
-          </div>
           <form onSubmit={handleEmailSubmit} className="flex flex-col gap-3">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="email">Email</Label>
@@ -116,7 +90,6 @@ export function SignIn() {
 
 function formatAuthError(err: unknown): string {
   if (err instanceof FirebaseError) {
-    if (err.code === 'auth/popup-closed-by-user') return 'Sign-in cancelled.';
     if (err.code === 'auth/invalid-credential') return 'Email or password incorrect.';
     return err.message;
   }

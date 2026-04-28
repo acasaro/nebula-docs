@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Navigate, useSearchParams } from 'react-router';
-import { useCurrentUser } from '@nebula/firebase';
+import { useCurrentUser } from '@nebula-docs/firebase';
 import { fetchInstallation } from '@/lib/githubApi';
 import { saveInstallation } from '@/lib/installations';
 import {

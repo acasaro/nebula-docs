@@ -1,7 +1,7 @@
 {
   "functions": {
     "source": "functions",
-    "predeploy": ["pnpm --filter @nebula/functions build"],
+    "predeploy": ["pnpm --filter @nebula-docs/functions build"],
     "ignore": ["node_modules", ".git", "*.local", "src", "tsconfig.json"]
   },
   "firestore": {
@@ -13,7 +13,7 @@
       "target": "icons",
       "public": "packages/firebase/public",
       "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
-      "predeploy": ["pnpm --filter @nebula/firebase build:icons"],
+      "predeploy": ["pnpm --filter @nebula-docs/firebase build:icons"],
       "headers": [
         {
           "source": "**/*.@(svg|json)",

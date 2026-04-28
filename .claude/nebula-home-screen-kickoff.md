@@ -18,8 +18,8 @@ Read these files in order. Confirm you've read each.
 
 Run `ls products/nebula/` and inspect.
 
-- If `products/nebula/` does not exist or is empty, complete Phase 0 from `.claude/nebula.md` first (Vite + React 19 + Tailwind v4 + shadcn/ui scaffold, workspace deps wired up, `pnpm --filter @nebula/cms dev` shows a Hello page on `localhost:8081`). Then proceed.
-- If Phase 0 is done, confirm Tailwind v4, shadcn/ui, react-router, and the four workspace deps (`@nebula/components`, `@nebula/schemas`, `@nebula/theme`, `@nebula/firebase`) are present in `package.json` before continuing.
+- If `products/nebula/` does not exist or is empty, complete Phase 0 from `.claude/nebula.md` first (Vite + React 19 + Tailwind v4 + shadcn/ui scaffold, workspace deps wired up, `pnpm --filter @nebula-docs/platform dev` shows a Hello page on `localhost:8081`). Then proceed.
+- If Phase 0 is done, confirm Tailwind v4, shadcn/ui, react-router, and the four workspace deps (`@nebula-docs/components`, `@nebula-docs/schemas`, `@nebula-docs/theme`, `@nebula-docs/firebase`) are present in `package.json` before continuing.
 
 ## Step 3, Confirm scope with me, then propose a plan
 
@@ -105,7 +105,7 @@ The Live tab (screenshot 2) row expansion can be a simpler diff view, scope it s
 - **No `index.tsx` for component code, ever.** Pattern is `Folder/Folder.tsx` (the code) + `Folder/index.ts` (pure re-export). Folder name, filename, and exported component name must all match.
 - Folder-level barrels for imports, e.g., `from '@/components/dashboard'`, not nested paths
 - Path aliases configured in `tsconfig.json`
-- All colors come from `@nebula/theme` tokens, no hardcoded hex
+- All colors come from `@nebula-docs/theme` tokens, no hardcoded hex
 - Use commas instead of em dashes (—) in code comments and any user-visible copy
 
 ## Mock data approach
@@ -120,7 +120,7 @@ Phase 5 wires real Firestore data via `onSnapshot`. For this work:
 ## Anti-patterns, do not do these
 
 - Do NOT reuse the deleted Nebula scaffolding (MUI starter, `BlockEditor`, `EditableText`, `<CmsPage>` based on contenteditable). That lineage was the failed attempt.
-- Do NOT replace `@nebula/theme` with another tokens system, the data is frozen.
+- Do NOT replace `@nebula-docs/theme` with another tokens system, the data is frozen.
 - Do NOT introduce MUI, Nebula is Tailwind + shadcn only.
 - Do NOT introduce a 4th styling system, Tailwind only inside `products/nebula/`.
 - Do NOT use `any` or `as unknown as` to escape types.
@@ -138,15 +138,15 @@ Phase 5 wires real Firestore data via `onSnapshot`. For this work:
    - Tab toggle + section heading
    - Activity table (Live tab)
    - Previews table + expanded row
-   Run `pnpm --filter @nebula/cms typecheck`, `pnpm --filter @nebula/cms build`, and post a screenshot from `pnpm dev` (or describe the rendered state) before moving on.
+   Run `pnpm --filter @nebula-docs/platform typecheck`, `pnpm --filter @nebula-docs/platform build`, and post a screenshot from `pnpm dev` (or describe the rendered state) before moving on.
 5. Visual fidelity pass at the end, side-by-side mental compare against both screenshots, list any deltas you couldn't match and why.
 
 ## Definition of done
 
 - Both tab states render at the target route with mock data
 - Visual match against screenshots is tight, deltas are documented
-- `pnpm --filter @nebula/cms typecheck` passes
-- `pnpm --filter @nebula/cms build` passes
+- `pnpm --filter @nebula-docs/platform typecheck` passes
+- `pnpm --filter @nebula-docs/platform build` passes
 - Every component follows `Folder/Folder.tsx` + `Folder/index.ts`
 - No `any`, no inline hex colors, no em dashes
 - Mock data is isolated to one fixtures file, easy to swap for real Phase 5 wiring

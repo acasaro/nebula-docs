@@ -21,7 +21,11 @@ export interface GetInstallationResponse {
 }
 
 export const getInstallation = onCall(
-  { secrets: [GITHUB_APP_ID, GITHUB_APP_PRIVATE_KEY] },
+  {
+    secrets: [GITHUB_APP_ID, GITHUB_APP_PRIVATE_KEY],
+    vpcConnector: 'nebula-connector',
+    vpcConnectorEgressSettings: 'ALL_TRAFFIC',
+  },
   async (request): Promise<GetInstallationResponse> => {
     if (!request.auth) {
       throw new HttpsError('unauthenticated', 'Caller must be signed in.');

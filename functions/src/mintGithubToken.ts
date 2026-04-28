@@ -16,7 +16,11 @@ export interface MintTokenResponse {
 }
 
 export const mintGithubToken = onCall(
-  { secrets: [GITHUB_APP_ID, GITHUB_APP_PRIVATE_KEY] },
+  {
+    secrets: [GITHUB_APP_ID, GITHUB_APP_PRIVATE_KEY],
+    vpcConnector: 'nebula-connector',
+    vpcConnectorEgressSettings: 'ALL_TRAFFIC',
+  },
   async (request): Promise<MintTokenResponse> => {
     if (!request.auth) {
       throw new HttpsError('unauthenticated', 'Caller must be signed in.');

@@ -1,4 +1,4 @@
-import type { IconLibrary, IconType } from '@nebula/components';
+import type { IconLibrary, IconType } from '@nebula-docs/components';
 import { IconField, type IconValue } from '@/components/IconField';
 import { SelectField, TextField, ToggleField } from '@/components/fields';
 import type { AttrField, BlockAttrs, BlockAttrSchema } from '@/lib/blockSchemas';

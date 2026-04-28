@@ -1,5 +1,5 @@
 {
-  "name": "@nebula/firebase",
+  "name": "@nebula-docs/firebase",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -15,7 +15,7 @@
     "clean:icons": "rm -rf public/icons public/manifest"
   },
   "dependencies": {
-    "@nebula/schemas": "workspace:*",
+    "@nebula-docs/schemas": "workspace:*",
     "firebase": "^12.12.0",
     "react": "^19.2.3",
     "zod": "^4.1.13"

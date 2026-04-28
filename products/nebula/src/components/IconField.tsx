@@ -4,7 +4,7 @@ import { InlineSpinner } from "@/components/ui/NebulaLoader";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useIconManifest } from "@/lib/iconManifest";
 import { cn } from "@/lib/utils";
-import { Icon, type IconLibrary, type IconType } from "@nebula/components";
+import { Icon, type IconLibrary, type IconType } from "@nebula-docs/components";
 import * as Popover from "@radix-ui/react-popover";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { Plus, Search, Trash2 } from "lucide-react";

@@ -1,6 +1,6 @@
 import { Sparkles, Trash2 } from 'lucide-react';
 import { useState } from 'react';
-import { Icon } from '@nebula/components';
+import { Icon } from '@nebula-docs/components';
 import { IconPickerPopover, type IconValue } from '@/components/IconField';
 import { FormRow } from './FormRow';
 

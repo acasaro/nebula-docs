@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import type { IconLibrary } from '@nebula/components';
+import type { IconLibrary } from '@nebula-docs/components';
 
 const CDN_BASE = 'https://mcoe-icons.web.app';
 

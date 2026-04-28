@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { getDb } from '@nebula/firebase';
+import { getDb } from '@nebula-docs/firebase';
 import {
   collection,
   deleteDoc,

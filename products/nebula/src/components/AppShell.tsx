@@ -2,7 +2,7 @@ import { HeaderSlotProvider } from "@/components/HeaderSlot";
 import { Sidebar } from "@/components/Sidebar";
 import { UserMenu } from "@/components/UserMenu";
 import { cn } from "@/lib/utils";
-import { useCurrentUser } from "@nebula/firebase";
+import { useCurrentUser } from "@nebula-docs/firebase";
 import { Outlet } from "react-router";
 
 export function AppShell() {

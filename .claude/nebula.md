@@ -30,7 +30,7 @@ After the revert, the monorepo state is:
 ```
 products/
   docs/                  # Docusaurus 3.10 — pre-CMS-runtime, exactly as before.
-                         #   customCss now imports @nebula/theme/dist/tokens.css
+                         #   customCss now imports @nebula-docs/theme/dist/tokens.css
                          #   instead of a hand-written tokens.css. That's the
                          #   only docs-site change worth keeping.
 
@@ -196,7 +196,7 @@ slightly different syntax. Functionally equivalent.
 | **TypeScript** | Strict, project-wide | Workspace standard |
 | **Styling** | Tailwind CSS v4 | Mintlify visual language; shadcn assumes it |
 | **Components** | shadcn/ui (Radix primitives) | Copy-into-codebase, customizable; sidebars, command palettes, dialogs, file trees, dropdowns out of the box. [Vite setup guide](https://ui.shadcn.com/docs/installation/vite). |
-| **User auth** | Firebase Auth client SDK directly (via `@nebula/firebase`) | Already wired up; simple; swap to OIDC later when SSO arrives |
+| **User auth** | Firebase Auth client SDK directly (via `@nebula-docs/firebase`) | Already wired up; simple; swap to OIDC later when SSO arrives |
 | **GitHub auth** | `@octokit/auth-app` in a **Cloud Function** | Private key server-side; SPA gets short-lived installation tokens via `httpsCallable` |
 | **GitHub API** | `@octokit/rest` (client-side, in SPA) | Uses the installation token from the function |
 | **MDX parse/serialize** | `@mdx-js/mdx` + `unified` + `remark-mdx` + `mdast-util-mdx` | Generic, framework-agnostic; produces a real AST we can edit |
@@ -275,18 +275,14 @@ docs build), and is load-bearing for the next phase. Don't redo any of it.
    to know which version it's editing. Currently single-version
    (`current`). Probably stays that way; flag if not.
 
-5. ~~**OOSS bucket for Nebula.**~~ **Resolved:** bucket name is
-   `mcoe-dev-nebula`, parallel to `mcoe-dev-docs`. Wired into
-   [.github/workflows/deploy-nebula.yml](../.github/workflows/deploy-nebula.yml)
-   via the same JFrog → vault → `ooss-deploy@v1.1.2` chain as the docs
-   site. Still TBD with UHG infra: bucket provisioning + SPA fallback
-   routing (the bucket needs to serve `index.html` for unknown paths so
-   react-router routes survive a hard reload).
+5. **OOSS bucket for Nebula.** Likely a new bucket like `mcoe-dev-nebula`,
+   parallel to `mcoe-dev-docs`. Confirm naming + provisioning steps with
+   UHG infra.
 
-6. ~~**Where does the GitHub App live?**~~ **Resolved:** GitHub Enterprise
-   **Cloud** — same host as `github.com`, just a UHG-owned org plan. No
-   `baseUrl` overrides needed on Octokit; install URL is
-   `https://github.com/apps/<slug>/installations/new`.
+6. **Where does the GitHub App live?** UHG's GitHub Enterprise instance,
+   not github.com. Need to confirm whether you can register a GitHub App
+   on your enterprise GitHub and how the install flow works in the
+   enterprise admin UI.
 
 ## Build phases for the next chat
 
@@ -305,12 +301,12 @@ Then:
 - Install GitHub libs (CLIENT-side only): `pnpm add @octokit/rest`
 - Install MDX libs: `pnpm add @mdx-js/mdx unified remark-mdx mdast-util-mdx remark-stringify`
 - Install Firebase client SDK: `pnpm add firebase`
-- Add `@nebula/components`, `@nebula/schemas`, `@nebula/theme`, `@nebula/firebase`
+- Add `@nebula-docs/components`, `@nebula-docs/schemas`, `@nebula-docs/theme`, `@nebula-docs/firebase`
   as workspace deps
 - The `products/*` glob in `pnpm-workspace.yaml` already covers it.
 
 For the Cloud Functions side, in `functions/`:
-- Install: `pnpm --filter @nebula/functions add @octokit/auth-app @octokit/rest firebase-admin firebase-functions`
+- Install: `pnpm --filter @nebula-docs/functions add @octokit/auth-app @octokit/rest firebase-admin firebase-functions`
 - Stub two functions: `mintGithubToken` (callable) + `githubWebhook` (HTTP)
 
 ### Phase 1 — auth + GitHub App connection
@@ -391,7 +387,7 @@ Mintlify-style visual editor, edits, and the in-memory MDX string updates.
 >
 > Then bootstrap Phase 0 — the Vite + React + Tailwind v4 + shadcn/ui
 > scaffold inside `products/nebula/` with workspace deps wired up,
-> ending with `pnpm --filter @nebula/cms dev` showing a 'Hello Nebula'
+> ending with `pnpm --filter @nebula-docs/platform dev` showing a 'Hello Nebula'
 > page on `localhost:8081`. Then stub the two Cloud Functions in
 > `functions/` (just signatures + 'TODO' comments — no implementation
 > yet)."
@@ -402,7 +398,7 @@ That's the first commit. From there, Phase 1 (auth + GitHub App) starts.
 
 - Don't reintroduce a runtime-CMS pattern (no Firestore-as-content, no
   wildcard routes in Docusaurus).
-- Don't replace `@nebula/theme` with another tokens system. The frozen-data
+- Don't replace `@nebula-docs/theme` with another tokens system. The frozen-data
   hard rule still applies.
 - Don't reuse the deleted Nebula scaffolding (MUI starter, `BlockEditor`
   cards, etc.) — that lineage was the prior failed attempt. Start fresh

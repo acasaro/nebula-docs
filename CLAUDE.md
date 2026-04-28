@@ -50,7 +50,7 @@ vendor/
 
 ## Workspace conventions
 
-- **Workspace deps**: `"@nebula/components": "workspace:*"` etc. Never reach across
+- **Workspace deps**: `"@nebula-docs/components": "workspace:*"` etc. Never reach across
   `products/*` for code; share via `packages/*`.
 - **`packages/components` is the canonical home for MDX components.** New
   components go there with their schema in `packages/schemas`. The MDX shim
@@ -139,7 +139,7 @@ products/docs/
   for tokens/Infima only. Don't introduce a fourth system.
 - **MDX components**: import from the shim files
   (`products/docs/src/components/mdx/<X>`). Those re-export from
-  `@nebula/components`. To add a new MDX-importable component, add a folder to
+  `@nebula-docs/components`. To add a new MDX-importable component, add a folder to
   `packages/components/src/<type>/`, then add a one-line shim under
   `products/docs/src/components/mdx/<Type>/`.
 - **New landing pages**: compose from
@@ -223,7 +223,7 @@ Read [.claude/nebula.md](.claude/nebula.md) for:
   cards, `EditableText` based on contenteditable, etc.). That lineage
   was the failed attempt.
 - Don't drop Docusaurus from the docs site.
-- Don't replace `@nebula/theme` with another tokens system.
+- Don't replace `@nebula-docs/theme` with another tokens system.
 
 ---
 
@@ -233,17 +233,17 @@ All packages export from `src/index.ts` directly (no build step for dev —
 TS resolves via paths). Each has a minimal `package.json` and `tsconfig.json`
 extending `tsconfig.base.json`.
 
-- **`@nebula/components`** — React components for MDX block types. Each block
+- **`@nebula-docs/components`** — React components for MDX block types. Each block
   has `<Type>.tsx` (natural API for MDX use) and an `index.ts` barrel.
   Heading, Text, Callout, Icon, Frame, VideoLoop, Steps, Step are all
   ported 1:1 from the original `products/docs/src/components/mdx/*`.
-- **`@nebula/schemas`** — Zod schemas, one per block type. Used by Nebula
+- **`@nebula-docs/schemas`** — Zod schemas, one per block type. Used by Nebula
   for editor-side prop validation when serializing back to MDX.
-- **`@nebula/theme`** — TS-first design tokens. Source of truth in
+- **`@nebula-docs/theme`** — TS-first design tokens. Source of truth in
   `src/themes/*.ts` (frozen). `scripts/build-css.ts` generates
   `dist/tokens.css` for Docusaurus's customCss. React provider for
   runtime theme switching.
-- **`@nebula/firebase`** — Slim Firebase wrapper: init + auth helpers
+- **`@nebula-docs/firebase`** — Slim Firebase wrapper: init + auth helpers
   (Google + email). May be replaced by Auth.js v5 in Nebula or kept as
   the Firebase wrapper — decided in Nebula Phase 1.
 

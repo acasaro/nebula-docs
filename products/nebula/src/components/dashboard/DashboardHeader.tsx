@@ -1,4 +1,4 @@
-import { useCurrentUser } from "@nebula/firebase";
+import { useCurrentUser } from "@nebula-docs/firebase";
 import { getFirstName, getGreeting } from "@/lib/dashboard";
 
 export function DashboardHeader() {

@@ -12,7 +12,6 @@ import type {
   ListItem,
   Paragraph,
   PhrasingContent,
-  Root,
   RootContent,
   Strong,
   Table,
@@ -22,44 +21,11 @@ import type {
   ThematicBreak,
 } from 'mdast';
 import type { MdxJsxFlowElement, MdxJsxTextElement } from 'mdast-util-mdx';
-import { CodeBlock, Mermaid } from '@nebula/components';
+import { CodeBlock, Mermaid } from '@nebula-docs/components';
 import { parseMdx } from '@/lib/mdx/parse';
 import { lookupComponent } from './registry';
 import { attributesToProps } from './jsxAttributes';
 import { cn } from '@/lib/utils';
-
-interface ParseResult {
-  tree: Root | null;
-  error: string | null;
-}
-
-function safeParse(source: string): ParseResult {
-  try {
-    return { tree: parseMdx(source), error: null };
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    return { tree: null, error: message };
-  }
-}
-
-function ParseFailureFallback({
-  source,
-  error,
-}: {
-  source: string;
-  error: string;
-}) {
-  return (
-    <div className="my-4 rounded-md border border-dashed border-destructive/40 bg-destructive/5 p-3 text-xs">
-      <div className="mb-2 font-mono font-semibold text-destructive">
-        MDX parse failed: {error}
-      </div>
-      <pre className="overflow-x-auto whitespace-pre-wrap font-mono text-[11px] text-destructive/80">
-        {source}
-      </pre>
-    </div>
-  );
-}
 
 interface MdxRendererProps {
   source: string;
@@ -67,14 +33,10 @@ interface MdxRendererProps {
 }
 
 export function MdxRenderer({ source, className }: MdxRendererProps) {
-  const result = useMemo(() => safeParse(source), [source]);
+  const tree = useMemo(() => parseMdx(source), [source]);
   return (
     <article className={cn('mdx-prose mx-auto max-w-3xl px-8 py-10', className)}>
-      {result.tree ? (
-        renderChildren(result.tree.children, 'root')
-      ) : (
-        <ParseFailureFallback source={source} error={result.error ?? 'unknown'} />
-      )}
+      {renderChildren(tree.children, 'root')}
     </article>
   );
 }
@@ -85,11 +47,8 @@ export function MdxRenderer({ source, className }: MdxRendererProps) {
  * Steps, etc.) at full fidelity inside the Tiptap surface.
  */
 export function MdxFragment({ source }: { source: string }) {
-  const result = useMemo(() => safeParse(source), [source]);
-  if (!result.tree) {
-    return <ParseFailureFallback source={source} error={result.error ?? 'unknown'} />;
-  }
-  return <>{renderChildren(result.tree.children, 'fragment')}</>;
+  const tree = useMemo(() => parseMdx(source), [source]);
+  return <>{renderChildren(tree.children, 'fragment')}</>;
 }
 
 type AnyNode =
@@ -285,7 +244,6 @@ function renderJsx(
   key: string,
 ): ReactNode {
   if (!node.name) return null;
-  const isText = node.type === 'mdxJsxTextElement';
   const props = attributesToProps(node);
   const children = renderChildren(node.children as readonly AnyNode[], key);
 
@@ -304,7 +262,7 @@ function renderJsx(
       </Component>
     );
   }
-  return renderUnknownJsx(node.name, props, children, key, isText);
+  return renderUnknownJsx(node.name, props, children, key);
 }
 
 const SELF_CLOSING_TAGS = new Set([
@@ -399,20 +357,7 @@ function renderUnknownJsx(
   props: Record<string, unknown>,
   children: ReactNode,
   key: string,
-  isText = false,
 ): ReactNode {
-  // Inline-context JSX must not emit block-level wrappers — that produces
-  // <div> inside <p> hydration errors. Render a span placeholder instead.
-  if (isText) {
-    return (
-      <span
-        key={key}
-        className="rounded border border-dashed border-amber-500/50 bg-amber-500/10 px-1 font-mono text-xs text-amber-700 dark:text-amber-300"
-      >
-        &lt;{name} /&gt;
-      </span>
-    );
-  }
   const propPairs = Object.entries(props);
   return (
     <div

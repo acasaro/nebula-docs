@@ -9,7 +9,7 @@ ahead. Read this *and* `CLAUDE.md` and `.claude/nebula.md` before touching code.
   + repo browser are all live and working end-to-end. User signs in, picks a
   repo via `<Tabs>`-style settings UI, browses the MDX file tree, opens a file.
 - **Phase 3 component port is done.** 29 Mintlify-style components ported from
-  `vendor/mintlify-components/` into `@nebula/components`, all registered in a
+  `vendor/mintlify-components/` into `@nebula-docs/components`, all registered in a
   read-only `MdxRenderer` so the visual fidelity already hits the bar.
 - **Phase 3 next: edit affordances.** The renderer is currently read-only. The
   editor is the contenteditable layer + per-block edit UI on top. **That's the
@@ -48,7 +48,7 @@ products/nebula/                       # Vite SPA, Tailwind v4, shadcn/ui
       theme.ts                         # light/dark toggle
       repoTree.ts                      # flat-paths-to-tree builder
 
-packages/components/src/               # @nebula/components — Mintlify port
+packages/components/src/               # @nebula-docs/components — Mintlify port
   badge/      callout/      card/      columns/      example/
   expandable/ frame/        icon/      mermaid/      property/
   step/       steps/        tabs/      tree/         update/
@@ -316,7 +316,7 @@ already learned that lesson with MDXEditor. **Get text editing right first.**
   treat those as a precursor pattern; the editor wraps `MdxRenderer` and
   injects the chrome universally.
 - **Don't break the Docusaurus build** (`pnpm --filter @mcoe/docs typecheck`).
-  Docusaurus shims still re-export from `@nebula/components`; the package
+  Docusaurus shims still re-export from `@nebula-docs/components`; the package
   still works for both consumers. Phase 5/6 retires the docs site for a
   custom SSG, but until then, both render targets need to keep building.
 - **Don't add server-roundtrip dependencies for editing.** Keep the edit

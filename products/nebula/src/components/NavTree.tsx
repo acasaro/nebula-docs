@@ -1,6 +1,6 @@
 import { useState, type MouseEvent as ReactMouseEvent, type ReactNode } from 'react';
 import { ChevronDown, ChevronRight, Folder, Plus, Settings } from 'lucide-react';
-import { Icon } from '@nebula/components';
+import { Icon } from '@nebula-docs/components';
 import { cn } from '@/lib/utils';
 import {
   defaultPageTitle,

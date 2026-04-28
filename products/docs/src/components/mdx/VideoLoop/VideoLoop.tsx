@@ -1,4 +1,4 @@
 /**
- * Compat re-export. Canonical implementation lives in `@nebula/components`.
+ * Compat re-export. Canonical implementation lives in `@nebula-docs/components`.
  */
-export { VideoLoop } from '@nebula/components';
+export { VideoLoop } from '@nebula-docs/components';

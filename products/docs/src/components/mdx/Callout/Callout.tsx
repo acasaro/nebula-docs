@@ -1,5 +1,5 @@
 /**
- * Compat re-export. Canonical implementation lives in `@nebula/components`.
+ * Compat re-export. Canonical implementation lives in `@nebula-docs/components`.
  */
 export {
   Callout,
@@ -9,4 +9,4 @@ export {
   Tip,
   Check,
   Danger,
-} from '@nebula/components';
+} from '@nebula-docs/components';

@@ -5,7 +5,7 @@ import {
   ReactNodeViewRenderer,
   type NodeViewProps,
 } from '@tiptap/react';
-import { Update } from '@nebula/components';
+import { Update } from '@nebula-docs/components';
 import { cn } from '@/lib/utils';
 
 export const MdxUpdate = Node.create({

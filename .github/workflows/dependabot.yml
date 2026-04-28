@@ -1,0 +1,59 @@
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    target-branch: main
+    open-pull-requests-limit: 10
+    schedule:
+      interval: daily
+      timezone: America/Chicago
+    groups:
+      major-updates:
+          applies-to: version-updates
+          patterns:
+            - "*"
+          update-types:
+            - major
+      security-updates:
+          applies-to: security-updates
+          patterns:
+            - "*"
+          update-types:
+            - patch
+            - minor
+    rebase-strategy: auto
+    labels:
+      - dependencies
+      - github-actions
+  - package-ecosystem: npm
+    directory: /
+    target-branch: main
+    open-pull-requests-limit: 10
+    schedule:
+      interval: daily
+      timezone: America/Chicago
+    groups:
+      major-updates:
+          applies-to: version-updates
+          patterns:
+            - "*"
+          update-types:
+            - major
+      security-updates:
+          applies-to: security-updates
+          patterns:
+            - "*"
+          update-types:
+            - patch
+            - minor
+    registries:
+      - npm-registry
+    rebase-strategy: auto
+    versioning-strategy: increase
+registries:
+  npm-registry:
+      type: npm-registry
+      url: https://centraluhg.jfrog.io/artifactory/api/npm/glb-npm-vir/
+      username: ${{ secrets.IMMERSE_DEPENDABOT_ARTIFACTORY_USER }}
+      password: ${{ secrets.IMMERSE_DEPENDABOT_ARTIFACTORY_TOKEN }}
+      replaces-base: true

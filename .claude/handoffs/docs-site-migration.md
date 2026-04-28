@@ -19,7 +19,7 @@ Direction has now shifted: **the docs reading site is to be migrated off Docusau
 
 1. **Renderer target** — Vite + React SPA reading `docs.json` and rendering MDX at the route, OR a static-build pipeline (Astro / Next-on-Pages / similar) that pre-renders pages? Pick one and document the trade-offs (search, performance, DX) in the migration plan you produce.
 2. **Search story** — what replaces `@easyops-cn/docusaurus-search-local`? (FlexSearch built at build time, Pagefind, Algolia, custom?)
-3. **Theme story** — Nebula already shares `@nebula/theme` tokens with Docusaurus's `customCss`. Confirm the new renderer reuses the same package (it should — the tokens are frozen).
+3. **Theme story** — Nebula already shares `@nebula-docs/theme` tokens with Docusaurus's `customCss`. Confirm the new renderer reuses the same package (it should — the tokens are frozen).
 4. **Content structure** — `products/docs/docs/{instance}/...` is the current Docusaurus layout (four content instances). Nebula's `docs.json` uses a flat `navigation.tabs[].groups[].pages[]` structure. Decide whether the migration:
     a. flattens content into a single tree driven by `docs.json`, or
     b. keeps four instances and represents each as a separate tab in `docs.json`.
@@ -51,12 +51,12 @@ Produce a short plan markdown (`.claude/handoffs/docs-site-migration-plan.md`) c
 
 ### Phase 1 — bootstrap the new renderer
 - Stand up the chosen stack in a new package (`products/docs-next/` is the safe path — keeps Docusaurus running while you build).
-- Tokens: `import "@nebula/theme/dist/tokens.css"` exactly like Docusaurus does today.
-- Render `@nebula/components` MDX components — they're the canonical block components and Docusaurus already uses them via shims.
+- Tokens: `import "@nebula-docs/theme/dist/tokens.css"` exactly like Docusaurus does today.
+- Render `@nebula-docs/components` MDX components — they're the canonical block components and Docusaurus already uses them via shims.
 
 ### Phase 2 — content rendering
 - Read `docs.json` from the repo at build time.
-- For each page entry, load the matching `.mdx`, parse with `@mdx-js/mdx`, render through `@nebula/components`.
+- For each page entry, load the matching `.mdx`, parse with `@mdx-js/mdx`, render through `@nebula-docs/components`.
 - Match the typography defined in `products/nebula/src/index.css`'s `.mdx-prose` rules.
 
 ### Phase 3 — navigation
@@ -91,11 +91,11 @@ The other parallel session (`feat/nav-page-settings`) is editing `products/nebul
 
 ## Things to NOT do
 
-- Don't change `@nebula/theme` tokens — they're frozen (see CLAUDE.md).
-- Don't replace `@nebula/components` with a different MDX component set — they're the single source of truth.
+- Don't change `@nebula-docs/theme` tokens — they're frozen (see CLAUDE.md).
+- Don't replace `@nebula-docs/components` with a different MDX component set — they're the single source of truth.
 - Don't delete `products/docs/` until parity is verified and the parent green-lights the cutover.
 - "Mintlify" is *not* a name we use in our code or docs (except the link to the actual upstream `docs.json` schema). References are mental-model only.
-- Don't spin up a parallel design system. Reuse `@nebula/theme` and `@nebula/components`.
+- Don't spin up a parallel design system. Reuse `@nebula-docs/theme` and `@nebula-docs/components`.
 
 ---
 

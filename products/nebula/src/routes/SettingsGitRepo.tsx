@@ -16,7 +16,7 @@ import { Switch } from "@/components/ui/switch";
 import { listBranches, listInstallationRepos, type InstallationRepo } from "@/lib/githubApi";
 import { saveGitSettings, useGitSettings, type GitSettings } from "@/lib/gitSettings";
 import { useInstallations, type InstallationDoc } from "@/lib/installations";
-import { useCurrentUser } from "@nebula/firebase";
+import { useCurrentUser } from "@nebula-docs/firebase";
 import { ArrowRight, CheckCircle2, Github, Settings as SettingsIcon } from "lucide-react";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { Link } from "react-router";

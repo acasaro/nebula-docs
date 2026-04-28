@@ -1,5 +1,5 @@
 import type { LucideIcon } from 'lucide-react';
-import type { IconLibrary, IconType } from '@nebula/components';
+import type { IconLibrary, IconType } from '@nebula-docs/components';
 
 export type BlockAttrs = Record<string, unknown>;
 

@@ -5,7 +5,7 @@ import {
   ReactNodeViewRenderer,
   type NodeViewProps,
 } from '@tiptap/react';
-import { Frame } from '@nebula/components';
+import { Frame } from '@nebula-docs/components';
 import { cn } from '@/lib/utils';
 
 export const MdxFrame = Node.create({

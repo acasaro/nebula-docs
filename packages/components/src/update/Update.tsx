@@ -4,7 +4,7 @@ import { cn } from '../utils/cn';
 export interface UpdateProps {
   label: string;
   description?: string;
-  tags?: string[];
+  tags?: string | string[];
   className?: string;
   children?: ReactNode;
 }

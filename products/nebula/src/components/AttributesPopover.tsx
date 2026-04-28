@@ -1,4 +1,4 @@
-import { useMemo, type ReactNode } from 'react';
+import React, { useMemo, type ReactNode } from 'react';
 import * as Popover from '@radix-ui/react-popover';
 import { Trash2, X, type LucideIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -36,7 +36,7 @@ export function AttributesPopover({
         : null,
     }),
     [anchorEl],
-  );
+  ) as React.RefObject<{ getBoundingClientRect: () => DOMRect }>;
 
   if (!anchorEl) return null;
 

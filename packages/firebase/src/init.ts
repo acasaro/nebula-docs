@@ -21,7 +21,7 @@ export function initializeFirebase(config: FirebaseOptions): FirebaseApp {
 function ensureInitialized<T>(value: T | undefined, name: string): T {
   if (!value) {
     throw new Error(
-      `@nebula/firebase: ${name} accessed before initializeFirebase() was called`
+      `@nebula-docs/firebase: ${name} accessed before initializeFirebase() was called`
     );
   }
   return value;

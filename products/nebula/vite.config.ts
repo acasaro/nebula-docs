@@ -19,7 +19,7 @@ export default defineConfig({
       '@': path.resolve(here, './src'),
     },
   },
-  envPrefix: ['FIREBASE_', 'GITHUB_'],
+  envPrefix: ['FIREBASE_', 'NEBULA_'],
   server: {
     port,
     strictPort: true,

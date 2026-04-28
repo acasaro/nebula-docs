@@ -8,7 +8,7 @@ import {
   useEditorState,
   type NodeViewProps,
 } from '@tiptap/react';
-import { CodeBlock as CodeBlockPreview } from '@nebula/components';
+import { CodeBlock as CodeBlockPreview } from '@nebula-docs/components';
 import {
   DropdownMenu,
   DropdownMenuContent,

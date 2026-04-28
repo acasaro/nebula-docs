@@ -8,11 +8,21 @@ let dbInstance: Firestore | undefined;
 let authInstance: Auth | undefined;
 let storageInstance: FirebaseStorage | undefined;
 
-export function initializeFirebase(config: FirebaseOptions): FirebaseApp {
+export interface InitializeOptions {
+  /** Firestore database ID. Defaults to `(default)` when omitted. */
+  firestoreDbId?: string;
+}
+
+export function initializeFirebase(
+  config: FirebaseOptions,
+  options?: InitializeOptions,
+): FirebaseApp {
   if (app) return app;
   const existing = getApps();
   app = existing.length > 0 ? existing[0]! : initializeApp(config);
-  dbInstance = getFirestore(app);
+  dbInstance = options?.firestoreDbId
+    ? getFirestore(app, options.firestoreDbId)
+    : getFirestore(app);
   authInstance = getAuth(app);
   storageInstance = getStorage(app);
   return app;

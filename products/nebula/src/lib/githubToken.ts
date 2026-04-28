@@ -1,5 +1,6 @@
 import { getApp } from '@nebula-docs/firebase';
 import { getFunctions, httpsCallable } from 'firebase/functions';
+import { env } from '@/lib/env';
 
 export interface MintTokenRequest {
   installationId: number;
@@ -34,7 +35,7 @@ export async function mintGithubInstallationToken(
 
   const fn = httpsCallable<MintTokenRequest, MintTokenResponse>(
     getFunctions(getApp()),
-    'mintGithubToken',
+    env.fn.mintGithubToken,
   );
   const result = await fn({ installationId });
   cached = {

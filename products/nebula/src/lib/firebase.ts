@@ -1,11 +1,12 @@
 import { initializeFirebase, type FirebaseOptions } from '@nebula-docs/firebase';
+import { env } from '@/lib/env';
 
 function readConfig(): FirebaseOptions | null {
-  const env = import.meta.env;
-  const apiKey = env.FIREBASE_API_KEY;
-  const authDomain = env.FIREBASE_AUTH_DOMAIN;
-  const projectId = env.FIREBASE_PROJECT_ID;
-  const appId = env.FIREBASE_APP_ID;
+  const e = import.meta.env;
+  const apiKey = e.FIREBASE_API_KEY;
+  const authDomain = e.FIREBASE_AUTH_DOMAIN;
+  const projectId = e.FIREBASE_PROJECT_ID;
+  const appId = e.FIREBASE_APP_ID;
 
   if (!apiKey || !authDomain || !projectId || !appId) return null;
 
@@ -13,10 +14,10 @@ function readConfig(): FirebaseOptions | null {
     apiKey,
     authDomain,
     projectId,
-    storageBucket: env.FIREBASE_STORAGE_BUCKET,
-    messagingSenderId: env.FIREBASE_MESSAGE_SENDER_ID,
+    storageBucket: e.FIREBASE_STORAGE_BUCKET,
+    messagingSenderId: e.FIREBASE_MESSAGE_SENDER_ID,
     appId,
-    measurementId: env.FIREBASE_MEASUREMENT_ID,
+    measurementId: e.FIREBASE_MEASUREMENT_ID,
   };
 }
 
@@ -25,7 +26,7 @@ let configured = false;
 export function bootstrapFirebase(): boolean {
   const config = readConfig();
   if (!config) return false;
-  initializeFirebase(config);
+  initializeFirebase(config, { firestoreDbId: env.firestoreDbId });
   configured = true;
   return true;
 }

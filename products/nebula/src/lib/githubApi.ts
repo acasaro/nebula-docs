@@ -1,6 +1,7 @@
 import { Octokit } from '@octokit/rest';
 import { getApp } from '@nebula-docs/firebase';
 import { getFunctions, httpsCallable } from 'firebase/functions';
+import { env } from '@/lib/env';
 import { mintGithubInstallationToken } from '@/lib/githubToken';
 
 export interface InstallationRepo {
@@ -25,7 +26,7 @@ async function octokitFor(installationId: number): Promise<Octokit> {
 export async function fetchInstallation(installationId: number): Promise<InstallationInfo> {
   const fn = httpsCallable<{ installationId: number }, InstallationInfo>(
     getFunctions(getApp()),
-    'getInstallation',
+    env.fn.getInstallation,
   );
   const result = await fn({ installationId });
   return result.data;

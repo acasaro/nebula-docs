@@ -19,7 +19,8 @@ export default defineConfig({
       '@': path.resolve(here, './src'),
     },
   },
-  envPrefix: ['FIREBASE_', 'NEBULA_'],
+  envDir: path.resolve(here, '../..'),
+  envPrefix: ['FIREBASE_', 'NEBULA_', 'FIRESTORE_'],
   server: {
     port,
     strictPort: true,

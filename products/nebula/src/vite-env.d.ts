@@ -8,7 +8,11 @@ interface ImportMetaEnv {
   readonly FIREBASE_MESSAGE_SENDER_ID?: string;
   readonly FIREBASE_APP_ID?: string;
   readonly FIREBASE_MEASUREMENT_ID?: string;
-  readonly NEBULA_APP_INSTALL_URL?: string;
+  readonly NEBULA_ENV?: 'dev' | 'prod';
+  readonly NEBULA_APP_INSTALL_URL_DEV?: string;
+  readonly NEBULA_APP_INSTALL_URL_PROD?: string;
+  readonly FIRESTORE_DB_ID_DEV?: string;
+  readonly FIRESTORE_DB_ID_PROD?: string;
 }
 
 interface ImportMeta {

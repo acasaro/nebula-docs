@@ -1,10 +1,13 @@
+import * as path from "node:path";
+import { fileURLToPath } from "node:url";
 import * as dotenv from "dotenv";
 import type * as Preset from "@docusaurus/preset-classic";
 import type { Config } from "@docusaurus/types";
 import { docInstances } from "./src/config/doc-instances";
 import { themeConfig } from "./src/config/theme";
 
-dotenv.config();
+const here = path.dirname(fileURLToPath(import.meta.url));
+dotenv.config({ path: path.resolve(here, "../../.env") });
 
 const config: Config = {
   title: "MCoE",

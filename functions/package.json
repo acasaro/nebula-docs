@@ -10,6 +10,8 @@
     "shell": "pnpm build && firebase functions:shell",
     "start": "pnpm shell",
     "deploy": "firebase deploy --only functions",
+    "deploy:dev": "firebase deploy --only functions:mintGithubTokenDev,functions:getInstallationDev,functions:githubWebhookDev",
+    "deploy:prod": "firebase deploy --only functions:mintGithubToken,functions:getInstallation,functions:githubWebhook",
     "logs": "firebase functions:log",
     "typecheck": "tsc --noEmit",
     "lint": "echo \"(eslint TBD)\""

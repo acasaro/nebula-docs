@@ -1,0 +1,586 @@
+---
+title: "Formato de código"
+description: "Formatea el código en tu documentación con resaltado de sintaxis, números de línea, diffs, botones de copia y funciones interactivas de grupos de código en MDX."
+keywords: ["bloques de código", "resaltado de sintaxis", "estilo de código"]
+---
+
+<div id="adding-code-samples">
+  ## Agregar ejemplos de código
+</div>
+
+Puedes agregar fragmentos de código en línea o bloques de código. Los bloques de código ofrecen opciones de metadatos para el resaltado de sintaxis, títulos, resaltado de líneas, iconos y más.
+
+<div id="inline-code">
+  ### Código en línea
+</div>
+
+Para indicar una `palabra` o `frase` como código, enciérrala entre acentos invertidos (`).
+
+```mdx
+Para indicar una `palabra` o `frase` como código, enciérrala entre acentos invertidos (`).
+```
+
+<div id="code-blocks">
+  ### Bloques de código
+</div>
+
+Usa [bloques de código delimitados](https://www.markdownguide.org/extended-syntax/#fenced-code-blocks) encerrando el código entre tres comillas invertidas. Los bloques de código se pueden copiar y, si tienes el assistant habilitado, los usuarios pueden pedir a la IA que explique el código.
+
+Especifica el lenguaje de programación para el resaltado de sintaxis y para habilitar opciones meta. Agrega cualquier opción meta, como title o icon, después del lenguaje.
+
+<CodeGroup>
+  ```java HelloWorld.java example icon=java lines
+  class HelloWorld {
+      public static void main(String[] args) {
+          System.out.println("Hello, World!");
+      }
+  }
+  ```
+
+  ````mdx Format
+  ```java HelloWorld.java example lines icon="java"
+  class HelloWorld {
+      public static void main(String[] args) {
+          System.out.println("Hello, World!");
+      }
+  }
+  ```
+  ````
+</CodeGroup>
+
+<div id="code-block-options">
+  ## Opciones para bloques de código
+</div>
+
+Añade opciones meta a tus bloques de código para personalizar su apariencia.
+
+<Note>
+  Debes especificar un lenguaje de programación para un bloque de código antes de añadir cualquier otra opción meta.
+</Note>
+
+<div id="option-syntax">
+  ### Sintaxis de opciones
+</div>
+
+* **Opciones de tipo cadena y booleanas**: Envuélvelas con `""`, `''` o sin comillas.
+* **Opciones de expresión**: Envuélvelas con `{}`, `""` o `''`.
+
+<div id="syntax-highlighting">
+  ### Resaltado de sintaxis
+</div>
+
+Activa el resaltado de sintaxis especificando el lenguaje de programación tras las comillas invertidas de apertura de un bloque de código.
+
+Usamos [Shiki](https://shiki.style/) para el resaltado de sintaxis y admitimos todos los lenguajes disponibles. Consulta la lista completa de [lenguajes](https://shiki.style/languages) en la documentación de Shiki.
+
+Personaliza globalmente los temas de los bloques de código usando `styling.codeblocks` en tu archivo `docs.json`. Define temas simples como `system` o `dark`, o configura [temas de Shiki](https://shiki.style/themes) personalizados para los modos claro y oscuro. Consulta [Settings](/es/organize/settings-appearance#styling) para ver las opciones de configuración.
+
+<CodeGroup>
+  ```java Ejemplo de resaltado de sintaxis
+  class HelloWorld {
+      public static void main(String[] args) {
+          System.out.println("Hello, World!");
+      }
+  }
+  ```
+
+  ````mdx Format
+  ```java Ejemplo de resaltado de sintaxis
+  class HelloWorld {
+      public static void main(String[] args) {
+          System.out.println("Hello, World!");
+      }
+  }
+  ```
+  ````
+</CodeGroup>
+
+<Accordion title="Tema personalizado de resaltado de sintaxis">
+  Para temas personalizados, establece tu tema en `docs.json` como `"css-variables"` y reemplaza los colores del resaltado de sintaxis usando variables CSS con el prefijo `--mint-`.
+
+  Estas variables están disponibles:
+
+  **Colores básicos**
+
+  * `--mint-color-text`: Color de texto predeterminado
+  * `--mint-color-background`: Color de fondo
+
+  **Colores de tokens**
+
+  * `--mint-token-constant`: Constantes y literales
+  * `--mint-token-string`: Valores de cadena
+  * `--mint-token-comment`: Comentarios
+  * `--mint-token-keyword`: Palabras clave
+  * `--mint-token-parameter`: Parámetros de función
+  * `--mint-token-function`: Nombres de función
+  * `--mint-token-string-expression`: Expresiones de cadena
+  * `--mint-token-punctuation`: Signos de puntuación
+  * `--mint-token-link`: Enlaces
+
+  **Colores ANSI**
+
+  * `--mint-ansi-black`, `--mint-ansi-black-dim`
+  * `--mint-ansi-red`, `--mint-ansi-red-dim`
+  * `--mint-ansi-green`, `--mint-ansi-green-dim`
+  * `--mint-ansi-yellow`, `--mint-ansi-yellow-dim`
+  * `--mint-ansi-blue`, `--mint-ansi-blue-dim`
+  * `--mint-ansi-magenta`, `--mint-ansi-magenta-dim`
+  * `--mint-ansi-cyan`, `--mint-ansi-cyan-dim`
+  * `--mint-ansi-white`, `--mint-ansi-white-dim`
+  * `--mint-ansi-bright-black`, `--mint-ansi-bright-black-dim`
+  * `--mint-ansi-bright-red`, `--mint-ansi-bright-red-dim`
+  * `--mint-ansi-bright-green`, `--mint-ansi-bright-green-dim`
+  * `--mint-ansi-bright-yellow`, `--mint-ansi-bright-yellow-dim`
+  * `--mint-ansi-bright-blue`, `--mint-ansi-bright-blue-dim`
+  * `--mint-ansi-bright-magenta`, `--mint-ansi-bright-magenta-dim`
+  * `--mint-ansi-bright-cyan`, `--mint-ansi-bright-cyan-dim`
+  * `--mint-ansi-bright-white`, `--mint-ansi-bright-white-dim`
+
+  **Resaltado de sintaxis personalizado**
+
+  Añade resaltado de sintaxis para lenguajes que no estén incluidos en el conjunto predeterminado de Shiki proporcionando archivos de gramática TextMate personalizados. Crea un archivo JSON siguiendo el [formato de gramática de TextMate](https://macromates.com/manual/en/language_grammars) y luego haz referencia a él en tu `docs.json`. Puedes añadir varios lenguajes personalizados incluyendo rutas adicionales en el array.
+
+  ```json docs.json
+  {
+    "styling": {
+      "codeblocks": {
+        "languages": {
+          "custom": ["/languages/my-custom-language.json"]
+        }
+      }
+    }
+  }
+  ```
+</Accordion>
+
+<div id="twoslash">
+  ### Twoslash
+</div>
+
+En los bloques de código de JavaScript y TypeScript, usa `twoslash` para habilitar información de tipos interactiva. Los usuarios pueden pasar el cursor sobre variables, funciones y parámetros para ver los tipos y errores como en un IDE.
+
+<CodeGroup>
+  ```ts twoslash Twoslash example
+  type Pet = "cat" | "dog" | "hamster";
+
+  function adoptPet(name: string, type: Pet) {
+    return `${name} the ${type} is now adopted!`;
+  }
+
+  // Hover to see the inferred types
+  const message = adoptPet("Mintie", "cat");
+  ```
+
+  ````mdx Format
+  ```ts twoslash Twoslash example
+  type Pet = "cat" | "dog" | "hamster";
+
+  function adoptPet(name: string, type: Pet) {
+    return `${name} the ${type} is now adopted!`;
+  }
+
+  // Hover to see the inferred types
+  const message = adoptPet("Mintie", "cat");
+  ```
+  ````
+</CodeGroup>
+
+<div id="title">
+  ### Título
+</div>
+
+Añade un título para etiquetar tu ejemplo de código. Coloca el título después del identificador de lenguaje. Los títulos pueden contener múltiples palabras y rutas de archivos.
+
+Puedes establecer el título de dos maneras:
+
+- **En línea**: Coloca el título directamente después del identificador de lenguaje.
+- **Propiedad `title`**: Usa `title="Your title"` para títulos que necesiten caracteres especiales o comillas explícitas.
+
+<CodeGroup>
+  ```javascript Example title
+  const hello = "world";
+  ```
+
+  ```javascript title="utils/hello.js"
+  const hello = "world";
+  ```
+
+  ````mdx Inline format
+  ```javascript Example title
+  const hello = "world";
+  ```
+  ````
+
+  ````mdx title property format
+  ```javascript title="utils/hello.js"
+  const hello = "world";
+  ```
+  ````
+</CodeGroup>
+
+<div id="icon">
+  ### Icono
+</div>
+
+Añade un icono a tu bloque de código usando la propiedad `icon`. Consulta [Iconos](/es/components/icons) para ver todas las opciones disponibles.
+
+<CodeGroup>
+  ```javascript Icon example icon=square-js
+  const hello = "world";
+  ```
+
+  ````mdx Formato
+  ```javascript Icon example icon="square-js"
+  const hello = "world";
+  ```
+  ````
+</CodeGroup>
+
+<div id="line-highlighting">
+  ### Resaltado de líneas
+</div>
+
+Resalta líneas específicas en tus bloques de código usando `highlight` con los números de línea o los rangos que quieras resaltar.
+
+<CodeGroup>
+  ```javascript Ejemplo de resaltado de líneas {1,2,5}
+  const greeting = "Hello, World!";
+  function sayHello() {
+    console.log(greeting);
+  }
+  sayHello();
+  ```
+
+  ````mdx Formato
+  ```javascript Ejemplo de resaltado de líneas highlight={1-2,5}
+  const greeting = "Hello, World!";
+  function sayHello() {
+    console.log(greeting);
+  }
+  sayHello();
+  ```
+  ````
+</CodeGroup>
+
+<div id="line-focusing">
+  ### Enfoque de líneas
+</div>
+
+Resalta líneas específicas en tus bloques de código usando `focus` con números de línea o rangos.
+
+<CodeGroup>
+  ```javascript Line focusing example focus=2,4,5
+  const greeting = "Hello, World!";
+  function sayHello() {
+    console.log(greeting);
+  }
+  sayHello();
+  ```
+
+  ````mdx Format
+  ```javascript Line focusing example focus={2,4-5}
+  const greeting = "Hello, World!";
+  function sayHello() {
+    console.log(greeting);
+  }
+  sayHello();
+  ```
+  ````
+</CodeGroup>
+
+<div id="show-line-numbers">
+  ### Mostrar números de línea
+</div>
+
+Muestra los números de línea en el lado izquierdo de tu bloque de código usando `lines`.
+
+<CodeGroup>
+  ```javascript Ejemplo de mostrar números de línea lines
+  const greeting = "Hello, World!";
+  function sayHello() {
+    console.log(greeting);
+  }
+  sayHello();
+  ```
+
+  ````mdx Formato
+  ```javascript Show line numbers example lines
+  const greeting = "Hello, World!";
+  function sayHello() {
+    console.log(greeting);
+  }
+  sayHello();
+  ```
+  ````
+</CodeGroup>
+
+<div id="expandable">
+  ### Expandible
+</div>
+
+Permite a los usuarios expandir y contraer bloques de código largos usando `expandable`.
+
+<CodeGroup>
+  ```python Expandable example expandable
+  from datetime import datetime, timedelta
+  from typing import Dict, List, Optional
+  from dataclasses import dataclass
+
+  @dataclass
+  class Book:
+  title: str
+  author: str
+  isbn: str
+  checked_out: bool = False
+  due_date: Optional[datetime] = None
+
+  class Library:
+      def __init__(self):
+          self.books: Dict[str, Book] = {}
+          self.checkouts: Dict[str, List[str]] = {} # patron -> list of ISBNs
+
+      def add_book(self, book: Book) -> None:
+          if book.isbn in self.books:
+              raise ValueError(f"Book with ISBN {book.isbn} already exists")
+          self.books[book.isbn] = book
+
+      def checkout_book(self, isbn: str, patron: str, days: int = 14) -> None:
+          if patron not in self.checkouts:
+              self.checkouts[patron] = []
+
+          book = self.books.get(isbn)
+          if not book:
+              raise ValueError("Book not found")
+
+          if book.checked_out:
+              raise ValueError("Book is already checked out")
+
+          if len(self.checkouts[patron]) >= 3:
+              raise ValueError("Patron has reached checkout limit")
+
+          book.checked_out = True
+          book.due_date = datetime.now() + timedelta(days=days)
+          self.checkouts[patron].append(isbn)
+
+      def return_book(self, isbn: str) -> float:
+          book = self.books.get(isbn)
+          if not book or not book.checked_out:
+              raise ValueError("Book not found or not checked out")
+
+          late_fee = 0.0
+          if datetime.now() > book.due_date:
+              days_late = (datetime.now() - book.due_date).days
+              late_fee = days_late * 0.50
+
+          book.checked_out = False
+          book.due_date = None
+
+          # Eliminar de los préstamos del cliente
+          for patron, books in self.checkouts.items():
+              if isbn in books:
+                  books.remove(isbn)
+                  break
+
+          return late_fee
+
+      def search(self, query: str) -> List[Book]:
+          query = query.lower()
+          return [
+              book for book in self.books.values()
+              if query in book.title.lower() or query in book.author.lower()
+          ]
+
+  def main():
+      library = Library()
+
+      # Añade algunos libros
+      books = [
+          Book("The Hobbit", "J.R.R. Tolkien", "978-0-261-10295-4"),
+          Book("1984", "George Orwell", "978-0-452-28423-4"),
+      ]
+
+      for book in books:
+          library.add_book(book)
+
+      # Ejemplo de préstamo y devolución
+      library.checkout_book("978-0-261-10295-4", "patron123")
+      late_fee = library.return_book("978-0-261-10295-4")
+      print(f"Late fee: ${late_fee:.2f}")
+
+  if __name__ == "__main__":
+      main()
+  ```
+
+  ````text Formato
+  ```python Expandable example expandable
+  from datetime import datetime, timedelta
+  from typing import Dict, List, Optional
+  from dataclasses import dataclass
+
+  # ...
+
+  if __name__ == "__main__":
+      main()
+  ```
+  ````
+</CodeGroup>
+
+<div id="wrap">
+  ### Ajuste
+</div>
+
+Activa el ajuste de texto para líneas largas con `wrap`. Esto evita el desplazamiento horizontal y facilita la lectura de líneas extensas.
+
+<CodeGroup>
+  ```javascript Wrap example wrap
+  const greeting =
+    "Hello, World! I am a long line of text that will wrap to the next line.";
+  function sayHello() {
+    console.log(greeting);
+  }
+  sayHello();
+  ```
+
+  ````mdx Format
+  ```javascript Wrap example wrap
+  const greeting =
+    "Hello, World! I am a long line of text that will wrap to the next line.";
+  function sayHello() {
+    console.log(greeting);
+  }
+  sayHello();
+  ```
+  ````
+</CodeGroup>
+
+<div id="diff">
+  ### Diff
+</div>
+
+Muestra un diff visual de las líneas añadidas o eliminadas en tus bloques de código. Las líneas añadidas se resaltan en verde y las eliminadas se resaltan en rojo.
+
+Añade `[!code ++]` o `[!code --]` dentro de un comentario al final de una línea para marcarla como añadida o eliminada. Usa la sintaxis de comentarios de tu lenguaje:
+
+| Lenguaje | Añadidas | Eliminadas |
+| --- | --- | --- |
+| JavaScript, TypeScript, Java, C, C++, Go, Rust | `// [!code ++]` | `// [!code --]` |
+| Python, Ruby, Bash, YAML | `# [!code ++]` | `# [!code --]` |
+| HTML, XML | `<!-- [!code ++] -->` | `<!-- [!code --] -->` |
+| CSS | `/* [!code ++] */` | `/* [!code --] */` |
+| SQL, Lua | `-- [!code ++]` | `-- [!code --]` |
+
+Para varias líneas consecutivas, añade dos puntos y el número de líneas:
+
+* `// [!code ++:3]`: Marca la línea actual y las dos siguientes como añadidas.
+* `# [!code --:5]`: Marca la línea actual y las cuatro siguientes como eliminadas.
+
+<CodeGroup>
+  ```js JavaScript líneas diff
+  const greeting = "Hello, World!"; // [!code ++]
+  function sayHello() {
+    console.log("Hello, World!"); // [!code --]
+    console.log(greeting); // [!code ++]
+  }
+  sayHello();
+  ```
+
+  ```python Python líneas diff
+  def greet():
+      print("Hello, World!")  # [!code --]
+      print("Hello, Mintlify!")  # [!code ++]
+
+  greet()
+  ```
+
+  ````text JavaScript Format
+  ```js JavaScript líneas diff
+  const greeting = "Hello, World!"; // [!code ++]
+  function sayHello() {
+    console.log("Hello, World!"); // [!code --]
+    console.log(greeting); // [!code ++]
+  }
+  sayHello();
+  ```
+  ````
+
+  ````text Python Format
+  ```python Python líneas diff
+  def greet():
+      print("Hello, World!")  # [!code --]
+      print("Hello, Mintlify!")  # [!code ++]
+
+  greet()
+  ```
+  ````
+</CodeGroup>
+
+<div id="codeblock-component">
+  ## Componente CodeBlock
+</div>
+
+Usa el componente `<CodeBlock>` en componentes personalizados de React para renderizar bloques de código de forma programática con el mismo estilo y las mismas funciones que los bloques de código de Markdown.
+
+<div id="props">
+  ### Props
+</div>
+
+<ResponseField name="language" type="string">
+  El lenguaje de programación para el resaltado de sintaxis.
+</ResponseField>
+
+<ResponseField name="filename" type="string">
+  El nombre del archivo que se mostrará en el encabezado del bloque de código.
+</ResponseField>
+
+<ResponseField name="icon" type="string">
+  El icon que se mostrará en el encabezado del bloque de código. Consulta [Icons](/es/components/icons)
+  para ver las opciones disponibles.
+</ResponseField>
+
+<ResponseField name="lines" type="boolean">
+  Si mostrar números de línea.
+</ResponseField>
+
+<ResponseField name="wrap" type="boolean">
+  Si ajustar el bloque de código.
+</ResponseField>
+
+<ResponseField name="expandable" type="boolean">
+  Si expandir el bloque de código.
+</ResponseField>
+
+<ResponseField name="highlight" type="string">
+  Las líneas que se deben resaltar. Proporciona un arreglo de números en formato de cadena. Ejemplo:
+  `"[1,3,4,5]"`.
+</ResponseField>
+
+<ResponseField name="focus" type="string">
+  Las líneas en las que enfocarse. Proporciona un arreglo de números en formato de cadena. Ejemplo:
+  `"[1,3,4,5]"`.
+</ResponseField>
+
+<div id="example">
+  ### Ejemplo
+</div>
+
+```jsx
+export const CustomCodeBlock = ({
+  filename,
+  icon,
+  language,
+  highlight,
+  children,
+}) => {
+  return (
+    <CodeBlock
+      filename={filename}
+      icon={icon}
+      language={language}
+      lines
+      highlight={highlight}
+    >
+      {children}
+    </CodeBlock>
+  );
+};
+```

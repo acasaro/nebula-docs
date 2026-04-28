@@ -2,10 +2,11 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageLoader } from "@/components/ui/PageLoader";
+import { env } from "@/lib/env";
 import { removeInstallation, useInstallations } from "@/lib/installations";
 import { ExternalLink, Plus, Settings as SettingsIcon, Trash2 } from "lucide-react";
 
-const installUrl = import.meta.env.NEBULA_APP_INSTALL_URL;
+const installUrl = env.appInstallUrl;
 
 export function SettingsGithubApp() {
   const installs = useInstallations();
@@ -35,8 +36,9 @@ export function SettingsGithubApp() {
           <CardHeader>
             <CardTitle>App not yet registered</CardTitle>
             <CardDescription>
-              Set <code>NEBULA_APP_INSTALL_URL</code> in <code>products/nebula/.env</code> after
-              creating the GitHub App.
+              Set <code>NEBULA_APP_INSTALL_URL_DEV</code> /{" "}
+              <code>NEBULA_APP_INSTALL_URL_PROD</code> in <code>products/nebula/.env</code> after
+              creating the GitHub App, and select the active env via <code>NEBULA_ENV</code>.
             </CardDescription>
           </CardHeader>
         </Card>

@@ -1,10 +1,8 @@
 ---
-title: "CodeBlock"
-description: "Standalone fenced code rendered with Shiki."
-icon: "code"
+title: CodeBlock
+description: Standalone fenced code rendered with Shiki.
 ---
-
-In MDX, you usually write code as a fenced block — \`\`\`lang...\`\`\` — and the renderer converts it to a `<CodeBlock>` automatically. The component accepts the same `language` and optional `filename` you'd pass through fence info.
+In MDX, you usually write code as a fenced block — ```lang...``` — and the renderer converts it to a `<CodeBlock>` automatically. The component accepts the same `language` and optional `filename` you'd pass through fence info.
 
 ## Plain fenced block
 
@@ -77,7 +75,7 @@ export async function listEditors(client: AcmeCloud) {
 }
 ```
 
-<Callout type='tip'>
-  Filenames render as a small chip above the code. Use them on tutorial pages where the reader needs
-  to know which file the snippet goes into.
-</Callout>
+<Tip>
+Filenames render as a small chip above the code. Use them on tutorial pages where the reader needs
+to know which file the snippet goes into.
+</Tip>

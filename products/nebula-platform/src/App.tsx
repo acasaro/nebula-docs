@@ -1,8 +1,10 @@
+import { Toaster as SonnerToaster } from 'sonner';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router';
 import { isFirebaseConfigured } from '@/lib/firebase';
 import { AppShell } from '@/components/AppShell';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { useGitSettings } from '@/lib/gitSettings';
+import { useTheme } from '@/lib/theme';
 import { Assets } from '@/routes/Assets';
 import { DevIconPicker } from '@/routes/DevIconPicker';
 import { Home } from '@/routes/Home';
@@ -22,6 +24,23 @@ function LegacyRepoRedirect() {
   return <Navigate to={`/editor/${settings.settings.defaultBranch}`} replace />;
 }
 
+/**
+ * Toast portal — bottom-right, non-invasive. Sonner's `theme` prop has to
+ * match our app theme explicitly: it doesn't read our `documentElement.dark`
+ * class on its own, so we wire it via `useTheme()`.
+ */
+function AppToaster() {
+  const { theme } = useTheme();
+  return (
+    <SonnerToaster
+      position='bottom-right'
+      theme={theme}
+      richColors
+      closeButton
+    />
+  );
+}
+
 export function App() {
   if (!isFirebaseConfigured()) {
     return <NotConfigured />;
@@ -29,6 +48,7 @@ export function App() {
 
   return (
     <BrowserRouter>
+      <AppToaster />
       <Routes>
         <Route path="/sign-in" element={<SignIn />} />
 

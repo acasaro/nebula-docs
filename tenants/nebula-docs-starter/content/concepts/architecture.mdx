@@ -1,84 +1,88 @@
 ---
-title: 'Architecture'
-description: 'How an AcmeCloud SDK call gets from your runtime to a stored record and back.'
-icon: 'box'
+title: Architecture
+description: How an AcmeCloud SDK call gets from your runtime to a stored record and back.
 ---
-
 AcmeCloud runs an edge-first architecture: the SDK talks to the nearest *edge node*, which validates and routes the request before it ever touches a region. Most reads never leave the edge.
 
 ## Request lifecycle
 
 <Steps>
-  <Step title="SDK serializes" icon="terminal">
-    The client SDK builds a JSON request body and signs the `Authorization: Bearer ...` header from the API key.
-  </Step>
-  <Step title="Edge node receives" icon="globe">
-    The request lands at the nearest of 38 edge nodes. The edge does:
+<Step title="SDK serializes" icon="terminal">
+The client SDK builds a JSON request body and signs the `Authorization: Bearer ...` header from the API key.
+</Step>
 
-    - Token validation (revocation list cached for 30s)
-    - Schema validation (against the published OpenAPI)
-    - Rate-limit accounting
+<Step title="Edge node receives" icon="globe">
+The request lands at the nearest of 38 edge nodes. The edge does:
 
-    Reads served entirely from the edge cache return here, in single-digit milliseconds.
-  </Step>
-  <Step title="Region forwards" icon="server">
-    Mutations and uncached reads forward to the home region for the project. There are four regions: `us-east`, `us-west`, `eu`, `ap`.
-  </Step>
-  <Step title="Storage commits" icon="database">
-    The region writes through a quorum of three replicas. Replication to other regions is asynchronous and lags by ~120ms p95.
-  </Step>
-  <Step title="Response returns" icon="check-check">
-    The reply traverses the path in reverse. Total p50 latency: 38ms for cached reads, 84ms for writes.
-  </Step>
+- Token validation (revocation list cached for 30s)
+- Schema validation (against the published OpenAPI)
+- Rate-limit accounting
+
+Reads served entirely from the edge cache return here, in single-digit milliseconds.
+</Step>
+
+<Step title="Region forwards" icon="server">
+Mutations and uncached reads forward to the home region for the project. There are four regions: `us-east`, `us-west`, `eu`, `ap`.
+</Step>
+
+<Step title="Storage commits" icon="database">
+The region writes through a quorum of three replicas. Replication to other regions is asynchronous and lags by ~120ms p95.
+</Step>
+
+<Step title="Response returns" icon="check-check">
+The reply traverses the path in reverse. Total p50 latency: 38ms for cached reads, 84ms for writes.
+</Step>
 </Steps>
 
 ## Where each piece runs
 
 <Tree>
-  <Tree.Folder name="edge nodes (38)" defaultOpen>
-    <Tree.File name="token-validator" />
-    <Tree.File name="schema-router" />
-    <Tree.File name="rate-limiter" />
-    <Tree.File name="read-cache" />
-  </Tree.Folder>
-  <Tree.Folder name="regions (4)" defaultOpen>
-    <Tree.Folder name="us-east">
-      <Tree.File name="api-server" />
-      <Tree.File name="post-store" />
-      <Tree.File name="user-store" />
-    </Tree.Folder>
-    <Tree.Folder name="us-west">
-      <Tree.File name="api-server" />
-      <Tree.File name="post-store" />
-    </Tree.Folder>
-    <Tree.Folder name="eu">
-      <Tree.File name="api-server" />
-    </Tree.Folder>
-    <Tree.Folder name="ap">
-      <Tree.File name="api-server" />
-    </Tree.Folder>
-  </Tree.Folder>
-  <Tree.Folder name="control plane">
-    <Tree.File name="dashboard" />
-    <Tree.File name="billing" />
-    <Tree.File name="auth-broker" />
-  </Tree.Folder>
+<Tree.Folder name="edge nodes (38)" defaultOpen>
+<Tree.File name="token-validator" />
+<Tree.File name="schema-router" />
+<Tree.File name="rate-limiter" />
+<Tree.File name="read-cache" />
+</Tree.Folder>
+<Tree.Folder name="regions (4)" defaultOpen>
+<Tree.Folder name="us-east">
+<Tree.File name="api-server" />
+<Tree.File name="post-store" />
+<Tree.File name="user-store" />
+</Tree.Folder>
+<Tree.Folder name="us-west">
+<Tree.File name="api-server" />
+<Tree.File name="post-store" />
+</Tree.Folder>
+<Tree.Folder name="eu">
+<Tree.File name="api-server" />
+</Tree.Folder>
+<Tree.Folder name="ap">
+<Tree.File name="api-server" />
+</Tree.Folder>
+</Tree.Folder>
+<Tree.Folder name="control plane">
+<Tree.File name="dashboard" />
+<Tree.File name="billing" />
+<Tree.File name="auth-broker" />
+</Tree.Folder>
 </Tree>
 
 ## Failure modes
 
 <AccordionGroup>
-  <Accordion title="An edge node loses connectivity">
-    Clients fail over to the next-closest edge automatically. The SDK adds 1 retry with full jitter; the second attempt always lands on a different node.
-  </Accordion>
-  <Accordion title="A region is unreachable">
-    Reads fall back to the read-cache (stale up to 30s) and to other regions' replicas (eventually consistent, ~120ms behind). Writes return `503 Service Unavailable` with `Retry-After`.
-  </Accordion>
-  <Accordion title="The control plane is down">
-    The data plane keeps serving. New API keys cannot be minted, rate-limit ceilings cannot change, and billing data backs up — but every existing key keeps working.
-  </Accordion>
+<Accordion title="An edge node loses connectivity">
+Clients fail over to the next-closest edge automatically. The SDK adds 1 retry with full jitter; the second attempt always lands on a different node.
+</Accordion>
+
+<Accordion title="A region is unreachable">
+Reads fall back to the read-cache (stale up to 30s) and to other regions' replicas (eventually consistent, ~120ms behind). Writes return `503 Service Unavailable` with `Retry-After`.
+</Accordion>
+
+<Accordion title="The control plane is down">
+The data plane keeps serving. New API keys cannot be minted, rate-limit ceilings cannot change, and billing data backs up — but every existing key keeps working.
+</Accordion>
 </AccordionGroup>
 
-<Callout type="info" title="More detail">
-  The runbook for each failure mode is published to the internal `acmecloud/runbooks` repo. This page is the public summary.
-</Callout>
+<Info>
+The runbook for each failure mode is published to the internal `acmecloud/runbooks` repo. This page is the public summary.
+</Info>

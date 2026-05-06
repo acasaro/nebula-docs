@@ -1,75 +1,86 @@
 ---
-title: 'Components'
-description: 'Every block exported from @nebula-docs/components, with multiple variations on each page.'
-icon: 'layers'
-sidebarTitle: 'Overview'
+title: Components
+description: Every block exported from @nebula-docs/components, with multiple variations on each page.
+sidebarTitle: Overview
 ---
-
 This tab is the visual reference for every block tenants can use in MDX. Each page renders multiple variations of one component so you can copy the exact MDX that produced the visual you want.
 
 ## Layout blocks
 
 <CardGroup cols={3}>
-  <Card title="Card" icon="square" href="/components/card">
-    Linkable container with optional icon, image, and CTA.
-  </Card>
-  <Card title="Columns" icon="columns" href="/components/columns">
-    Responsive grid wrapper for arbitrary children.
-  </Card>
-  <Card title="Frame" icon="image" href="/components/frame">
-    Bordered surround for screenshots, with a caption.
-  </Card>
-  <Card title="Tabs" icon="layout" href="/components/tabs">
-    Switchable content panels.
-  </Card>
-  <Card title="Accordion" icon="list-collapse" href="/components/accordion">
-    Disclosure widget — title bar, body when expanded.
-  </Card>
-  <Card title="Expandable" icon="chevrons-down" href="/components/expandable">
-    Flatter disclosure for nested-property documentation.
-  </Card>
+<Card title="Card" icon="square" href="/components/card">
+Linkable container with optional icon, image, and CTA.
+</Card>
+
+<Card title="Columns" icon="columns" href="/components/columns">
+Responsive grid wrapper for arbitrary children.
+</Card>
+
+<Card title="Frame" icon="image" href="/components/frame">
+Bordered surround for screenshots, with a caption.
+</Card>
+
+<Card title="Tabs" icon="layout" href="/components/tabs">
+Switchable content panels.
+</Card>
+
+<Card title="Accordion" icon="list-collapse" href="/components/accordion">
+Disclosure widget — title bar, body when expanded.
+</Card>
+
+<Card title="Expandable" icon="chevrons-down" href="/components/expandable">
+Flatter disclosure for nested-property documentation.
+</Card>
 </CardGroup>
 
 ## Content blocks
 
 <CardGroup cols={3}>
-  <Card title="Callout" icon="message-circle-warning" href="/components/callout">
-    Info, warning, note, tip, check, danger admonitions.
-  </Card>
-  <Card title="Badge" icon="tag" href="/components/badge">
-    Inline status pill in eight colors and four sizes.
-  </Card>
-  <Card title="Icon" icon="sparkles" href="/components/icon">
-    Lucide / Material / Material Symbols, recolorable.
-  </Card>
-  <Card title="Steps" icon="list-ordered" href="/components/steps">
-    Numbered ordered-list with connector lines.
-  </Card>
-  <Card title="Update" icon="history" href="/components/update">
-    Changelog entry with label + tags + body.
-  </Card>
+<Card title="Callout" icon="message-circle-warning" href="/components/callout">
+Info, warning, note, tip, check, danger admonitions.
+</Card>
+
+<Card title="Badge" icon="tag" href="/components/badge">
+Inline status pill in eight colors and four sizes.
+</Card>
+
+<Card title="Icon" icon="sparkles" href="/components/icon">
+Lucide / Material / Material Symbols, recolorable.
+</Card>
+
+<Card title="Steps" icon="list-ordered" href="/components/steps">
+Numbered ordered-list with connector lines.
+</Card>
+
+<Card title="Update" icon="history" href="/components/update">
+Changelog entry with label + tags + body.
+</Card>
 </CardGroup>
 
 ## Code & data blocks
 
 <CardGroup cols={3}>
-  <Card title="CodeBlock" icon="code" href="/components/code-block">
-    Standalone fenced code rendered with Shiki.
-  </Card>
-  <Card title="CodeGroup" icon="layout-grid" href="/components/code-group">
-    Tabbed multi-language code panels. (Beta — known broken)
-  </Card>
-  <Card title="Property" icon="settings-2" href="/components/property">
-    The primitive behind ParamField / ResponseField.
-  </Card>
-  <Card title="Tree" icon="folder-tree" href="/components/tree">
-    Collapsible file-tree visualization.
-  </Card>
-  <Card title="Mermaid" icon="git-branch" href="/components/mermaid">
-    Diagrams from a string source.
-  </Card>
+<Card title="CodeBlock" icon="code" href="/components/code-block">
+Standalone fenced code rendered with Shiki.
+</Card>
+
+<Card title="CodeGroup" icon="layout-grid" href="/components/code-group">
+Tabbed multi-language code panels. (Beta — known broken)
+</Card>
+
+<Card title="Property" icon="settings-2" href="/components/property">
+The primitive behind ParamField / ResponseField.
+</Card>
+
+<Card title="Tree" icon="folder-tree" href="/components/tree">
+Collapsible file-tree visualization.
+</Card>
+
+<Card title="Mermaid" icon="git-branch" href="/components/mermaid">
+Diagrams from a string source.
+</Card>
 </CardGroup>
 
-<Callout type="info" title="What's missing">
-  `Tooltip` appears in the design doc but is not yet implemented in `@nebula-docs/components`. It will land in a later phase. `VideoLoop` is exported but doesn't have a dedicated page here — see the [Frame](/components/frame) page for an example wrapping `<video>`.
-</Callout>
+<Info>
+`Tooltip` appears in the design doc but is not yet implemented in `@nebula-docs/components`. It will land in a later phase. `VideoLoop` is exported but doesn't have a dedicated page here — see the [Frame](/components/frame) page for an example wrapping `<video>`.
+</Info>

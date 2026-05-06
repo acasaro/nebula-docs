@@ -29,7 +29,7 @@ interface PublishMenuProps {
   saving: boolean;
   creatingPr: boolean;
   message: string | null;
-  onSave: () => void | Promise<void>;
+  onSave: () => Promise<boolean | void> | boolean | void;
   onCreatePr: (title: string, body: string) => Promise<void>;
   onRevert: (path: string) => void;
   onRevertAll: () => void;
@@ -107,7 +107,14 @@ export function PublishMenu({
                 variant={onDefault ? "default" : "outline"}
                 disabled={busy || dirtyCount === 0}
                 onClick={async () => {
-                  await onSave();
+                  // Close immediately on click for the publish (default-
+                  // branch) path so the toast becomes the sole feedback.
+                  // For non-default branches, wait for the result and
+                  // close on success — keeps the popover open if the
+                  // commit failed so the inline error is visible.
+                  if (onDefault) setOpen(false);
+                  const result = await onSave();
+                  if (!onDefault && result === true) setOpen(false);
                 }}>
                 {saving ? "Saving…" : saveLabel}
               </Button>

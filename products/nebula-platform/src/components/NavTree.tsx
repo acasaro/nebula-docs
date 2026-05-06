@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import * as Popover from '@radix-ui/react-popover';
 import { Icon } from '@nebula-docs/components';
+import { DragRow } from '@/components/NavDnd';
 import { cn } from '@/lib/utils';
 import {
   buildPageEntryResolver,
@@ -322,35 +323,37 @@ function TabSection({
 
   return (
     <div className="flex flex-col gap-0.5">
-      <Row
-        paddingLeft={indent}
-        settingsOpen={settingsOpen}
-        onClick={() => setExpanded((e) => !e)}
-        showActions
-        actions={
-          <>
-            <AddEntryButton
-              parentLabel={tab.tab}
-              onPick={beginAdd}
-            />
-            <SettingsToggle
-              label={tab.tab}
-              isOpen={settingsOpen}
-              onToggle={() =>
-                onOpenSettings(
-                  settingsOpen
-                    ? null
-                    : { key: settingsKey, kind: 'tab', title: tab.tab },
-                )
-              }
-            />
-          </>
-        }
-      >
-        <Chevron expanded={expanded} />
-        <NavIcon icon={tab.icon} fallback="tab" />
-        <Title>{tab.tab}</Title>
-      </Row>
+      <DragRow id={settingsKey} draggable={false} droppable={false}>
+        <Row
+          paddingLeft={indent}
+          settingsOpen={settingsOpen}
+          onClick={() => setExpanded((e) => !e)}
+          showActions
+          actions={
+            <>
+              <AddEntryButton
+                parentLabel={tab.tab}
+                onPick={beginAdd}
+              />
+              <SettingsToggle
+                label={tab.tab}
+                isOpen={settingsOpen}
+                onToggle={() =>
+                  onOpenSettings(
+                    settingsOpen
+                      ? null
+                      : { key: settingsKey, kind: 'tab', title: tab.tab },
+                  )
+                }
+              />
+            </>
+          }
+        >
+          <Chevron expanded={expanded} />
+          <NavIcon icon={tab.icon} fallback="tab" />
+          <Title>{tab.tab}</Title>
+        </Row>
+      </DragRow>
       {expanded ? (
         <div className="flex flex-col gap-0.5">
           {directPages.map((entry, i) => (
@@ -448,35 +451,37 @@ function GroupSection({
 
   return (
     <div className="flex flex-col gap-0.5">
-      <Row
-        paddingLeft={indent}
-        settingsOpen={settingsOpen}
-        onClick={() => setExpanded((e) => !e)}
-        showActions
-        actions={
-          <>
-            <AddEntryButton
-              parentLabel={group.group}
-              onPick={beginAdd}
-            />
-            <SettingsToggle
-              label={group.group}
-              isOpen={settingsOpen}
-              onToggle={() =>
-                onOpenSettings(
-                  settingsOpen
-                    ? null
-                    : { key: settingsKey, kind: 'group', title: group.group },
-                )
-              }
-            />
-          </>
-        }
-      >
-        <Chevron expanded={expanded} />
-        <NavIcon icon={group.icon} fallback="folder" />
-        <Title>{group.group}</Title>
-      </Row>
+      <DragRow id={settingsKey}>
+        <Row
+          paddingLeft={indent}
+          settingsOpen={settingsOpen}
+          onClick={() => setExpanded((e) => !e)}
+          showActions
+          actions={
+            <>
+              <AddEntryButton
+                parentLabel={group.group}
+                onPick={beginAdd}
+              />
+              <SettingsToggle
+                label={group.group}
+                isOpen={settingsOpen}
+                onToggle={() =>
+                  onOpenSettings(
+                    settingsOpen
+                      ? null
+                      : { key: settingsKey, kind: 'group', title: group.group },
+                  )
+                }
+              />
+            </>
+          }
+        >
+          <Chevron expanded={expanded} />
+          <NavIcon icon={group.icon} fallback="folder" />
+          <Title>{group.group}</Title>
+        </Row>
+      </DragRow>
       {expanded ? (
         <div className="flex flex-col gap-0.5">
           {pages.map((entry, i) => (
@@ -577,29 +582,31 @@ function PageOrGroup({
   const settingsOpen = settingsOpenKey === settingsKey;
 
   return (
-    <Row
-      paddingLeft={indent}
-      selected={isSelected}
-      settingsOpen={settingsOpen}
-      onClick={filePath ? () => onSelectPath(filePath) : undefined}
-      showActions
-      actions={
-        <SettingsToggle
-          label={title}
-          isOpen={settingsOpen}
-          onToggle={() =>
-            onOpenSettings(
-              settingsOpen
-                ? null
-                : { key: settingsKey, kind: 'page', title },
-            )
-          }
-        />
-      }
-    >
-      {hasIcon ? <NavIcon icon={iconValue} fallback={null} /> : null}
-      <Title>{title}</Title>
-    </Row>
+    <DragRow id={settingsKey}>
+      <Row
+        paddingLeft={indent}
+        selected={isSelected}
+        settingsOpen={settingsOpen}
+        onClick={filePath ? () => onSelectPath(filePath) : undefined}
+        showActions
+        actions={
+          <SettingsToggle
+            label={title}
+            isOpen={settingsOpen}
+            onToggle={() =>
+              onOpenSettings(
+                settingsOpen
+                  ? null
+                  : { key: settingsKey, kind: 'page', title },
+              )
+            }
+          />
+        }
+      >
+        {hasIcon ? <NavIcon icon={iconValue} fallback={null} /> : null}
+        <Title>{title}</Title>
+      </Row>
+    </DragRow>
   );
 }
 

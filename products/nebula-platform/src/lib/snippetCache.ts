@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { bindingNameFromPath } from '@nebula-docs/mdx';
-import { fetchFileContent } from '@/lib/githubApi';
+import { fetchFileContent } from '@/lib/content';
 import type { SnippetCatalogEntry } from '@/lib/mdx/snippetResolver';
 
 /**

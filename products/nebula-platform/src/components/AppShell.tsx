@@ -29,6 +29,13 @@ export function AppShell() {
                 {slot}
               </div>
               <div className={cn("flex shrink-0 items-center gap-2 pr-6", !leading && "border-b")}>
+                {env.isLocalBackend ? (
+                  <span
+                    title={`Editing tenants/${env.localTenant}/ on disk`}
+                    className='rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-400'>
+                    Local · {env.localTenant}
+                  </span>
+                ) : null}
                 {env.isDev ? (
                   <span
                     title={`NEBULA_ENV=${env.mode}`}

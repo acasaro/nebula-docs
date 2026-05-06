@@ -1,9 +1,7 @@
 ---
-title: 'Property'
-description: 'The primitive behind ParamField and ResponseField.'
-icon: 'settings-2'
+title: Property
+description: The primitive behind ParamField and ResponseField.
 ---
-
 `<Property>` is the field-row primitive used in API references. It renders a name + type + pills row, then a description body. `<ParamField>` and `<ResponseField>` are aliases that normalize Mintlify's `path` vs `name` conventions onto the same primitive.
 
 ## Plain property
@@ -41,25 +39,25 @@ icon: 'settings-2'
 `<ParamField>` is the same primitive but exposes `path` for the Mintlify-shaped MDX:
 
 <ParamField path="id" type="string" required>
-  The user's unique identifier.
+The user's unique identifier.
 </ParamField>
 
 <ParamField query="include" type="string">
-  Comma-separated list of related resources to include.
+Comma-separated list of related resources to include.
 </ParamField>
 
 ## ResponseField alias
 
 <ResponseField name="id" type="string">
-  The user's unique identifier.
+The user's unique identifier.
 </ResponseField>
 
 <ResponseField name="email" type="string">
-  The user's email address.
+The user's email address.
 </ResponseField>
 
 <ResponseField name="roles" type="string[]">
-  Array of role identifiers granted to the user.
+Array of role identifiers granted to the user.
 </ResponseField>
 
 ## Nested properties

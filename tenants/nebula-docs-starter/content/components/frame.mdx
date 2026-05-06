@@ -1,63 +1,43 @@
 ---
-title: "Frame"
-description: "Bordered surround for screenshots, with an optional caption."
-icon: "image"
+title: Frame
+description: Bordered surround for screenshots, with an optional caption.
 ---
-
 `<Frame>` wraps a child block (usually an image) in a rounded surround with a subtle dot grid. Use it for screenshots, diagrams, or anything else that benefits from chrome separating it from surrounding prose.
 
 ## Plain frame
 
 <Frame>
-  <img
-    src='https://firebasestorage.googleapis.com/v0/b/mcoe-d.firebasestorage.app/o/dev%2F129876467%2Fimages%2Fdd2b1626aec63224.jpg?alt=media&token=e09638ea-add6-4786-9091-5a0c82d7179f'
-    alt='A placeholder console screenshot.'
-    className='block dark:hidden'
-  />
-  <img
-    src='https://firebasestorage.googleapis.com/v0/b/mcoe-d.firebasestorage.app/o/dev%2F129876467%2Fimages%2Fdd2b1626aec63224.jpg?alt=media&token=e09638ea-add6-4786-9091-5a0c82d7179f'
-    alt='A placeholder console screenshot.'
-    className='hidden dark:block'
-  />
+<img src="https://firebasestorage.googleapis.com/v0/b/mcoe-d.firebasestorage.app/o/dev%2F129876467%2Fimages%2Fdd2b1626aec63224.jpg?alt=media&token=e09638ea-add6-4786-9091-5a0c82d7179f" alt="A placeholder console screenshot." className="block dark:hidden" />
+<img src="https://firebasestorage.googleapis.com/v0/b/mcoe-d.firebasestorage.app/o/dev%2F129876467%2Fimages%2Fdd2b1626aec63224.jpg?alt=media&token=e09638ea-add6-4786-9091-5a0c82d7179f" alt="A placeholder console screenshot." className="hidden dark:block" />
 </Frame>
 
 ## With a caption
 
-<Frame caption='The AcmeCloud dashboard, with the project switcher open.'>
-  <img
-    src='https://firebasestorage.googleapis.com/v0/b/mcoe-d.firebasestorage.app/o/dev%2F129876467%2Fimages%2Fdd2b1626aec63224.jpg?alt=media&token=e09638ea-add6-4786-9091-5a0c82d7179f'
-    alt='A placeholder dashboard screenshot.'
-  />
+<Frame caption="The AcmeCloud dashboard, with the project switcher open.">
+![A placeholder dashboard screenshot.](https://firebasestorage.googleapis.com/v0/b/mcoe-d.firebasestorage.app/o/dev%2F129876467%2Fimages%2Fdd2b1626aec63224.jpg?alt=media&token=e09638ea-add6-4786-9091-5a0c82d7179f)
 </Frame>
 
 ## With a title
 
-<Frame title='Architecture diagram'>
-  <img
-    src='https://firebasestorage.googleapis.com/v0/b/mcoe-d.firebasestorage.app/o/dev%2F129876467%2Fimages%2Fdd2b1626aec63224.jpg?alt=media&token=e09638ea-add6-4786-9091-5a0c82d7179f'
-    alt='Placeholder architecture diagram.'
-  />
+<Frame title="Architecture diagram">
+![Placeholder architecture diagram.](https://firebasestorage.googleapis.com/v0/b/mcoe-d.firebasestorage.app/o/dev%2F129876467%2Fimages%2Fdd2b1626aec63224.jpg?alt=media&token=e09638ea-add6-4786-9091-5a0c82d7179f)
 </Frame>
 
 ## Wrapping a video
 
-<Frame caption='A short loop of the dashboard at 2x speed.'>
-  <video autoPlay loop muted playsInline width='640'>
+<Frame caption="A short loop of the dashboard at 2x speed.">
+<video autoPlay loop muted playsInline width='640'>
     <source src='https://placehold.co/video.mp4' type='video/mp4' />
   </video>
 </Frame>
 
 ## Wrapping arbitrary content
 
-<Frame caption='Diagrams work too.'>
-  <Mermaid
-    chart={
-      "flowchart LR\n    A[Client SDK] --> B[Edge node]\n    B --> C[Region]\n    C --> D[(Storage)]"
-    }
-  />
+<Frame caption="Diagrams work too.">
+<Mermaid chart={"flowchart LR\n    A[Client SDK] --> B[Edge node]\n    B --> C[Region]\n    C --> D[(Storage)]"} />
 </Frame>
 
 <Tip>
-  `description` is a documented alias for `caption` and `title` is a documented alias for the
-  heading row, kept for back-compat with editor MDX that uses either name.
+`description` is a documented alias for `caption` and `title` is a documented alias for the
+heading row, kept for back-compat with editor MDX that uses either name.
 </Tip>

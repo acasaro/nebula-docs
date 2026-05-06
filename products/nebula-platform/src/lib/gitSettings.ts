@@ -8,6 +8,7 @@ import {
   type Timestamp,
 } from 'firebase/firestore';
 import { z } from 'zod';
+import { env } from '@/lib/env';
 
 export const gitSettingsSchema = z.object({
   installationId: z.number().int().positive(),
@@ -46,10 +47,31 @@ export type GitSettingsState =
   | { status: 'missing' }
   | { status: 'ready'; settings: GitSettings };
 
+/**
+ * Synthesizes a "settings configured" state when NEBULA_BACKEND=local so
+ * the editor renders against a tenant directory on disk instead of waiting
+ * on a Firestore-backed GitHub config. installationId is unused in local
+ * mode (the fs provider ignores it) — owner/repo become a label only.
+ */
+function localSentinel(): GitSettings {
+  return {
+    installationId: 1,
+    owner: 'local',
+    repo: env.localTenant,
+    defaultBranch: 'local',
+    docsSubdirectory: null,
+  };
+}
+
 export function useGitSettings(): GitSettingsState {
-  const [state, setState] = useState<GitSettingsState>({ status: 'loading' });
+  const [state, setState] = useState<GitSettingsState>(() =>
+    env.isLocalBackend
+      ? { status: 'ready', settings: localSentinel() }
+      : { status: 'loading' },
+  );
 
   useEffect(() => {
+    if (env.isLocalBackend) return;
     const unsub = onSnapshot(gitSettingsDoc(), (snap) => {
       if (!snap.exists()) {
         setState({ status: 'missing' });

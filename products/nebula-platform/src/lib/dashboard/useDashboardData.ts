@@ -9,7 +9,7 @@ import {
   type CommitAuthor,
   type CommitDetails,
   type CommitSummary,
-} from "@/lib/githubApi";
+} from "@/lib/content";
 import { useGitSettings } from "@/lib/gitSettings";
 import { dashboardMockData } from "./mockData";
 import type {

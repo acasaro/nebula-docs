@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { fetchFileContent } from '@/lib/githubApi';
+import { fetchFileContent } from '@/lib/content';
 
 export interface ThemeConfig {
   extends?: string;

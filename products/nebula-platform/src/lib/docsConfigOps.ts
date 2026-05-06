@@ -381,3 +381,121 @@ export function appendToGroup(
   pages.push(entry);
   return next;
 }
+
+/**
+ * Address of an array slot in docs.json — a `where to put it` for an insert.
+ * `tab-pages` and `tab-groups` index directly into the named tab; `group-pages`
+ * walks `tab.groups[gp[0]].pages[gp[1]].pages…` like the `findEntry` resolver.
+ */
+export type DocsInsertAddress =
+  | { kind: 'tab-pages'; tabIndex: number; index: number }
+  | { kind: 'tab-groups'; tabIndex: number; index: number }
+  | { kind: 'group-pages'; tabIndex: number; groupPath: number[]; index: number };
+
+/**
+ * Read off the parent array slot of any nav row so we can insert above/below.
+ * Used by drag-and-drop: target row → its address → insert source nearby.
+ */
+export function addressOfEntry(resolved: ResolvedEntry): DocsInsertAddress | null {
+  if (resolved.kind === 'tab') return null; // tabs aren't drop targets
+  if (resolved.kind === 'group') {
+    return {
+      kind: 'tab-groups',
+      tabIndex: resolved.tabIndex,
+      index: resolved.groupPath[0]!,
+    };
+  }
+  if (resolved.inTabDirect) {
+    return {
+      kind: 'tab-pages',
+      tabIndex: resolved.tabIndex,
+      index: resolved.pagePath[0]!,
+    };
+  }
+  return {
+    kind: 'group-pages',
+    tabIndex: resolved.tabIndex,
+    groupPath: resolved.pagePath.slice(0, -1),
+    index: resolved.pagePath[resolved.pagePath.length - 1]!,
+  };
+}
+
+function pagesArrayAt(
+  config: DocsConfig,
+  address: DocsInsertAddress,
+): PageEntry[] | Group[] | null {
+  const tabs = config.navigation?.tabs ?? [];
+  const tab = tabs[address.tabIndex];
+  if (!tab) return null;
+  if (address.kind === 'tab-pages') {
+    if (!tab.pages) tab.pages = [];
+    return tab.pages;
+  }
+  if (address.kind === 'tab-groups') {
+    if (!tab.groups) tab.groups = [];
+    return tab.groups;
+  }
+  let group = tab.groups?.[address.groupPath[0]!];
+  for (let i = 1; i < address.groupPath.length; i++) {
+    const child = group?.pages?.[address.groupPath[i]!];
+    if (!child || !isGroup(child)) return null;
+    group = child;
+  }
+  if (!group) return null;
+  if (!group.pages) group.pages = [];
+  return group.pages;
+}
+
+/** Insert `entry` at `address`. Returns a new config; original untouched. */
+export function insertEntryAt(
+  config: DocsConfig,
+  address: DocsInsertAddress,
+  entry: PageEntry,
+): DocsConfig {
+  const next: DocsConfig = JSON.parse(JSON.stringify(config));
+  if (!next.navigation) next.navigation = { tabs: [] };
+  const arr = pagesArrayAt(next, address);
+  if (!arr) return next;
+  // tab-groups is a Group[] — silently skip non-Group entries to avoid
+  // corrupting the schema. Callers should validate before calling.
+  if (address.kind === 'tab-groups' && !isGroup(entry)) return next;
+  const idx = Math.max(0, Math.min(address.index, arr.length));
+  (arr as PageEntry[]).splice(idx, 0, entry);
+  return next;
+}
+
+/**
+ * Remove the entry at `sourceKey` and insert it at `dest`. Handles the
+ * same-array index shift internally (if you remove index 2 and ask to insert
+ * at index 5 in the *same* array, the actual insert lands at index 4). Used
+ * by drag-and-drop reorder.
+ */
+export function moveEntryToAddress(
+  config: DocsConfig,
+  sourceKey: string,
+  dest: DocsInsertAddress,
+  resolveCtx?: ResolveContext,
+): DocsConfig {
+  const resolved = findEntry(config, sourceKey, resolveCtx);
+  if (!resolved || resolved.kind === 'tab') return config;
+  // Snapshot the entry before deletion so we can re-insert it.
+  const entry: PageEntry =
+    resolved.kind === 'group' ? resolved.group : resolved.page;
+  const sourceAddr = addressOfEntry(resolved);
+  if (!sourceAddr) return config;
+
+  // Index shift: if source and destination point at the same array AND the
+  // source slot sits before the destination, the post-removal indices shift
+  // down by one.
+  let destIndex = dest.index;
+  const sameArray =
+    sourceAddr.kind === dest.kind &&
+    sourceAddr.tabIndex === dest.tabIndex &&
+    (dest.kind !== 'group-pages' ||
+      JSON.stringify((sourceAddr as Extract<DocsInsertAddress, { kind: 'group-pages' }>).groupPath) ===
+        JSON.stringify((dest as Extract<DocsInsertAddress, { kind: 'group-pages' }>).groupPath));
+  if (sameArray && sourceAddr.index < destIndex) destIndex -= 1;
+
+  const removed = deleteEntry(config, sourceKey, resolveCtx);
+  return insertEntryAt(removed, { ...dest, index: destIndex }, entry);
+}

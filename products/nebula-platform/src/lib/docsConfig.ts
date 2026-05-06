@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { fetchFileContent } from '@/lib/githubApi';
+import { fetchFileContent } from '@/lib/content';
 
 // `docs.json` schema (the subset Nebula renders). Pages can be strings
 // (page paths without `.mdx`) or nested groups / page-object entries.
@@ -191,6 +191,29 @@ export function buildPageEntryResolver(
 }
 
 /**
+ * Inverse of `buildPageEntryResolver` — convert a real on-disk path back to
+ * the docs.json page slug. Strips the docs subdirectory + optional `content/`
+ * prefix and the `.mdx`/`.md` extension. Returns null if the path doesn't
+ * sit under `<docsSubdirectory>` (caller shouldn't be inserting it).
+ *
+ *   "content/landing.mdx", ""     → "landing"
+ *   "docs/content/quickstart.mdx", "docs" → "quickstart"
+ */
+export function filePathToPageSlug(
+  filePath: string,
+  docsSubdirectory: string,
+): string | null {
+  const sub = docsSubdirectory.replace(/\/+$/, '');
+  let p = filePath;
+  if (sub) {
+    if (!p.startsWith(sub + '/')) return null;
+    p = p.slice(sub.length + 1);
+  }
+  if (p.startsWith('content/')) p = p.slice('content/'.length);
+  return p.replace(/\.(mdx|md)$/, '');
+}
+
+/**
  * Pretty-print a page path's last segment for display in the tree when no
  * sidebarTitle is provided.
  *   "documentation/format-text" → "Format text"
@@ -244,6 +267,38 @@ function* yieldReachableInEntry(entry: PageEntry): Generator<PageEntry> {
     return;
   }
   if (entry.hidden || entry.externalUrl) return;
+  if (!entry.page && !entry.slug) return;
+  yield entry;
+}
+
+/**
+ * Yield every local page entry referenced anywhere in `navigation.tabs`,
+ * including entries marked `hidden`. Used to compute the set of repo paths
+ * docs.json *knows about* — anything on disk outside that set is an orphan.
+ * Mirrors `reachablePages` but doesn't prune hidden branches.
+ */
+export function* referencedPages(config: DocsConfig | null): Generator<PageEntry> {
+  if (!config) return;
+  for (const tab of config.navigation?.tabs ?? []) {
+    for (const entry of tab.pages ?? []) yield* yieldReferencedInEntry(entry);
+    for (const group of tab.groups ?? []) yield* yieldReferencedInGroup(group);
+  }
+}
+
+function* yieldReferencedInGroup(group: Group): Generator<PageEntry> {
+  for (const entry of group.pages ?? []) yield* yieldReferencedInEntry(entry);
+}
+
+function* yieldReferencedInEntry(entry: PageEntry): Generator<PageEntry> {
+  if (typeof entry === 'string') {
+    yield entry;
+    return;
+  }
+  if (isGroup(entry)) {
+    yield* yieldReferencedInGroup(entry);
+    return;
+  }
+  if (entry.externalUrl) return;
   if (!entry.page && !entry.slug) return;
   yield entry;
 }

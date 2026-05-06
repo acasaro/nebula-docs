@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { fetchFileContent } from '@/lib/githubApi';
+import { fetchFileContent } from '@/lib/content';
 import { splitFrontmatter } from '@/lib/frontmatter';
 
 export type FrontmatterValues = Record<string, unknown>;
@@ -134,6 +134,20 @@ export function useFrontmatterCache({
 
     return () => {
       cancelled = true;
+      // Drop every target this effect added to inFlightRef. Two reasons:
+      //   1. Queue paths (never picked up by a worker) need to be re-attempted
+      //      by the next effect run; otherwise they stay "in flight" forever.
+      //   2. Paths shifted by a worker but mid-fetch at cancellation time
+      //      bail out via `if (cancelled) return` and never write to cache or
+      //      mark themselves loaded — without clearing inFlightRef here, the
+      //      next effect filters them out as "still in flight" and they're
+      //      orphaned forever.
+      // Each worker's finally will also delete its current path from
+      // inFlightRef, but that's idempotent. Without this cleanup, knownFiles
+      // changes mid-fetch (which fires every time a user opens a file) strand
+      // a chunk of the queue, so those nav-row icons stay invisible until the
+      // file is opened.
+      for (const p of targets) inFlightRef.current.delete(p);
     };
     // `loaded` is read but intentionally not a dep — adding it would re-run
     // every time a single fetch finishes and re-trigger half the queue.

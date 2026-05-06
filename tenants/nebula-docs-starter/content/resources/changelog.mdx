@@ -1,33 +1,31 @@
 ---
-title: 'Changelog'
-description: 'Notable releases of the AcmeCloud SDK and platform.'
-icon: 'history'
+title: Changelog
+description: Notable releases of the AcmeCloud SDK and platform.
 ---
-
 A summary of every release since the `v2.0` cut. For full release notes — including security fixes — see the GitHub releases page on each SDK repo.
 
 <Update label="v2.4.0" description="2026-04-22" tags={['sdk', 'platform']}>
-  - **TypeScript SDK** added `client.users.me()` shorthand for the `GET /users/me` endpoint.
-  - **Platform** new region: `ap-northeast-1`. Existing `ap` projects can opt in from **Settings → Region**.
-  - **Webhooks** payloads now include the deploy SHA in `x-acme-deploy`.
+- **TypeScript SDK** added `client.users.me()` shorthand for the `GET /users/me` endpoint.
+- **Platform** new region: `ap-northeast-1`. Existing `ap` projects can opt in from **Settings → Region**.
+- **Webhooks** payloads now include the deploy SHA in `x-acme-deploy`.
 </Update>
 
 <Update label="v2.3.0" description="2026-03-08" tags={['sdk']}>
-  - **All SDKs** retry policy changed from fixed-jitter to exponential-with-full-jitter. Mean retry delay drops by ~30%.
-  - **Python SDK** dropped Python 3.10 support. 3.11+ only going forward.
+- **All SDKs** retry policy changed from fixed-jitter to exponential-with-full-jitter. Mean retry delay drops by ~30%.
+- **Python SDK** dropped Python 3.10 support. 3.11+ only going forward.
 </Update>
 
 <Update label="v2.2.0" description="2026-01-30" tags={['platform']}>
-  - **Platform** rate limits per API key are now configurable from the dashboard. Previously project-wide.
-  - **Platform** added `X-RateLimit-Reset` header to every response.
+- **Platform** rate limits per API key are now configurable from the dashboard. Previously project-wide.
+- **Platform** added `X-RateLimit-Reset` header to every response.
 </Update>
 
 <Update label="v2.1.0" description="2025-12-12" tags={['sdk', 'beta']}>
-  - **Go SDK** initial release. v2.1 is the version-zero cut for the Go client.
-  - **TypeScript SDK** experimental `client.posts.stream()` for tailing post revisions.
+- **Go SDK** initial release. v2.1 is the version-zero cut for the Go client.
+- **TypeScript SDK** experimental `client.posts.stream()` for tailing post revisions.
 </Update>
 
 <Update label="v2.0.0" description="2025-10-01" tags={['breaking', 'platform']}>
-  - **Breaking** the `Authorization` header now requires the `Bearer ` prefix. Pre-2.0 clients sending raw keys get a 401 with a migration hint.
-  - **Platform** new resource: `Post`. See [Data model](/concepts/data-model).
+- **Breaking** the `Authorization` header now requires the `Bearer ` prefix. Pre-2.0 clients sending raw keys get a 401 with a migration hint.
+- **Platform** new resource: `Post`. See [Data model](/concepts/data-model).
 </Update>

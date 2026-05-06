@@ -1,46 +1,47 @@
 ---
-title: 'Accordion'
-description: 'A single collapsible disclosure built on the native <details> element.'
-icon: 'list-collapse'
+title: Accordion
+description: A single collapsible disclosure built on the native <details> element.
 ---
-
 `<Accordion>` shows a title bar that toggles a body region. Use a single accordion for an inline FAQ-style disclosure, or wrap several in `<AccordionGroup>` for a stacked set.
 
 ## Single accordion
 
 <Accordion title="What is AcmeCloud?">
-  AcmeCloud is a fictional placeholder product used to populate this kitchen-sink starter. Don't reference its content as real documentation.
+AcmeCloud is a fictional placeholder product used to populate this kitchen-sink starter. Don't reference its content as real documentation.
 </Accordion>
 
 ## With a description and icon
 
 <Accordion title="Pricing details" description="Free tier vs paid plans" icon="dollar-sign">
-  Free tier covers up to 120 requests/minute. Paid tiers raise the ceiling and unlock per-region replication.
+Free tier covers up to 120 requests/minute. Paid tiers raise the ceiling and unlock per-region replication.
 </Accordion>
 
 ## Default-open
 
 <Accordion title="This one starts expanded" defaultOpen>
-  Use `defaultOpen` when the body is the primary content of the section and the disclosure is just for scannable affordance, not for hiding.
+Use `defaultOpen` when the body is the primary content of the section and the disclosure is just for scannable affordance, not for hiding.
 </Accordion>
 
 ## Stacked group
 
 <AccordionGroup>
-  <Accordion title="How do I rotate an API key?">
-    Go to **Settings → API keys → Rotate**. The previous key keeps working for 24 hours so deploys can roll over without a flag day.
-  </Accordion>
-  <Accordion title="Where is my data stored?">
-    In your project's home region. The list of regions and what's deployed where is on the [Architecture](/concepts/architecture) page.
-  </Accordion>
-  <Accordion title="Can I export my data?">
-    Yes — every project has a one-click `acmecloud export` from the dashboard. Output is one JSON-Lines file per resource type.
-  </Accordion>
-  <Accordion title="What's your SLA?">
-    Pro and Enterprise tiers ship a 99.95% uptime SLA on the API. Free tier is best-effort; check the [Status page](https://status.acmecloud.example) for current incidents.
-  </Accordion>
+<Accordion title="How do I rotate an API key?">
+Go to **Settings → API keys → Rotate**. The previous key keeps working for 24 hours so deploys can roll over without a flag day.
+</Accordion>
+
+<Accordion title="Where is my data stored?">
+In your project's home region. The list of regions and what's deployed where is on the [Architecture](/concepts/architecture) page.
+</Accordion>
+
+<Accordion title="Can I export my data?">
+Yes — every project has a one-click `acmecloud export` from the dashboard. Output is one JSON-Lines file per resource type.
+</Accordion>
+
+<Accordion title="What's your SLA?">
+Pro and Enterprise tiers ship a 99.95% uptime SLA on the API. Free tier is best-effort; check the [Status page](https://status.acmecloud.example) for current incidents.
+</Accordion>
 </AccordionGroup>
 
-<Callout type="tip">
-  Children of an `<Accordion>` can be any block. Mix prose, code, and components freely.
-</Callout>
+<Tip>
+Children of an `<Accordion>` can be any block. Mix prose, code, and components freely.
+</Tip>

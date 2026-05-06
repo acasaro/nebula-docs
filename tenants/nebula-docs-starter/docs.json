@@ -7,7 +7,10 @@
     "href": "/"
   },
   "versions": [
-    { "version": "v2.4", "default": true }
+    {
+      "version": "v2.4",
+      "default": true
+    }
   ],
   "theme": {
     "base": "mcoe-default",
@@ -24,6 +27,8 @@
             "group": "Get Started",
             "icon": "rocket",
             "pages": [
+              "landing",
+              "resources/changelog",
               "index",
               "quickstart"
             ]
@@ -42,31 +47,17 @@
             "pages": [
               {
                 "group": "Build & Deploy",
-                "icon": "wrench",
                 "pages": [
                   "tutorial/01-setup",
                   "tutorial/02-deploy"
-                ]
-              }
-            ]
-          },
-          {
-            "group": "Resources",
-            "icon": "external-link",
-            "pages": [
-              {
-                "page": "resources/changelog",
-                "sidebarTitle": "Changelog",
-                "icon": "history"
-              },
-              {
-                "slug": "external-status",
-                "sidebarTitle": "Status page",
-                "externalUrl": "https://status.acmecloud.example",
-                "icon": "activity"
+                ],
+                "expanded": false
               }
             ]
           }
+        ],
+        "pages": [
+          "legal/internal-notes"
         ]
       },
       {
@@ -75,7 +66,6 @@
         "groups": [
           {
             "group": "Overview",
-            "icon": "list",
             "pages": [
               "components"
             ]
@@ -126,20 +116,13 @@
         "groups": [
           {
             "group": "Overview",
-            "icon": "book-open",
             "pages": [
               "api"
             ]
           },
           {
             "group": "Users",
-            "icon": "users",
             "pages": [
-              {
-                "page": "api/users/get-user",
-                "sidebarTitle": "GET /users/{id}",
-                "icon": "search"
-              },
               {
                 "page": "api/users/create-user",
                 "sidebarTitle": "POST /users",
@@ -154,7 +137,6 @@
           },
           {
             "group": "Posts",
-            "icon": "file-text",
             "pages": [
               {
                 "page": "api/posts/get-post",
@@ -180,8 +162,16 @@
       "href": "/quickstart"
     },
     "links": [
-      { "label": "Changelog", "href": "/resources/changelog", "icon": "history" },
-      { "label": "Support", "href": "/concepts/architecture", "icon": "life-buoy" }
+      {
+        "label": "Changelog",
+        "href": "/resources/changelog",
+        "icon": "history"
+      },
+      {
+        "label": "Support",
+        "href": "/concepts/architecture",
+        "icon": "life-buoy"
+      }
     ]
   },
   "footer": {
@@ -189,24 +179,48 @@
       {
         "label": "Documentation",
         "links": [
-          { "label": "Quickstart", "href": "/quickstart" },
-          { "label": "Concepts", "href": "/concepts/data-model" },
-          { "label": "Tutorials", "href": "/tutorial/01-setup" }
+          {
+            "label": "Quickstart",
+            "href": "/quickstart"
+          },
+          {
+            "label": "Concepts",
+            "href": "/concepts/data-model"
+          },
+          {
+            "label": "Tutorials",
+            "href": "/tutorial/01-setup"
+          }
         ]
       },
       {
         "label": "Components",
         "links": [
-          { "label": "Overview", "href": "/components" },
-          { "label": "Cards", "href": "/components/card" },
-          { "label": "Tabs", "href": "/components/tabs" }
+          {
+            "label": "Overview",
+            "href": "/components"
+          },
+          {
+            "label": "Cards",
+            "href": "/components/card"
+          },
+          {
+            "label": "Tabs",
+            "href": "/components/tabs"
+          }
         ]
       },
       {
         "label": "API",
         "links": [
-          { "label": "Users", "href": "/api/users/get-user" },
-          { "label": "Posts", "href": "/api/posts/get-post" }
+          {
+            "label": "Users",
+            "href": "/api/users/get-user"
+          },
+          {
+            "label": "Posts",
+            "href": "/api/posts/get-post"
+          }
         ]
       }
     ],

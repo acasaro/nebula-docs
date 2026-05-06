@@ -1,10 +1,8 @@
 ---
-title: 'Data model'
-description: 'How projects, users, and posts relate in AcmeCloud.'
-icon: 'database'
-keywords: ['model', 'projects', 'users', 'posts', 'tenancy']
+title: Data model
+description: How projects, users, and posts relate in AcmeCloud.
+keywords: [model, projects, users, posts, tenancy]
 ---
-
 The AcmeCloud data model has three top-level entities: **Project**, **User**, and **Post**. A project owns its users; a user authors posts; posts are addressable across projects through a stable global ID.
 
 ## Project
@@ -77,38 +75,18 @@ A post is a versioned content record. Posts are mutable but every change writes 
 
 ## Relationships at a glance
 
-<Mermaid>
-{`erDiagram
-  PROJECT ||--o{ USER : "contains"
-  USER ||--o{ POST : "authors"
-  PROJECT {
-    string id PK
-    string name
-    string tier
-  }
-  USER {
-    string id PK
-    string email
-    string name
-  }
-  POST {
-    string id PK
-    string authorId FK
-    string title
-    number revision
-  }`}
-</Mermaid>
+<Mermaid chart={"erDiagram\nPROJECT ||--o{ USER : \"contains\"\nUSER ||--o{ POST : \"authors\"\nPROJECT {\n  string id PK\n  string name\n  string tier\n}\nUSER {\n  string id PK\n  string email\n  string name\n}\nPOST {\n  string id PK\n  string authorId FK\n  string title\n  number revision\n}"} />
 
 ## Why no global user table?
 
 <Accordion title="Tenancy isolation" defaultOpen>
-  Per-project scoping means a security incident in one tenant cannot leak into another. The price is duplication when the same human signs up to multiple projects — the model accepts that tradeoff.
+Per-project scoping means a security incident in one tenant cannot leak into another. The price is duplication when the same human signs up to multiple projects — the model accepts that tradeoff.
 </Accordion>
 
 <Accordion title="Auth provider integration">
-  Each project picks its own OIDC provider. A global user would force a single auth contract; per-project users let each tenant pick their own.
+Each project picks its own OIDC provider. A global user would force a single auth contract; per-project users let each tenant pick their own.
 </Accordion>
 
 <Accordion title="Why not project-scoped IDs across the board?">
-  Posts get global IDs because cross-project sharing is a planned feature. Users do not, because cross-project membership creates a privacy surface we explicitly don't want to introduce.
+Posts get global IDs because cross-project sharing is a planned feature. Users do not, because cross-project membership creates a privacy surface we explicitly don't want to introduce.
 </Accordion>

@@ -4,8 +4,20 @@ import { FileTypeIcon, isBinaryFile } from "@/components/FileTypeIcon";
 import { useHeaderLeading, useHeaderSlot } from "@/components/HeaderSlot";
 import { MdxEditor, normalizeMdx } from "@/components/mdx/MdxEditor";
 import { NavSettingsPanel } from "@/components/NavSettingsPanel";
+import { HoverProvider, type DropSide, type HoverState } from "@/components/NavDnd";
 import { NavTreeSkeleton } from "@/components/NavTreeSkeleton";
+import { OrphanedPages, ORPHAN_ID_PREFIX } from "@/components/OrphanedPages";
 import { SourceEditor } from "@/components/SourceEditor";
+import {
+  DndContext,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+  type DragOverEvent,
+  type DragStartEvent,
+} from "@dnd-kit/core";
+import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import {
   NavTree,
   type AddEntryKind,
@@ -17,19 +29,26 @@ import { PageLoader } from "@/components/ui/PageLoader";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   buildPageEntryResolver,
+  filePathToPageSlug,
   firstReachablePage,
+  referencedPages,
   useDocsConfig,
   type DocsConfig,
   type Group,
+  type PageEntry,
   type Tab,
 } from "@/lib/docsConfig";
 import { useThemeConfig, type ThemeConfig } from "@/lib/themeConfig";
 import {
+  addressOfEntry,
   appendTab,
   appendToGroup,
   appendToTab,
   deleteEntry,
   findEntry,
+  insertEntryAt,
+  moveEntryToAddress,
+  type DocsInsertAddress,
   type ResolveContext,
 } from "@/lib/docsConfigOps";
 import { applyFrontmatterPatch } from "@/lib/frontmatter";
@@ -50,13 +69,14 @@ import {
   fetchRepoTree,
   listBranches,
   type FileChange,
-} from "@/lib/githubApi";
+} from "@/lib/content";
 import { useGitSettings } from "@/lib/gitSettings";
 import { buildTree, type TreeNode } from "@/lib/repoTree";
 import { cn } from "@/lib/utils";
 import { ChevronDown, ChevronRight, Code2, Eye, Files, Folder, Map, Settings } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Navigate, useNavigate, useParams } from "react-router";
+import { toast } from "sonner";
 
 interface FileEntry {
   /** Canonical content from GitHub, normalized through the MDX serializer
@@ -514,6 +534,95 @@ export function RepoBrowser() {
     return docsConfigState.config;
   }, [files, docsConfigState.config]);
 
+  // MDX files on disk but not referenced anywhere in docs.json. Snippets are
+  // intentionally never in the nav, so they don't count. Surfaced under the
+  // curated nav tree as "Orphaned pages" so drafts and unwired files don't
+  // disappear when docs.json is the source of truth for the sidebar. Drag a
+  // row from this section onto any nav row to wire it in.
+  const orphanedPagePaths = useMemo<string[]>(() => {
+    if (!liveDocsConfig) return [];
+    const referenced = new Set<string>();
+    for (const entry of referencedPages(liveDocsConfig)) {
+      const path = resolvePagePath(entry);
+      if (path) referenced.add(path);
+    }
+    return allPaths
+      .filter((p) => isMdxFile(p))
+      .filter((p) => !p.includes("/snippets/"))
+      .filter((p) => !referenced.has(p))
+      .sort();
+  }, [liveDocsConfig, resolvePagePath, allPaths]);
+
+  // Stable ids for every draggable row, in document order. Nav rows use the
+  // same settings-key the row already mints (`tab:`, `group:`, `page:`),
+  // orphans use `orphan:<path>`. SortableContext needs the full list, but
+  // collapsed-but-not-rendered descendants are harmless — they have no DOM
+  // node so collision detection skips them naturally.
+  const navDragIds = useMemo<string[]>(() => {
+    const ids: string[] = [];
+    if (liveDocsConfig) {
+      const tabs = liveDocsConfig.navigation?.tabs ?? [];
+      const visit = (entry: PageEntry, keyPath: string): void => {
+        if (typeof entry === "object" && entry !== null && "group" in entry) {
+          const g = entry as Group;
+          ids.push(`group:${keyPath}`);
+          (g.pages ?? []).forEach((child, i) =>
+            visit(child as PageEntry, `${keyPath}/p${i}`),
+          );
+        } else {
+          const fp = resolvePagePath(entry);
+          ids.push(`page:${fp ?? keyPath}`);
+        }
+      };
+      tabs.forEach((tab, ti) => {
+        ids.push(`tab:${tab.tab}`);
+        const base = `tab${ti}`;
+        (tab.pages ?? []).forEach((entry, i) => visit(entry, `${base}/d${i}`));
+        (tab.groups ?? []).forEach((g, gi) => {
+          const groupPath = `${base}/${gi}/${g.group}`;
+          ids.push(`group:${groupPath}`);
+          (g.pages ?? []).forEach((child, i) =>
+            visit(child, `${groupPath}/p${i}`),
+          );
+        });
+      });
+    }
+    for (const path of orphanedPagePaths) ids.push(`${ORPHAN_ID_PREFIX}${path}`);
+    return ids;
+  }, [liveDocsConfig, resolvePagePath, orphanedPagePaths]);
+
+  // Drag-and-drop state. `hover` drives the drop-line indicator on whichever
+  // row is currently the over target — overId + side. Cleared on drop.
+  const [hover, setHover] = useState<HoverState>({ overId: null, side: null });
+  const dndSensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+  );
+
+  const handleDragStart = useCallback((_e: DragStartEvent) => {
+    setHover({ overId: null, side: null });
+  }, []);
+
+  const handleDragOver = useCallback((e: DragOverEvent) => {
+    const overId = e.over?.id;
+    if (!overId || typeof overId !== "string") {
+      setHover({ overId: null, side: null });
+      return;
+    }
+    if (overId.startsWith(ORPHAN_ID_PREFIX) || overId.startsWith("tab:")) {
+      // Orphan rows aren't drop targets; tab rows are out-of-scope for
+      // reordering. Show no indicator.
+      setHover({ overId: null, side: null });
+      return;
+    }
+    const overRect = e.over?.rect;
+    if (!overRect) return;
+    const activeRect = e.active?.rect.current.translated;
+    const pointerY = activeRect ? activeRect.top + activeRect.height / 2 : 0;
+    const midY = overRect.top + overRect.height / 2;
+    const side: DropSide = pointerY < midY ? "above" : "below";
+    setHover({ overId, side });
+  }, []);
+
   const handleConfigChange = useCallback(
     (updater: (config: DocsConfig) => DocsConfig) => {
       setFiles((prev) => {
@@ -544,6 +653,47 @@ export function RepoBrowser() {
       });
     },
     [docsConfigState.config],
+  );
+
+  const handleDragEnd = useCallback(
+    (e: DragEndEvent) => {
+      const { active, over } = e;
+      const activeId = String(active.id);
+      const overId = over ? String(over.id) : null;
+      const side = hover.side;
+      setHover({ overId: null, side: null });
+
+      if (!overId || !liveDocsConfig) return;
+      if (overId === activeId) return;
+      if (overId.startsWith(ORPHAN_ID_PREFIX) || overId.startsWith("tab:")) return;
+
+      const targetResolved = findEntry(liveDocsConfig, overId, resolveCtx);
+      if (!targetResolved) return;
+      const baseAddr = addressOfEntry(targetResolved);
+      if (!baseAddr) return;
+      const dest: DocsInsertAddress = {
+        ...baseAddr,
+        index: side === "below" ? baseAddr.index + 1 : baseAddr.index,
+      };
+
+      handleConfigChange((config) => {
+        if (activeId.startsWith(ORPHAN_ID_PREFIX)) {
+          // Source is an orphan: build a string PageEntry from its path and
+          // insert at the destination. tab-groups can't host pages, so route
+          // page-shaped sources to the corresponding tab-pages array.
+          const path = activeId.slice(ORPHAN_ID_PREFIX.length);
+          const slug = filePathToPageSlug(path, docsSubdir);
+          if (!slug) return config;
+          const insertDest: DocsInsertAddress =
+            dest.kind === "tab-groups"
+              ? { kind: "tab-pages", tabIndex: dest.tabIndex, index: dest.index }
+              : dest;
+          return insertEntryAt(config, insertDest, slug);
+        }
+        return moveEntryToAddress(config, activeId, dest, resolveCtx);
+      });
+    },
+    [hover.side, liveDocsConfig, resolveCtx, handleConfigChange, docsSubdir],
   );
 
   const liveThemeConfig = useMemo<ThemeConfig | null>(() => {
@@ -872,9 +1022,9 @@ export function RepoBrowser() {
 
   const deletionList = useMemo(() => Array.from(deletions), [deletions]);
 
-  const handleSave = async () => {
-    if (!active || !currentBranch) return;
-    if (dirtyPaths.length === 0 && deletionList.length === 0) return;
+  const handleSave = async (): Promise<boolean> => {
+    if (!active || !currentBranch) return false;
+    if (dirtyPaths.length === 0 && deletionList.length === 0) return false;
     setSaving(true);
     setSaveMessage(null);
     try {
@@ -886,7 +1036,7 @@ export function RepoBrowser() {
       for (const path of deletionList) {
         changes.push({ path, delete: true });
       }
-      if (changes.length === 0) return;
+      if (changes.length === 0) return false;
       const message =
         dirtyPaths.length + deletionList.length === 1
           ? deletionList.length === 1
@@ -918,11 +1068,27 @@ export function RepoBrowser() {
         return next;
       });
       setDeletions(new Set());
-      setSaveMessage(
-        `Saved ${changes.length} change${changes.length === 1 ? "" : "s"} to ${currentBranch}.`,
-      );
+      const onDefault = currentBranch === active.defaultBranch;
+      const count = changes.length;
+      const fileLabel = `${count} change${count === 1 ? "" : "s"}`;
+      // Toast for ephemeral feedback. The PublishMenu also closes its
+      // popover on a successful save (see its onSave handler).
+      if (onDefault) {
+        toast.success("Published", {
+          description: `Merged ${fileLabel} into ${currentBranch}.`,
+        });
+      } else {
+        toast.success("Saved", {
+          description: `Committed ${fileLabel} to ${currentBranch}.`,
+        });
+      }
+      setSaveMessage(`Saved ${fileLabel} to ${currentBranch}.`);
+      return true;
     } catch (err) {
-      setSaveMessage(err instanceof Error ? `Save failed: ${err.message}` : "Save failed.");
+      const detail = err instanceof Error ? err.message : "Save failed.";
+      toast.error("Save failed", { description: detail });
+      setSaveMessage(`Save failed: ${detail}`);
+      return false;
     } finally {
       setSaving(false);
     }
@@ -1108,19 +1274,36 @@ export function RepoBrowser() {
             ) : docsConfigState.error ? (
               <p className='px-3 py-2 text-sm text-destructive'>{docsConfigState.error}</p>
             ) : liveDocsConfig ? (
-              <NavTree
-                config={liveDocsConfig}
-                selectedPath={selectedPath}
-                onSelectPath={handleSelectPath}
-                settingsOpenKey={settingsOpen?.key ?? null}
-                onOpenSettings={setSettingsOpen}
-                onAddEntry={handleAddEntry}
-                onAddTab={handleAddTab}
-                repoPaths={repoPathSet}
-                docsSubdirectory={docsSubdir}
-                frontmatterCache={frontmatterCacheState.cache}
-                frontmatterLoaded={frontmatterCacheState.loaded}
-              />
+              <DndContext
+                sensors={dndSensors}
+                onDragStart={handleDragStart}
+                onDragOver={handleDragOver}
+                onDragEnd={handleDragEnd}
+              >
+                <SortableContext items={navDragIds} strategy={verticalListSortingStrategy}>
+                  <HoverProvider hover={hover}>
+                    <NavTree
+                      config={liveDocsConfig}
+                      selectedPath={selectedPath}
+                      onSelectPath={handleSelectPath}
+                      settingsOpenKey={settingsOpen?.key ?? null}
+                      onOpenSettings={setSettingsOpen}
+                      onAddEntry={handleAddEntry}
+                      onAddTab={handleAddTab}
+                      repoPaths={repoPathSet}
+                      docsSubdirectory={docsSubdir}
+                      frontmatterCache={frontmatterCacheState.cache}
+                      frontmatterLoaded={frontmatterCacheState.loaded}
+                    />
+                    <OrphanedPages
+                      paths={orphanedPagePaths}
+                      selectedPath={selectedPath}
+                      onSelectPath={handleSelectPath}
+                      docsSubdirectory={docsSubdir}
+                    />
+                  </HoverProvider>
+                </SortableContext>
+              </DndContext>
             ) : (
               <FileTreePanel
                 tree={navigationTree}

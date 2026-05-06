@@ -6,5 +6,6 @@ export { AssetEmptyState } from './AssetEmptyState';
 export { AssetToolbar } from './AssetToolbar';
 export { AssetUploadOverlay } from './AssetUploadOverlay';
 export { AssetUploadProgress } from './AssetUploadProgress';
+export { VideoThumbnail } from './VideoThumbnail';
 export { ImagePickerDialog } from './ImagePickerDialog';
 export type { PickedImage } from './ImagePickerDialog';

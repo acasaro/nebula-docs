@@ -226,21 +226,22 @@
   margin-top: 0.5rem;
 }
 
-/* Code-block configurable options driven by node attrs:
- *   data-show-line-numbers="true" → counter-based line gutter
- *   data-wrap-code="true"          → soft-wrap long lines
- * The same modifier classes (`mdx-code-block--lines/--wrap`) are also
- * applied directly to the inner <pre> when the preview's surrounding
- * wrapper rewrites them via Tailwind arbitrary variants. */
-.mdx-code-block--lines {
+/* Code-block configurable options driven by `data-show-line-numbers` /
+ * `data-wrap-code` on the NodeView wrapper. The counter resets on the
+ * <pre>; each top-level `<span class="line">` (Shiki) — or each direct
+ * `<code>` child span (when no .line wrapper is present) — increments
+ * the counter and gets a numeric `::before` gutter. */
+[data-mdx-code-block][data-show-line-numbers='true'] pre {
   counter-reset: code-line;
 }
-.mdx-code-block--lines code,
-.mdx-code-block--lines .line {
+[data-mdx-code-block][data-show-line-numbers='true'] pre .line,
+[data-mdx-code-block][data-show-line-numbers='true'] pre code > span:not(.line) {
   counter-increment: code-line;
+  display: inline-block;
+  width: 100%;
 }
-.mdx-code-block--lines code > span::before,
-.mdx-code-block--lines .line::before {
+[data-mdx-code-block][data-show-line-numbers='true'] pre .line::before,
+[data-mdx-code-block][data-show-line-numbers='true'] pre code > span:not(.line)::before {
   content: counter(code-line);
   display: inline-block;
   width: 2.25em;
@@ -250,14 +251,34 @@
   opacity: 0.55;
   user-select: none;
 }
-[data-show-line-numbers='true'] .ProseMirror > pre.is-empty::before {
-  /* Don't double-prefix an empty editor surface. */
-  content: none;
-}
-.mdx-code-block--wrap,
-.mdx-code-block--wrap code {
+[data-mdx-code-block][data-wrap-code='true'] pre,
+[data-mdx-code-block][data-wrap-code='true'] pre code {
   white-space: pre-wrap;
   word-break: break-word;
+}
+
+/* Reset the browser's default top/bottom margin on Shiki <pre>'s rendered
+ * inside the editor codeBlock preview. Tailwind's `[&_pre]:m-0` arbitrary
+ * variant on the wrapper doesn't reach pre's that arrive via
+ * dangerouslySetInnerHTML (the CSS rule does generate, but cascade order
+ * means the user-agent margin still paints). Explicit reset closes the
+ * gap between the filename header and the first code line. */
+[data-mdx-code-block] .mdx-code-block > pre,
+[data-mdx-code-block] .mdx-code-block-light > pre,
+[data-mdx-code-block] .mdx-code-block-dark > pre {
+  margin: 0;
+}
+
+/* When the filename header is showing, the pre below it must have
+ * square top corners so it sits flush against the header's straight
+ * bottom edge. Targets BOTH the in-edit raw <pre> (visible while editing)
+ * AND the Shiki preview <pre> rendered via dangerouslySetInnerHTML —
+ * Tailwind's `[&_pre]:rounded-t-none` arbitrary variant on the wrapper
+ * is unreliable when the pre is injected as innerHTML, same cascade
+ * caveat as the margin rule above. */
+[data-mdx-code-block][data-has-filename-header='true'] pre {
+  border-top-left-radius: 0 !important;
+  border-top-right-radius: 0 !important;
 }
 
 /* Tiptap editor surface — keep the focus ring off the contenteditable. */

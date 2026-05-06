@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { File, FileVideo, ImageOff, MoreHorizontal } from 'lucide-react';
+import { File, ImageOff, MoreHorizontal } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,6 +10,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { formatBytes, type Asset } from '@/lib/assets';
 import { cn } from '@/lib/utils';
+import { VideoThumbnail } from './VideoThumbnail';
 
 interface AssetCardProps {
   asset: Asset;
@@ -41,7 +42,7 @@ export function AssetCard({
       )}>
       <button
         type='button'
-        className='flex aspect-video w-full items-center justify-center overflow-hidden bg-muted/40'
+        className='relative flex aspect-video w-full items-center justify-center overflow-hidden bg-muted/40'
         onClick={onClick}>
         {asset.category === 'image' && !broken ? (
           <img
@@ -57,10 +58,7 @@ export function AssetCard({
             <span className='text-xs'>Image unavailable</span>
           </div>
         ) : asset.category === 'video' ? (
-          <div className='flex flex-col items-center gap-2 p-4 text-muted-foreground'>
-            <FileVideo className='size-10' />
-            <span className='text-xs uppercase tracking-wide'>Video</span>
-          </div>
+          <VideoThumbnail src={asset.downloadUrl} />
         ) : (
           <div className='flex flex-col items-center gap-2 p-4 text-muted-foreground'>
             <File className='size-10' />

@@ -6,20 +6,41 @@ rules_version = '2';
 //   env ∈ {dev, prod}
 //   tenantId = numeric GitHub installationId, as a string
 //   category ∈ {images, videos, files}
+//
+// Per-category size caps (v1):
+//   images  ≤ 25 MB  — high-res screenshots fit comfortably below this
+//   videos  ≤ 200 MB — accommodates 1-2 min H.264 walkthroughs
+//   files   ≤ 50 MB  — PDFs, slide decks, sample data
 service firebase.storage {
   match /b/{bucket}/o {
-    match /{env}/{tenantId}/{category}/{filename=**} {
-      allow read: if request.auth != null
-        && env in ['dev', 'prod'];
-
+    match /{env}/{tenantId}/images/{filename=**} {
+      allow read: if request.auth != null && env in ['dev', 'prod'];
       allow create: if request.auth != null
         && env in ['dev', 'prod']
-        && category in ['images', 'videos', 'files']
         && request.resource.size < 25 * 1024 * 1024
         && request.resource.metadata.uploadedBy == request.auth.uid;
+      allow update: if false;
+      allow delete: if request.auth != null
+        && resource.metadata.uploadedBy == request.auth.uid;
+    }
 
-      // Updates are not part of the v1 flow (content-hashed paths). Delete is
-      // the uploader's prerogative.
+    match /{env}/{tenantId}/videos/{filename=**} {
+      allow read: if request.auth != null && env in ['dev', 'prod'];
+      allow create: if request.auth != null
+        && env in ['dev', 'prod']
+        && request.resource.size < 200 * 1024 * 1024
+        && request.resource.metadata.uploadedBy == request.auth.uid;
+      allow update: if false;
+      allow delete: if request.auth != null
+        && resource.metadata.uploadedBy == request.auth.uid;
+    }
+
+    match /{env}/{tenantId}/files/{filename=**} {
+      allow read: if request.auth != null && env in ['dev', 'prod'];
+      allow create: if request.auth != null
+        && env in ['dev', 'prod']
+        && request.resource.size < 50 * 1024 * 1024
+        && request.resource.metadata.uploadedBy == request.auth.uid;
       allow update: if false;
       allow delete: if request.auth != null
         && resource.metadata.uploadedBy == request.auth.uid;

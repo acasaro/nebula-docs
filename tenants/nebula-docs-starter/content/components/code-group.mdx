@@ -4,9 +4,11 @@ description: 'Tabbed multi-language code panels.'
 icon: 'layout-grid'
 ---
 
-`<CodeGroup>` wraps two or more fenced code blocks and renders them as a tabbed switcher — one tab per language or filename. The first non-`key=value` token after the language becomes the tab label; the language code is the fallback.
+`<CodeGroup>` wraps two or more fenced code blocks and renders them as a tabbed switcher — one tab per language or filename. The first non-`key=value` token after the language becomes the tab label; the language code is the fallback. Each fenced block also accepts `lines` (show a line-number gutter) and `wrap` (soft-wrap long lines).
 
 ## Basic usage
+
+A bare CodeGroup with three languages — the tab labels fall back to the language code when no filename is given.
 
 <CodeGroup>
   ```ts
@@ -27,7 +29,7 @@ icon: 'layout-grid'
 
 ## With filenames
 
-When the fence has a filename token, the tab uses it instead of the language:
+When the fence has a filename token, the tab uses it instead of the language. Useful when two tabs share a language (e.g. two TypeScript files in the same example).
 
 <CodeGroup>
   ```ts client.ts
@@ -41,8 +43,108 @@ When the fence has a filename token, the tab uses it instead of the language:
   ```
 </CodeGroup>
 
+## Install matrix
+
+The classic “pick your package manager” pattern — three fenced blocks under one CodeGroup, each with the manager as its only meta token.
+
+<CodeGroup>
+  ```bash npm
+  npm install @acmecloud/sdk
+  ```
+
+  ```bash pnpm
+  pnpm add @acmecloud/sdk
+  ```
+
+  ```bash yarn
+  yarn add @acmecloud/sdk
+  ```
+
+  ```bash bun
+  bun add @acmecloud/sdk
+  ```
+</CodeGroup>
+
+## API request — multiple clients
+
+Show the same call across the wire and across language clients. The `curl` tab is usually first so readers can verify the raw request before picking a client.
+
+<CodeGroup>
+  ```bash curl
+  curl https://api.acmecloud.com/v1/users \
+    -H "Authorization: Bearer $ACME_KEY" \
+    -H "Content-Type: application/json" \
+    -d '{ "email": "ada@example.com", "name": "Ada Lovelace" }'
+  ```
+
+  ```ts TypeScript
+  await client.users.create({
+    email: 'ada@example.com',
+    name: 'Ada Lovelace',
+  });
+  ```
+
+  ```python Python
+  client.users.create(
+      email="ada@example.com",
+      name="Ada Lovelace",
+  )
+  ```
+
+  ```go Go
+  client.Users.Create(ctx, &acmecloud.UserCreate{
+      Email: "ada@example.com",
+      Name:  "Ada Lovelace",
+  })
+  ```
+</CodeGroup>
+
+## With line numbers
+
+Add `lines` after the language (or filename) to render a numeric gutter. Useful when prose references specific lines (“see line 7…”).
+
+<CodeGroup>
+  ```ts users.ts lines
+  import { AcmeCloud } from '@acmecloud/sdk';
+
+  export async function listEditors(client: AcmeCloud) {
+    const all = await client.users.list({ limit: 100 });
+    return all.users
+      .filter((u) => u.roles.includes('editor'))
+      .map((u) => ({ id: u.id, email: u.email }));
+  }
+  ```
+
+  ```python users.py lines
+  from acmecloud import AcmeCloud
+
+  def list_editors(client: AcmeCloud):
+      all_users = client.users.list(limit=100)
+      return [
+          {"id": u.id, "email": u.email}
+          for u in all_users.users
+          if "editor" in u.roles
+      ]
+  ```
+</CodeGroup>
+
+## With wrap
+
+Add `wrap` to soft-wrap long lines instead of horizontal scroll. Combines with `lines`.
+
+<CodeGroup>
+  ```bash request.sh wrap
+  curl -X POST https://api.acmecloud.com/v1/users -H "Authorization: Bearer $ACME_KEY" -H "Content-Type: application/json" -d '{"email":"ada@example.com","name":"Ada Lovelace","metadata":{"team":"engineering","onboardedAt":"2026-05-06"}}'
+  ```
+
+  ```sql query.sql lines wrap
+  SELECT u.id, u.email, u.name, u.created_at, p.title, p.body FROM users u LEFT JOIN posts p ON p.author_id = u.id WHERE u.email = 'ada@example.com' AND u.deleted_at IS NULL ORDER BY p.created_at DESC LIMIT 10;
+  ```
+</CodeGroup>
+
 ## Notes
 
 - The wrapper element name is `CodeGroup` (capital C, capital G).
-- Children are zero or more fenced code blocks. Plain ` ```lang ` works; ` ```lang filename ` sets the tab label.
+- Children are two or more fenced code blocks. Plain ` ```lang ` works; ` ```lang filename ` sets the tab label.
+- Per-block flags (after the filename, space-separated): `lines` (line numbers), `wrap` (soft-wrap). Editor-side, these correspond to the “With line numbers” / “Wrap code” toggles in each tab’s kebab menu.
 - The active tab is determined by `defaultIndex` (zero-based, defaults to `0`).

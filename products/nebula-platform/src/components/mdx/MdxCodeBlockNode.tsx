@@ -96,6 +96,21 @@ function MdxCodeBlockView({
     },
   });
 
+  // When this codeBlock is a child of a CodeGroup, the CodeGroup's tab strip
+  // already exposes filename as the tab label and Plus/Trash actions on the
+  // group. Suppress this codeBlock's own filename header (would duplicate the
+  // tab) and drop the "With filename" / "Duplicate" / "Delete" items from the
+  // per-block kebab.
+  const insideCodeGroup = useEditorState({
+    editor,
+    selector: ({ editor }) => {
+      const start = typeof getPos === 'function' ? getPos() : null;
+      if (start == null) return false;
+      const $pos = editor.state.doc.resolve(start);
+      return $pos.parent.type.name === 'mdxCodeGroup';
+    },
+  });
+
   const copy = async () => {
     try {
       await navigator.clipboard.writeText(node.textContent);
@@ -129,14 +144,17 @@ function MdxCodeBlockView({
 
   const stopPm = (e: React.SyntheticEvent) => e.stopPropagation();
 
+  const showFilenameHeader = filename != null && !insideCodeGroup;
+
   return (
     <NodeViewWrapper
       className="my-4 group/code-block relative"
       data-mdx-code-block=""
       data-show-line-numbers={showLineNumbers ? 'true' : 'false'}
       data-wrap-code={wrapCode ? 'true' : 'false'}
+      data-has-filename-header={showFilenameHeader ? 'true' : 'false'}
     >
-      {filename != null ? (
+      {showFilenameHeader ? (
         <div
           contentEditable={false}
           className={cn(
@@ -164,11 +182,13 @@ function MdxCodeBlockView({
       ) : null}
       <pre
         className={cn(
-          'overflow-x-auto border bg-muted/60 p-4 pt-9',
+          'overflow-x-auto border bg-muted/60 p-4',
           'font-mono text-xs leading-relaxed',
-          filename != null ? 'rounded-b-md' : 'rounded-md',
-          showLineNumbers && 'mdx-code-block--lines',
-          wrapCode && 'mdx-code-block--wrap',
+          // Reserve top-right space for the absolute-positioned controls
+          // ONLY when there's no filename header — the header row already
+          // contains them when it's visible.
+          !showFilenameHeader && 'pt-9',
+          showFilenameHeader ? 'rounded-b-md' : 'rounded-md',
           !isInside && 'hidden',
         )}
       >
@@ -186,10 +206,9 @@ function MdxCodeBlockView({
             }
           }}
           className={cn(
-            'cursor-text [&_pre]:m-0 [&_pre]:border [&_pre]:p-4 [&_pre]:pt-9',
-            filename != null ? '[&_pre]:rounded-t-none [&_pre]:rounded-b-md' : '[&_pre]:rounded-md',
-            showLineNumbers && '[&_pre]:mdx-code-block--lines',
-            wrapCode && '[&_pre]:mdx-code-block--wrap',
+            'cursor-text [&_pre]:m-0 [&_pre]:border [&_pre]:p-4',
+            !showFilenameHeader && '[&_pre]:pt-9',
+            showFilenameHeader ? '[&_pre]:rounded-t-none [&_pre]:rounded-b-md' : '[&_pre]:rounded-md',
           )}
         >
           <CodeBlockPreview
@@ -258,14 +277,16 @@ function MdxCodeBlockView({
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-52">
-            <DropdownMenuCheckboxItem
-              checked={filename != null}
-              onCheckedChange={() => toggleFilename()}
-              onSelect={(e) => e.preventDefault()}
-            >
-              <FileText className="size-3.5" aria-hidden="true" />
-              With filename
-            </DropdownMenuCheckboxItem>
+            {!insideCodeGroup ? (
+              <DropdownMenuCheckboxItem
+                checked={filename != null}
+                onCheckedChange={() => toggleFilename()}
+                onSelect={(e) => e.preventDefault()}
+              >
+                <FileText className="size-3.5" aria-hidden="true" />
+                With filename
+              </DropdownMenuCheckboxItem>
+            ) : null}
             <DropdownMenuCheckboxItem
               checked={showLineNumbers}
               onCheckedChange={(v) => updateAttributes({ showLineNumbers: !!v })}

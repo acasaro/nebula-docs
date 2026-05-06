@@ -121,6 +121,78 @@
   background-color: var(--shiki-dark-bg);
 }
 
+/* Code-block configurable options driven by data attrs the
+ * shikiCodeMetaTransformer (astro.config.mjs) stamps on <pre>:
+ *   data-filename           → filename chip rendered above the code
+ *   data-show-line-numbers  → numeric gutter via CSS counter
+ *   data-wrap-code          → soft-wrap long lines instead of overflow scroll
+ *
+ * Suppressed inside CodeGroup because the group's tab strip already
+ * surfaces the filename and houses any per-block controls.
+ */
+/* Filename chip lives INSIDE the pre's top padding (the pre has
+ * `overflow: auto` from Shiki, which would clip a chip positioned
+ * above the pre's box). Push code down with extra top padding to
+ * leave room for the chip. The chip itself inherits the pre's rounded
+ * top corners — together they read as one card, with a horizontal
+ * divider where the chip's bottom border meets the code below. */
+.mdx-prose .astro-code[data-filename] {
+  position: relative;
+  padding-top: 2.5rem;
+}
+.mdx-prose .astro-code[data-filename]::before {
+  content: attr(data-filename);
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  padding: 0.375rem 0.75rem;
+  font-family: var(--nebula-font-mono);
+  font-size: 0.75rem;
+  line-height: 1.25rem;
+  color: var(--mcoe-text-secondary);
+  background-color: var(--mcoe-bg-secondary);
+  border-bottom: 1px solid var(--mcoe-border-default);
+  /* Inherit the pre's rounded top corners so the chip's edges trace
+   * the same curve as the card. Without this the chip's square top
+   * corners poke past the pre's rounded ones, breaking the seal. */
+  border-top-left-radius: inherit;
+  border-top-right-radius: inherit;
+}
+/* Inside a CodeGroup the tab strip is the filename label; suppress the
+ * standalone chip and the padding it required. */
+.nebula-code-group .astro-code[data-filename] {
+  padding-top: 1rem;
+}
+.nebula-code-group .astro-code[data-filename]::before {
+  display: none;
+}
+
+.astro-code[data-show-line-numbers='true'] {
+  counter-reset: code-line;
+}
+.astro-code[data-show-line-numbers='true'] code .line {
+  counter-increment: code-line;
+  display: inline-block;
+  width: 100%;
+}
+.astro-code[data-show-line-numbers='true'] code .line::before {
+  content: counter(code-line);
+  display: inline-block;
+  width: 2.25em;
+  margin-right: 1em;
+  text-align: right;
+  color: var(--mcoe-text-secondary);
+  opacity: 0.55;
+  user-select: none;
+}
+
+.astro-code[data-wrap-code='true'],
+.astro-code[data-wrap-code='true'] code {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
 /* Base reset — mirrors the Platform's @layer base. The default `border`
  * utility resolves to `var(--color-border)` (i.e. CLI's
  * `--mcoe-border-default`), and the body inherits `bg-background` +

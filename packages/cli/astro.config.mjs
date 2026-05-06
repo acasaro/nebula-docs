@@ -20,21 +20,36 @@ const outDir = process.env.NEBULA_OUT_DIR;
 const base = process.env.NEBULA_BASE;
 
 /**
- * Shiki transformer: lift the filename out of the fence's meta string
- * (e.g. ```ts add.ts ` → first non-`key=value` token after the language)
- * and stamp it on the rendered <pre> as `data-filename`. CodeGroup.astro
- * reads that attribute to label its tabs; without it, tabs fall back to
- * the language code.
+ * Shiki transformer: parse the fence's meta string (e.g.
+ * ```ts add.ts lines wrap`) and stamp the rendered `<pre>` with data
+ * attributes the rest of the renderer reads:
+ *   - `data-filename`           — first non-`key=value` token (filename label)
+ *   - `data-show-line-numbers`  — `lines` flag → CSS counter renders gutter
+ *   - `data-wrap-code`          — `wrap`  flag → CSS soft-wraps long lines
+ *
+ * Mirrors the editor's `parseCodeMeta` in mdastToTiptap.ts so the same
+ * fence syntax round-trips end-to-end (editor toggles → MDX flags →
+ * CLI render).
  */
-const shikiFilenameTransformer = {
-  name: 'nebula-filename',
+const shikiCodeMetaTransformer = {
+  name: 'nebula-code-meta',
   pre(node) {
     const meta = this?.options?.meta?.__raw;
     if (!meta || typeof meta !== 'string') return;
-    const tokens = meta.split(/\s+/).filter(Boolean);
-    const filename = tokens.find((t) => !t.includes('='));
-    if (!filename) return;
-    node.properties = { ...node.properties, 'data-filename': filename };
+    let filename;
+    let lines = false;
+    let wrap = false;
+    for (const token of meta.split(/\s+/).filter(Boolean)) {
+      if (/^[A-Za-z_][A-Za-z0-9_-]*=/.test(token)) continue;
+      if (token === 'lines') { lines = true; continue; }
+      if (token === 'wrap') { wrap = true; continue; }
+      if (!filename) filename = token;
+    }
+    const props = { ...node.properties };
+    if (filename) props['data-filename'] = filename;
+    if (lines) props['data-show-line-numbers'] = 'true';
+    if (wrap) props['data-wrap-code'] = 'true';
+    node.properties = props;
   },
 };
 
@@ -130,7 +145,7 @@ export default defineConfig({
         dark: 'github-dark',
       },
       defaultColor: false,
-      transformers: [shikiFilenameTransformer],
+      transformers: [shikiCodeMetaTransformer],
     },
   },
   integrations: [

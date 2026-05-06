@@ -268,6 +268,148 @@ toggle the rest of the runtime uses:
 Verified: code-block backgrounds switch white ↔ dark with the page theme;
 syntax-highlight token colors swap accordingly.
 
+### Round 15 — Editor CodeBlock configurable options
+
+The editor's CodeBlock NodeView had only a language dropdown + copy
+button. Per user, it needed a kebab menu exposing per-block options that
+round-trip through the fence's meta string. New supported options:
+
+- **With filename** — toggles the inline-editable filename header.
+- **With line numbers** — emits `lines` in fence meta; CSS counter renders
+  the gutter in the preview.
+- **Wrap code** — emits `wrap` in fence meta; `white-space: pre-wrap`
+  on the preview's `<pre>` and `<code>`.
+- **Duplicate** — clones the codeBlock node after itself.
+- **Delete** — removes the node.
+
+Explicitly excluded: Expandable and Twoslash (per user — not needed in
+either consumer).
+
+Files touched:
+
+- `products/nebula-platform/src/components/mdx/MdxCodeBlockNode.tsx` —
+  added `showLineNumbers` + `wrapCode` attrs, kebab dropdown built on
+  Radix `DropdownMenuCheckboxItem` (with `e.preventDefault()` on `onSelect`
+  so the menu stays open while toggling), filename header row with an
+  `<input>` that updates the attr on every keystroke and clears it back
+  to `null` on blur if empty (so toggling "With filename" off via empty
+  input collapses the header).
+- `products/nebula-platform/src/lib/mdx/mdastToTiptap.ts` — replaced
+  `parseFilenameFromMeta` with `parseCodeMeta` that handles filename +
+  the `lines` / `wrap` flags. `key=value` tokens (Mintlify-style
+  highlights) are skipped and pass through untouched.
+- `products/nebula-platform/src/lib/mdx/tiptapToMdx.ts` — codeBlock
+  serializer emits ` ```lang [filename] [lines] [wrap] ` based on attrs.
+- `products/nebula-platform/src/index.css` — CSS rules driven by
+  `[data-mdx-code-block][data-show-line-numbers='true']` /
+  `[data-wrap-code='true']` on the wrapper. Counter increments on each
+  Shiki `<span class="line">` and renders a numeric gutter via `::before`.
+
+Round-trip verified: `\`\`\`json ThisFileNameEditsInline.json lines wrap`
+parses to `{ filename: 'ThisFileNameEditsInline.json', language: 'json',
+showLineNumbers: true, wrapCode: true }` and serializes back identically.
+Toggling each option in the kebab updates both the visible chrome and
+the underlying node attribute. Inline editing the filename input updates
+the attribute on every keystroke.
+
+CLI follow-up (next round): the same flags need to drive the CLI's
+fenced-block render — line-number gutter via a Shiki transformer + CSS
+for wrap. The Shiki filename transformer (Round 13) already stamps
+`data-filename` so the filename header is feasible there too.
+
+### Round 17 — CLI parity for code-block flags + editor gap fix
+
+Two follow-ups bundled.
+
+**Editor gap:** the new filename header in Round 15 left a 16px gap below
+the header (browser default `<pre>` margin). Tailwind's `[&_pre]:m-0`
+arbitrary variant on the preview wrapper doesn't reach `<pre>` elements
+that arrive via `dangerouslySetInnerHTML` — the CSS rule generates but
+the user-agent margin still paints. Added an explicit reset in
+`products/nebula-platform/src/index.css`:
+
+```css
+[data-mdx-code-block] .mdx-code-block > pre,
+[data-mdx-code-block] .mdx-code-block-light > pre,
+[data-mdx-code-block] .mdx-code-block-dark > pre { margin: 0; }
+```
+
+Also conditionally drop the pre's `pt-9` (which was reserving space for
+the absolute-positioned controls) when the filename header is visible —
+the controls already overlay the header row, so the padding becomes a
+pure dead gap.
+
+**CLI parity:** the editor's `lines` and `wrap` flags (Round 15) need to
+drive the CLI render too. Renamed `shikiFilenameTransformer` to
+`shikiCodeMetaTransformer` in `packages/cli/astro.config.mjs` and folded
+the same `parseCodeMeta` logic in:
+
+- First non-`key=value` token  → `data-filename` on `<pre>`
+- `lines` flag                  → `data-show-line-numbers="true"`
+- `wrap`  flag                  → `data-wrap-code="true"`
+
+CSS in `packages/cli/src/styles/global.css`:
+
+- `.astro-code[data-filename]::before` chip lives INSIDE the pre's top
+  padding (the pre has `overflow: auto` from Shiki — a chip positioned
+  above the pre's box gets clipped). The pre gets `padding-top: 2.5rem`
+  to leave room; `::before` is absolute-positioned at `top: 0` with the
+  filename via `attr(data-filename)`.
+- Inside `.nebula-code-group`, the chip is hidden (`display: none`) and
+  the extra padding-top reverts to the default — the CodeGroup tab
+  strip is the filename label.
+- Line-number gutter: `[data-show-line-numbers='true'] code .line` gets
+  `counter-increment` + a `::before` numeric label; matches the editor's
+  CSS pattern from Round 15.
+- Wrap: `[data-wrap-code='true']` toggles `white-space: pre-wrap` +
+  `word-break: break-word` on both `<pre>` and `<code>`.
+
+Tenant fixture extended at
+`tenants/nebula-docs-starter/content/components/code-group.mdx` with six
+CodeGroup examples covering: bare languages, filenames, install matrix,
+multi-client API call, line-numbers flag, wrap flag.
+
+Round-trip verified end-to-end:
+- Editor toggles "With filename" / "With line numbers" / "Wrap code" →
+  emits ` ```ts add.ts lines wrap` in MDX
+- CLI build picks up the flags → `<pre data-filename="add.ts"
+  data-show-line-numbers="true" data-wrap-code="true">` →
+  CSS renders the chip + gutter + soft-wrap.
+
+### Round 16 — CodeBlock-inside-CodeGroup
+
+The CodeGroup NodeView's tab strip already exposes filename as the tab
+label (one input per codeBlock). After Round 15, every codeBlock also
+rendered its own filename header above the code — duplicate UI when
+nested inside a CodeGroup.
+
+Fix in `MdxCodeBlockNode.tsx`: detect parent type via a `useEditorState`
+selector that resolves the node's position and reads `$pos.parent.type.name`.
+When `parent === 'mdxCodeGroup'`:
+
+- Suppress the standalone filename header (the CodeGroup tab already
+  provides filename editing).
+- Drop "With filename" from the per-block kebab (would conflict with
+  the tab-strip source of truth).
+
+Kept inside the kebab in either context:
+
+- With line numbers
+- Wrap code
+- Duplicate (clones the codeBlock; lands in same parent — naturally
+  becomes a sibling tab inside a CodeGroup)
+- Delete (removes the codeBlock; if it was the last child, ProseMirror's
+  `codeBlock+` content rule collapses the empty CodeGroup)
+
+Verified end-to-end with a programmatically-inserted CodeGroup containing
+two codeBlocks (`client.ts` / `client.py`):
+
+- 0 filename inputs render inside the group's codeBlocks (suppressed).
+- Kebab on a codeBlock inside the group shows 4 items: line numbers,
+  wrap, duplicate, delete.
+- Kebab on a standalone codeBlock shows all 5 items including
+  "With filename".
+
 ---
 
 ## Patterns established (read before touching any component)

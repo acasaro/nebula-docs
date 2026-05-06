@@ -79,6 +79,23 @@ export function useAssetUpload() {
       try {
         const tenantId = tenantIdFromSettings(settings.settings);
         const category = categoryFromMime(file.type);
+
+        // Mirror the per-category caps in storage.rules so we fail fast in
+        // the client instead of after the bytes hit the wire. Keep these
+        // numbers in sync with /storage.rules.
+        const limit =
+          category === 'image'
+            ? 25 * 1024 * 1024
+            : category === 'video'
+              ? 200 * 1024 * 1024
+              : 50 * 1024 * 1024;
+        if (file.size >= limit) {
+          const limitMb = Math.round(limit / (1024 * 1024));
+          const message = `File is too large (max ${limitMb} MB for ${category}s).`;
+          updateHandle(id, { status: { kind: 'error', message } });
+          return { asset: null, error: message };
+        }
+
         const contentHash = (await sha256Hex(file)).slice(0, 16);
         const ext = extOf(file.name);
         const storagePath = buildStoragePath({

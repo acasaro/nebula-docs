@@ -1,0 +1,155 @@
+---
+title: 'Cards'
+---
+
+> Use card components to create visual containers with icons, images, and links that highlight key points and organize navigation.
+
+Use cards to create visual containers for content. Cards are flexible containers that can include text, icons, images, and links.
+
+## Basic card
+
+<Card title="Card title" icon="text-align-start" href="/components/columns">
+  This is how you use a card with an icon and a link. Clicking on this card
+  brings you to the Columns page.
+</Card>
+
+```mdx Card example theme={null}
+<Card title="Card title" icon="text-align-start" href="/components/columns">
+  This is how you use a card with an icon and a link. Clicking on this card
+  brings you to the Columns page.
+</Card>
+```
+
+## Card variations
+
+Cards support several layout and styling options to fit different content needs.
+
+### Horizontal layout
+
+Add the `horizontal` property to display cards in a more compact, horizontal layout.
+
+<Card title="Horizontal card" icon="text-align-start" horizontal>
+  This is an example of a horizontal card.
+</Card>
+
+```mdx Horizontal card example theme={null}
+<Card title="Horizontal card" icon="text-align-start" horizontal>
+  This is an example of a horizontal card.
+</Card>
+```
+
+### Image cards
+
+Add an `img` property to display an image at the top of the card.
+
+<Card title="Image card" img="https://mintlify-assets.b-cdn.net/yosemite.jpg">
+  This is an example of a card with an image.
+</Card>
+
+```mdx Image card example theme={null}
+<Card title="Image card" img="/images/card-with-image.png">
+  This is an example of a card with an image.
+</Card>
+```
+
+### Link cards with custom CTAs
+
+You can customize the call-to-action text and control whether an arrow appears. By default, arrows only show for external links.
+
+<Card title="Link card" icon="link" href="/components/columns" arrow="true" cta="Click here">
+  This is an example of a card with an icon and a link. Clicking on this card brings you to the Columns page.
+</Card>
+
+```mdx Link card example theme={null}
+<Card
+  title="Link card"
+  icon="link"
+  href="/components/columns"
+  arrow="true"
+  cta="Click here"
+>
+  This is an example of a card with an icon and a link. Clicking on this card brings you to the Columns page.
+</Card>
+```
+
+## Group cards
+
+Use the [Columns component](/components/columns) to organize multiple cards side by side. The Columns component supports one to four columns and automatically adjusts for smaller screens.
+
+<Columns cols={2}>
+  <Card title="First card" icon="panel-left-close">
+    This is the first card.
+  </Card>
+
+  <Card title="Second card" icon="panel-right-close">
+    This is the second card.
+  </Card>
+</Columns>
+
+```mdx Columns example theme={null}
+<Columns cols={2}>
+  <Card title="First card" icon="panel-left-close">
+    This is the first card.
+  </Card>
+  <Card title="Second card" icon="panel-right-close">
+    This is the second card.
+  </Card>
+</Columns>
+```
+
+## Properties
+
+<ResponseField name="title" type="string">
+  The title displayed on the card.
+</ResponseField>
+
+<ResponseField name="icon" type="string">
+  The icon to display.
+
+  Options:
+
+  * [Font Awesome](https://fontawesome.com/icons) icon name, if you have the `icons.library` [property](/organize/settings-appearance#param-icons) set to `fontawesome` in your `docs.json`
+  * [Lucide](https://lucide.dev/icons) icon name, if you have the `icons.library` [property](/organize/settings-appearance#param-icons) set to `lucide` in your `docs.json`
+  * [Tabler](https://tabler.io/icons) icon name, if you have the `icons.library` [property](/organize/settings-appearance#param-icons) set to `tabler` in your `docs.json`
+  * URL to an externally hosted icon
+  * Path to an icon file in your project
+  * SVG code wrapped in curly braces
+
+  For custom SVG icons:
+
+  1. Convert your SVG using the [SVGR converter](https://react-svgr.com/playground/).
+  2. Paste your SVG code into the SVG input field.
+  3. Copy the complete `<svg>...</svg>` element from the JSX output field.
+  4. Wrap the JSX-compatible SVG code in curly braces: `icon={<svg ...> ... </svg>}`.
+  5. Adjust `height` and `width` as needed.
+</ResponseField>
+
+<ResponseField name="iconType" type="string">
+  The [Font Awesome](https://fontawesome.com/icons) icon style. Only used with Font Awesome icons.
+
+  Options: `regular`, `solid`, `light`, `thin`, `sharp-solid`, `duotone`, `brands`.
+</ResponseField>
+
+<ResponseField name="color" type="string">
+  Icon color as a hex code (for example, `#FF6B6B`).
+</ResponseField>
+
+<ResponseField name="href" type="string">
+  URL to navigate to when the card is clicked.
+</ResponseField>
+
+<ResponseField name="horizontal" type="boolean">
+  Display the card in a compact horizontal layout.
+</ResponseField>
+
+<ResponseField name="img" type="string">
+  URL or local path to an image displayed at the top of the card.
+</ResponseField>
+
+<ResponseField name="cta" type="string">
+  Custom text for the action button.
+</ResponseField>
+
+<ResponseField name="arrow" type="boolean">
+  Show or hide the link arrow icon.
+</ResponseField>

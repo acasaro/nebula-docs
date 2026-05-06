@@ -1,0 +1,75 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "theme": "mint",
+  "name": "MCoE Documentation",
+  "colors": {
+    "primary": "#0830be",
+    "light": "#008fff",
+    "dark": "#0830be"
+  },
+  "favicon": "/favicon.svg",
+  "logo": {
+    "light": "/logo/light.svg",
+    "dark": "/logo/dark.svg"
+  },
+  "styling": {
+    "eyebrows": "breadcrumbs"
+  },
+  
+  "navbar": {
+    
+  },
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "icon": "book",
+        "groups": [
+          {
+            "group": "Create content",
+            "icon": "pen",
+            "pages": [
+              "documentation/overview",
+              "documentation/format-text",
+              "documentation/format-code",
+              {
+                "group": "Componenents",
+                "pages": [
+                  "accordian",
+                  "badge",
+                  "banner",
+                  "callout",
+                  "cards",
+                  "code-groups",
+                  "columns",
+                  "examples",
+                  "expandables",
+                  "fields",
+                  "frames-1",
+                  "icons",
+                  "mermaid",
+                  "panel",
+                  "response-fields",
+                  "steps",
+                  "tabs",
+                  "tiles",
+                  "tooltips",
+                  "untitled-page",
+                  "update",
+                  "visibility"
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "contextual": {
+    "options": ["copy", "view", "vscode"]
+  },
+  "footer": {},
+  "seo": {
+    "indexHiddenPages": false
+  }
+}

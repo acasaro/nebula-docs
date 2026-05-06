@@ -1,0 +1,132 @@
+---
+title: 'Accordian'
+---
+
+> Use the accordion component to show and hide content sections, organize related information, and enable progressive disclosure in your docs.
+
+Accordions allow users to expand and collapse content sections. Use accordions for progressive disclosure and to organize information.
+
+When you open an accordion, the URL hash updates, which allows you to share direct links to specific accordion sections.
+
+## Single accordion
+
+<Accordion title="I am an Accordion.">
+  You can put any content in here, including other components, like code:
+
+  ```java HelloWorld.java theme={null}
+   class HelloWorld {
+       public static void main(String[] args) {
+           System.out.println("Hello, World!");
+       }
+   }
+  ```
+</Accordion>
+
+````mdx Accordion example theme={null}
+<Accordion title="I am an Accordion.">
+  You can put any content in here, including other components, like code:
+
+   ```java HelloWorld.java
+    class HelloWorld {
+        public static void main(String[] args) {
+            System.out.println("Hello, World!");
+        }
+    }
+  ```
+</Accordion>
+````
+
+## Accordion groups
+
+Group related accordions together using `<AccordionGroup>`. This creates a cohesive section of accordions that can be individually expanded or collapsed.
+
+<AccordionGroup>
+  <Accordion title="Getting started">
+    You can put other components inside Accordions.
+
+    ```java HelloWorld.java theme={null}
+    class HelloWorld {
+        public static void main(String[] args) {
+            System.out.println("Hello, World!");
+        }
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="Advanced features" icon="bot">
+    Add icons to make accordions more visually distinct and scannable.
+  </Accordion>
+
+  <Accordion title="Troubleshooting">
+    Keep related content organized into groups.
+  </Accordion>
+</AccordionGroup>
+
+````mdx Accordion Group Example theme={null}
+<AccordionGroup>
+  <Accordion title="Getting started">
+    You can put other components inside Accordions.
+
+    ```java HelloWorld.java
+    class HelloWorld {
+        public static void main(String[] args) {
+            System.out.println("Hello, World!");
+        }
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="Advanced features" icon="alien-8bit">
+    Add icons to make accordions more visually distinct and scannable.
+  </Accordion>
+
+  <Accordion title="Troubleshooting">
+    Keep related content organized into groups.
+  </Accordion>
+</AccordionGroup>
+````
+
+## Properties
+
+<ResponseField name="title" type="string" required>
+  Title in the Accordion preview.
+</ResponseField>
+
+<ResponseField name="description" type="string">
+  Detail below the title in the Accordion preview.
+</ResponseField>
+
+<ResponseField name="defaultOpen" type="boolean" default="false">
+  Whether the Accordion is open by default.
+</ResponseField>
+
+<ResponseField name="id" type="string">
+  A custom ID for the accordion used for anchor linking. If omitted, defaults to the same value as `title`.
+</ResponseField>
+
+<ResponseField name="icon" type="string">
+  The icon to display.
+
+  Options:
+
+  * [Font Awesome](https://fontawesome.com/icons) icon name, if you have the `icons.library` [property](/organize/settings-appearance#param-icons) set to `fontawesome` in your `docs.json`
+  * [Lucide](https://lucide.dev/icons) icon name, if you have the `icons.library` [property](/organize/settings-appearance#param-icons) set to `lucide` in your `docs.json`
+  * [Tabler](https://tabler.io/icons) icon name, if you have the `icons.library` [property](/organize/settings-appearance#param-icons) set to `tabler` in your `docs.json`
+  * URL to an externally hosted icon
+  * Path to an icon file in your project
+  * SVG code wrapped in curly braces
+
+  For custom SVG icons:
+
+  1. Convert your SVG using the [SVGR converter](https://react-svgr.com/playground/).
+  2. Paste your SVG code into the SVG input field.
+  3. Copy the complete `<svg>...</svg>` element from the JSX output field.
+  4. Wrap the JSX-compatible SVG code in curly braces: `icon={<svg ...> ... </svg>}`.
+  5. Adjust `height` and `width` as needed.
+</ResponseField>
+
+<ResponseField name="iconType" type="string">
+  The [Font Awesome](https://fontawesome.com/icons) icon style. Only used with Font Awesome icons.
+
+  Options: `regular`, `solid`, `light`, `thin`, `sharp-solid`, `duotone`, `brands`.
+</ResponseField>

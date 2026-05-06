@@ -1,0 +1,114 @@
+---
+import '../styles/global.css';
+import Navbar from '../components/Navbar.astro';
+import Footer from '../components/Footer.astro';
+import Lightbox from '../runtime/components/Lightbox.astro';
+import { loadDocsConfig } from '../runtime/lib/loadDocsConfig.mjs';
+
+interface Props {
+  title: string;
+  description?: string;
+  currentSlug: string;
+}
+
+const { title, description, currentSlug } = Astro.props as Props;
+const docs = loadDocsConfig();
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title} — {docs.name}</title>
+    {description && <meta name="description" content={description} />}
+    <script is:inline>
+      (function () {
+        try {
+          var stored = localStorage.getItem('nebula-theme');
+          var theme = stored === 'dark' ? 'dark' : 'light';
+          document.documentElement.setAttribute('data-theme', theme);
+        } catch (_) {}
+      })();
+    </script>
+  </head>
+  <body>
+    <Navbar docs={docs} currentSlug={currentSlug} />
+    <main class="nebula-custom-shell">
+      <div class="nebula-custom-container">
+        <slot />
+      </div>
+    </main>
+    <Footer docs={docs} />
+    <Lightbox />
+    <script is:inline>
+      (function () {
+        var COPY = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"></rect><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"></path></svg>';
+        var CHECK = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+        function attach(pre) {
+          if (pre.dataset.nebulaCopyInit === '1') return;
+          pre.dataset.nebulaCopyInit = '1';
+          var btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'nebula-code-copy';
+          btn.setAttribute('aria-label', 'Copy code');
+          btn.innerHTML = COPY;
+          btn.addEventListener('click', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            var text = pre.textContent || '';
+            if (pre.hasAttribute('data-filename')) {
+              text = text.replace(pre.getAttribute('data-filename'), '').replace(/^\n+/, '');
+            }
+            (navigator.clipboard ? navigator.clipboard.writeText(text) : Promise.reject())
+              .then(function () {
+                btn.dataset.copied = 'true';
+                btn.innerHTML = CHECK;
+                setTimeout(function () {
+                  btn.dataset.copied = 'false';
+                  btn.innerHTML = COPY;
+                }, 1500);
+              })
+              .catch(function () {});
+          });
+          pre.appendChild(btn);
+        }
+        function run() {
+          document.querySelectorAll('pre.astro-code').forEach(attach);
+        }
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', run);
+        } else {
+          run();
+        }
+      })();
+    </script>
+    <style is:global>
+      /* Custom-mode page shell. The shell is full-viewport-width; the inner
+         `.nebula-custom-container` constrains regular content to a centered
+         max-width column. Components that want full-bleed (Hero,
+         marketing-style sections) opt out by setting
+         `data-fullbleed` on their root element — the rule below forces them
+         to span the viewport via the negative-margin trick, while keeping
+         their internal centered alignment intact. */
+      .nebula-custom-shell {
+        width: 100%;
+        min-height: calc(100vh - 5.75rem);
+      }
+      .nebula-custom-container {
+        max-width: 64rem;
+        margin: 0 auto;
+        padding: 0 1.5rem 4rem;
+      }
+      /* Full-bleed escape hatch. A direct child of `.nebula-custom-container`
+         tagged with `data-fullbleed` breaks out to viewport width while
+         staying in document flow. Components that own their internal
+         centering (Hero) use this; their inner wrapper re-applies the same
+         80rem container so content stays aligned with the rest of the page. */
+      .nebula-custom-container > [data-fullbleed] {
+        width: 100vw;
+        margin-inline: calc(50% - 50vw);
+        max-width: none;
+      }
+    </style>
+  </body>
+</html>

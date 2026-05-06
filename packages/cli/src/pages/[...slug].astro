@@ -1,6 +1,7 @@
 ---
 import { getCollection, render } from 'astro:content';
 import DocsLayout from '../layouts/DocsLayout.astro';
+import CustomLayout from '../layouts/CustomLayout.astro';
 import { components as reactComponents } from '../runtime/components';
 import Steps from '../runtime/components/Steps.astro';
 import Step from '../runtime/components/Step.astro';
@@ -32,10 +33,15 @@ export async function getStaticPaths() {
 const { entry } = Astro.props;
 const { Content, headings } = await render(entry);
 
-const data = (entry.data ?? {}) as { title?: string; description?: string };
+const data = (entry.data ?? {}) as {
+  title?: string;
+  description?: string;
+  mode?: string;
+};
 const title = data.title ?? entry.id;
 const description = data.description;
 const currentSlug = entry.id;
+const isCustomMode = data.mode === 'custom';
 
 // Merge Astro variants over the React component map. Astro variants are
 // required for:
@@ -62,11 +68,17 @@ const components = {
   CodeGroup,
 };
 ---
-<DocsLayout
-  title={title}
-  description={description}
-  currentSlug={currentSlug}
-  headings={headings}
->
-  <Content components={components} />
-</DocsLayout>
+{isCustomMode ? (
+  <CustomLayout title={title} description={description} currentSlug={currentSlug}>
+    <Content components={components} />
+  </CustomLayout>
+) : (
+  <DocsLayout
+    title={title}
+    description={description}
+    currentSlug={currentSlug}
+    headings={headings}
+  >
+    <Content components={components} />
+  </DocsLayout>
+)}

@@ -144,6 +144,8 @@ function serializeBlock(node: TiptapNode): string {
       return serializeCodeGroup(node);
     case 'mdxImage':
       return serializeImage(node);
+    case 'table':
+      return serializeTable(node);
     case 'mdxImportedSnippet':
       return serializeImportedSnippet(node);
     case 'hardBreak':
@@ -151,6 +153,75 @@ function serializeBlock(node: TiptapNode): string {
     default:
       return '';
   }
+}
+
+/**
+ * Tiptap `table` → GFM markdown. The first row of the Tiptap node is the
+ * header row (its cells are `tableHeader`); subsequent rows are body
+ * (`tableCell`). Column alignment lives per-cell as the `align` attr; we
+ * read it from the header row to build the `| --- |` separator. Cells with
+ * different `align` values in the same column win-by-header (matches what
+ * GFM can express — alignment is column-scoped, not cell-scoped).
+ */
+function serializeTable(node: TiptapNode): string {
+  const rows = node.content ?? [];
+  if (rows.length === 0) return '';
+
+  // Determine the column count from the widest row so a malformed table
+  // (rows with mismatched cell counts) still serializes to valid GFM.
+  const colCount = rows.reduce((max, row) => {
+    const n = (row.content ?? []).length;
+    return n > max ? n : max;
+  }, 0);
+  if (colCount === 0) return '';
+
+  const headerRow = rows[0];
+  const bodyRows = rows.slice(1);
+  const align: Array<'left' | 'center' | 'right' | null> = [];
+  for (let i = 0; i < colCount; i++) {
+    const cell = headerRow.content?.[i];
+    const a = cell?.attrs?.align;
+    align.push(
+      a === 'left' || a === 'center' || a === 'right' ? a : null,
+    );
+  }
+
+  const renderRow = (row: TiptapNode): string => {
+    const cells = row.content ?? [];
+    const parts: string[] = [];
+    for (let i = 0; i < colCount; i++) {
+      const cell = cells[i];
+      const text = cell ? serializeCellInline(cell) : '';
+      parts.push(text);
+    }
+    return `| ${parts.join(' | ')} |`;
+  };
+
+  const separator = `| ${align
+    .map((a) => {
+      if (a === 'center') return ':---:';
+      if (a === 'right') return '---:';
+      if (a === 'left') return ':---';
+      return '---';
+    })
+    .join(' | ')} |`;
+
+  const lines = [renderRow(headerRow), separator, ...bodyRows.map(renderRow)];
+  return lines.join('\n');
+}
+
+/**
+ * A table cell holds a single paragraph in our model. Pull its inline
+ * content out to a single line and escape the GFM pipe character so a
+ * cell containing `a|b` doesn't break the row.
+ */
+function serializeCellInline(cell: TiptapNode): string {
+  const para = cell.content?.[0];
+  if (!para || para.type !== 'paragraph') return '';
+  const inline = serializeInline(para.content);
+  // Replace literal newlines with a `<br>` (the GFM convention for
+  // multi-line cell content) and escape pipes.
+  return inline.replace(/\n+/g, '<br>').replace(/\|/g, '\\|');
 }
 
 function serializeImage(node: TiptapNode): string {

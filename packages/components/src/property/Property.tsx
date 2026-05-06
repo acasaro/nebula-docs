@@ -182,28 +182,34 @@ type FieldProps = Omit<PropertyProps, 'name'> & {
   cookie?: string;
 };
 
-const PARAM_LOCATIONS: Array<keyof FieldProps> = [
-  'path',
-  'query',
-  'header',
-  'body',
-  'cookie',
-];
+const PARAM_LOCATIONS = ['path', 'query', 'header', 'body', 'cookie'] as const;
+type ParamLocation = (typeof PARAM_LOCATIONS)[number];
 
 export function ParamField({
   name,
   location,
+  path,
+  query,
+  header,
+  body,
+  cookie,
   ...rest
 }: FieldProps) {
+  const locValues: Record<ParamLocation, string | undefined> = {
+    path,
+    query,
+    header,
+    body,
+    cookie,
+  };
   let resolvedName = name;
   let resolvedLocation = location;
   for (const key of PARAM_LOCATIONS) {
-    const v = rest[key];
+    const v = locValues[key];
     if (typeof v === 'string' && !resolvedName) {
       resolvedName = v;
       resolvedLocation = resolvedLocation ?? key;
     }
-    delete rest[key];
   }
   return (
     <Property

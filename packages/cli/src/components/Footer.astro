@@ -40,17 +40,28 @@ if (!footer) return null;
 </footer>
 
 <style>
+  /* Full-width footer. Outer element spans the viewport (border-top runs
+     edge to edge); inner is capped at the same 64rem container width as
+     the custom-mode page shell so the columns line up with the rest of
+     the site no matter which layout sits above. Columns are evenly
+     distributed via `space-between`. */
   .nebula-footer {
+    width: 100%;
     margin-top: var(--mcoe-space-9);
     border-top: 1px solid var(--mcoe-border-default);
-    padding-top: var(--mcoe-space-6);
     font-size: var(--mcoe-font-size-sm);
     color: var(--mcoe-text-secondary);
   }
+  .nebula-footer-inner {
+    max-width: 64rem;
+    margin: 0 auto;
+    padding: var(--mcoe-space-6) 1.5rem var(--mcoe-space-7);
+  }
   .nebula-footer-columns {
     display: flex;
-    gap: var(--mcoe-space-7);
     flex-wrap: wrap;
+    justify-content: space-between;
+    gap: var(--mcoe-space-6) var(--mcoe-space-7);
   }
   .nebula-footer-column h3 {
     font-size: var(--mcoe-font-size-xs);

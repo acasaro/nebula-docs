@@ -124,11 +124,13 @@ Also updated the Mermaid component's dark-mode detection to check
 BOTH `.dark` class AND `[data-theme="dark"]` attribute so the diagram
 theme tracks the page theme in either consumer.
 
-### Round 10 — Editor Mermaid (PARKED — needs user repro)
+### Round 10 — Editor Mermaid (RESOLVED via Round 19)
 
 User reported Mermaid broken in the editor too. Couldn't reproduce —
 when I navigated to a Mermaid file the editor unmounted before I could
-inspect it. Need a specific repro path (which file / what state).
+inspect it. Resolved by Round 19's full rebuild of `MdxMermaidView`
+(stacked preview + source layout, zoom controls, height floor) — user
+confirmed the editor render is correct.
 
 ### Round 11 — Tree
 
@@ -485,6 +487,46 @@ and `<a href="https://example.com">` as expected. Editor uses the same
 shared Frame component (via the `MdxFrameView` NodeView) so it picks up
 the same behavior automatically.
 
+### Round 20 — Property + ParamField param-location aliases
+
+Audited Property in the CLI (renders correctly via the shared
+`@nebula-docs/components/Property`). Editor side had two gaps:
+
+1. `Property` wasn't in the editor's component registry —
+   `<Property>` blocks fell back to `MdxRaw` raw-source view instead
+   of a visual preview. Added `Property` to
+   `products/nebula-platform/src/components/mdx/registry.tsx` so the
+   editor renders it the same way the CLI does.
+2. `<ParamField query="include">` (and `header`, `body`, `cookie`)
+   rendered with an empty name. Mintlify uses any of these attribute
+   names AS the parameter declaration — the attr name doubles as the
+   parameter location. Three fixes stacked:
+   - **Tiptap schema** (`MdxApiNodes.tsx` `FIELD_ATTRS`): added
+     `query`/`header`/`body`/`cookie`. ProseMirror silently drops
+     attrs not declared in `addAttributes()`, so without this the
+     attrs never reached the Tiptap node.
+   - **Editor NodeView** (`MdxApiNodes.tsx` `paramFieldName`):
+     reused for both `headerName` and `rendererName` callbacks;
+     resolves the parameter name and surfaces the matching key as
+     the `location` pill.
+   - **Shared component** (`@nebula-docs/components/Property`):
+     `ParamField` alias loops over `[path, query, header, body,
+     cookie]`, picks the first non-empty string, and forwards it
+     as `name` + `location` to the underlying `<Property>`. CLI
+     and editor both pick this up via the shared component.
+
+**Defensive guard.** The audit also surfaced a Property crash via the
+editor (React error boundary): when MDX uses `pre={['Required']}`,
+the editor's mdast attr extractor can't `JSON.parse` the JS literal
+(single quotes) and falls through to a `{ __expression: "[...]" }`
+sentinel. `pre.map(...)` then throws. Added an `Array.isArray` guard
+on `pre`/`post` in `Property.tsx` so a non-array value renders as
+no pre/post pills instead of crashing the whole component tree.
+
+Verified: 14 fields render in both CLI and editor with matching
+names + location pills (path / query / header / body / cookie); no
+empty names; no React errors.
+
 ### Round 19 — Mermaid editor UX + CLI hydration fix
 
 Two-part round.
@@ -591,17 +633,15 @@ These are the recurring shapes — every component fix has been one of these:
 
 ## Components verified rendering = editor
 
-Callout · Card · Tabs / Tab · Accordion · Mermaid (CLI side) · Snippets ·
+Callout · Card · Tabs / Tab · Accordion · Mermaid · Snippets ·
 Tree / Tree.Folder / Tree.File · Columns / Column · Expandable ·
-Steps / Step · Update · ParamField · ResponseField · Icon ·
-RequestExample / ResponseExample (stray buttons removed) · CodeGroup
-(Astro slot variant) · CodeBlock (dual-theme Shiki + filename / line-numbers /
-wrap flags) · Frame (Mintlify-spec padding, solid bg, balanced caption,
-markdown captions).
+Steps / Step · Update · ParamField (path/query/header/body/cookie
+aliases) · ResponseField · Icon · RequestExample / ResponseExample
+· CodeGroup · CodeBlock · Frame · Property.
 
 ## Components NOT yet audited against editor
 
-Property.
+(none — full block surface audited.)
 
 ## Editor-side config UX follow-ups (Platform, not CLI)
 
@@ -612,9 +652,20 @@ the editor:
   numbers / Wrap code / Duplicate / Delete; filename header inline-editable.
 - **Frame** — DONE (Rounds 18 / 18b / 18c). Padding + solid bg + balanced
   caption + markdown captions all landed.
-- **Mermaid** — pending. User reported broken in editor (Round 10) with
-  no repro path; still parked. Config UX tweak hasn't been scoped yet.
-- **Update** — pending. Small tweak hasn't been scoped yet.
+- **Mermaid** — DONE (Round 19). Stacked preview + source with zoom
+  controls.
+- **Update** — DONE (Round 21 + 21b). Right column top-aligns with
+  the version label. First pass added `[&>:first-child]:mt-0` on the
+  shared component (works in CLI). Editor needed a deeper selector —
+  Tiptap nests prose elements two divs deep
+  (`[data-node-view-content]` > `[data-node-view-wrapper]` > `<p>`),
+  so the prose `p { my-4 }` rule still fired on the actual visible
+  text. Added `[data-component-part="update-content"] :where(p, ul,
+  ol, blockquote, h1..h6, pre):first-child { margin-top: 0 }` to
+  `products/nebula-platform/src/index.css` to cascade through the
+  Tiptap wrapper chain. Verified: 3 update entries on the page now
+  show `delta: 0` between the version label's top and the first
+  paragraph's top in both consumers.
 
 ## Durable follow-ups (defer until rounds settle)
 

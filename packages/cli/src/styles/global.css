@@ -311,6 +311,50 @@ body {
   color: var(--mcoe-text-secondary);
 }
 
+/* Hero block — full-bleed in `mode: custom` pages via `data-fullbleed`.
+   The outer section breaks out to viewport width through the layout's
+   `> [data-fullbleed]` rule; this re-applies the same 80rem container as
+   the surrounding `.nebula-custom-container` so internal content lines
+   up with whatever sits above and below. */
+.nebula-hero {
+  display: block;
+  position: relative;
+}
+.nebula-hero-inner {
+  max-width: 64rem;
+  margin: 0 auto;
+  padding: 0 1.5rem;
+}
+.nebula-hero-inner--padded {
+  padding-top: clamp(2.5rem, 6vw, 5rem);
+  padding-bottom: clamp(2.5rem, 6vw, 5rem);
+}
+.nebula-hero-eyebrow {
+  font-size: var(--mcoe-font-size-xs);
+  font-weight: var(--mcoe-font-weight-medium);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin: 0 0 var(--mcoe-space-3);
+  opacity: 0.75;
+}
+.nebula-hero-title {
+  font-size: clamp(2rem, 4vw, 3rem);
+  line-height: 1.1;
+  font-weight: var(--mcoe-font-weight-medium);
+  letter-spacing: -0.025em;
+  margin: 0;
+}
+.nebula-hero-description {
+  margin: var(--mcoe-space-4) 0 0;
+  font-size: var(--mcoe-font-size-md);
+  line-height: 1.6;
+  max-width: 42rem;
+  opacity: 0.85;
+}
+.nebula-hero-children {
+  margin-top: var(--mcoe-space-6);
+}
+
 /* Typography for MDX content — applied uniformly across both consumers
  * (the Platform's read-only renderer + Tiptap surface, AND this CLI build).
  * Both wrap content in `.mdx-prose` so a page looks the same in the

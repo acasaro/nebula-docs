@@ -228,6 +228,18 @@
   margin-top: 0.5rem;
   margin-bottom: 0;
 }
+
+/* Update entry: the right content column should top-align with the
+ * version label on the left. The shared component already sets
+ * `[&>:first-child]:mt-0` on update-content, but Tiptap nests prose
+ * elements two divs deep (`[data-node-view-content]` >
+ * `[data-node-view-wrapper]` > <p>), so the prose `p { my-4 }` rule
+ * still fires on the actual visible text. Cascade through the wrappers
+ * to the first prose-block leaf. */
+[data-component-part="update-content"]
+  :where(p, ul, ol, blockquote, h1, h2, h3, h4, h5, h6, pre):first-child {
+  margin-top: 0;
+}
 .mdx-prose [data-component-part="step-content"] :where(p, ul, ol, blockquote) {
   margin: 0;
 }

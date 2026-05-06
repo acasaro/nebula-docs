@@ -18,6 +18,10 @@ import { cn } from '@/lib/utils';
 
 const FIELD_ATTRS = [
   'path',
+  'query',
+  'header',
+  'body',
+  'cookie',
   'name',
   'type',
   'location',
@@ -147,6 +151,10 @@ export const MdxResponseExample = Node.create({
 
 interface FieldAttrs {
   path?: string | null;
+  query?: string | null;
+  header?: string | null;
+  body?: string | null;
+  cookie?: string | null;
   name?: string | null;
   type?: string | null;
   location?: string | null;
@@ -156,15 +164,25 @@ interface FieldAttrs {
   hidden?: boolean | null;
 }
 
+function paramFieldName(attrs: FieldAttrs): string {
+  // Mintlify uses any of `path` / `query` / `header` / `body` / `cookie`
+  // as the parameter declaration; the attribute name doubles as the
+  // parameter location. First non-empty one wins.
+  return (
+    attrs.path ?? attrs.query ?? attrs.header ?? attrs.body ?? attrs.cookie ??
+    attrs.name ?? ''
+  );
+}
+
 function MdxParamFieldView(props: NodeViewProps) {
   return (
     <FieldView
       {...props}
       tagName="ParamField"
       schema={paramFieldSchema}
-      headerName={(attrs) => attrs.path ?? attrs.name ?? ''}
+      headerName={paramFieldName}
       Renderer={ParamField as unknown as React.ComponentType<Record<string, unknown> & { children?: React.ReactNode }>}
-      rendererName={(attrs) => attrs.path ?? attrs.name ?? ''}
+      rendererName={paramFieldName}
     />
   );
 }

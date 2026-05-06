@@ -29,6 +29,7 @@ import {
   List as ListUnordered,
   Minus,
   Newspaper,
+  Table as TableIcon,
   Quote,
   Square,
   StretchHorizontal,
@@ -646,6 +647,44 @@ export const SLASH_ITEMS: SlashItem[] = [
               content: [{ type: 'paragraph' }],
             },
           ],
+        })
+        .run();
+    },
+  },
+  {
+    id: 'table',
+    label: 'Table',
+    description: 'Markdown table with header + 2 rows',
+    Icon: TableIcon,
+    keywords: ['table', 'grid', 'rows', 'columns'],
+    command: ({ editor, range }) => {
+      // 3 cols × header + 2 body rows. Matches Mintlify's default shape.
+      // GFM column alignment defaults to null (= left) on every cell.
+      const headerCell = {
+        type: 'tableHeader',
+        attrs: { align: null },
+        content: [{ type: 'paragraph' }],
+      };
+      const bodyCell = {
+        type: 'tableCell',
+        attrs: { align: null },
+        content: [{ type: 'paragraph' }],
+      };
+      const headerRow = {
+        type: 'tableRow',
+        content: [headerCell, headerCell, headerCell],
+      };
+      const bodyRow = {
+        type: 'tableRow',
+        content: [bodyCell, bodyCell, bodyCell],
+      };
+      editor
+        .chain()
+        .focus()
+        .deleteRange(range)
+        .insertContent({
+          type: 'table',
+          content: [headerRow, bodyRow, bodyRow],
         })
         .run();
     },

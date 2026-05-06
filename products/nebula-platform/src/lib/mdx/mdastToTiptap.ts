@@ -12,6 +12,9 @@ import type {
   Root,
   RootContent,
   Strong,
+  Table,
+  TableCell as TableCellNode,
+  TableRow as TableRowNode,
   Text,
   ThematicBreak,
 } from 'mdast';
@@ -153,6 +156,8 @@ function convertBlock(node: RootContent, ctx: ConvertCtx): TiptapNode | null {
       return convertList(node, ctx);
     case 'blockquote':
       return convertBlockquote(node, ctx);
+    case 'table':
+      return convertTable(node as Table, ctx);
     case 'code':
       return convertCode(node);
     case 'thematicBreak':
@@ -516,6 +521,59 @@ function paragraphSoleImage(node: Paragraph): Image | null {
     }
   }
   return image;
+}
+
+/**
+ * GFM table → Tiptap `table` node tree. Mintlify-style: the first row is
+ * the header (`tableHeader` cells), subsequent rows are body. Column
+ * alignments (`mdast.align[]`) are denormalized onto each cell's `align`
+ * attr so the editor's per-cell selection drives the menu's align state.
+ */
+function convertTable(node: Table, ctx: ConvertCtx): TiptapNode {
+  const align = (node.align ?? []) as Array<'left' | 'center' | 'right' | null>;
+  const rows = (node.children ?? []) as TableRowNode[];
+  const out: TiptapNode[] = [];
+  rows.forEach((row, rowIdx) => {
+    const cells = (row.children ?? []) as TableCellNode[];
+    const cellNodes: TiptapNode[] = [];
+    cells.forEach((cell, colIdx) => {
+      const inline = convertInline(cell.children as PhrasingContent[]);
+      const cellContent: TiptapNode[] = [
+        {
+          type: 'paragraph',
+          ...(inline && inline.length ? { content: inline } : {}),
+        },
+      ];
+      cellNodes.push({
+        type: rowIdx === 0 ? 'tableHeader' : 'tableCell',
+        attrs: { align: align[colIdx] ?? null },
+        content: cellContent,
+      });
+    });
+    out.push({ type: 'tableRow', content: cellNodes });
+  });
+  // Avoid an empty Tiptap table — the editor refuses to render a table
+  // without at least one row containing one cell. If the source is
+  // pathological, fall back to an empty 1-cell shell.
+  if (out.length === 0) {
+    return {
+      type: 'table',
+      content: [
+        {
+          type: 'tableRow',
+          content: [
+            {
+              type: 'tableHeader',
+              attrs: { align: null },
+              content: [{ type: 'paragraph' }],
+            },
+          ],
+        },
+      ],
+    };
+  }
+  void ctx;
+  return { type: 'table', content: out };
 }
 
 function convertImage(node: Image): TiptapNode {

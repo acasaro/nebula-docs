@@ -72,7 +72,10 @@ export function Update({ label, description, tags, className, children }: Update
         ) : null}
       </div>
 
-      <div className="min-w-0 flex-1" data-component-part="update-content">
+      <div
+        className="min-w-0 flex-1 [&>:first-child]:mt-0"
+        data-component-part="update-content"
+      >
         {children}
       </div>
     </div>

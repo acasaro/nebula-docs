@@ -44,10 +44,7 @@ interface PageSettingsFormProps {
 
 const MODE_OPTIONS = [
   { value: 'default', label: 'Default' },
-  { value: 'wide', label: 'Wide' },
   { value: 'custom', label: 'Custom' },
-  { value: 'frame', label: 'Frame' },
-  { value: 'center', label: 'Center' },
 ] as const;
 
 /**

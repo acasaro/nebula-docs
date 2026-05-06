@@ -76,7 +76,6 @@ const hasToc = tocHeadings.length > 0;
               <slot />
             </div>
           </article>
-          <Footer docs={docs} />
         </main>
         {hasToc && (
           <aside class="nebula-toc-aside">
@@ -85,6 +84,7 @@ const hasToc = tocHeadings.length > 0;
         )}
       </div>
     </div>
+    <Footer docs={docs} />
     <Lightbox />
     {/* Copy-to-clipboard button on every fenced code block. Walks
         `.astro-code` pres after render and appends a button child;

@@ -10,6 +10,7 @@ export * from './columns';
 export * from './example';
 export * from './expandable';
 export * from './frame';
+export * from './hero';
 export * from './icon';
 export * from './mermaid';
 export * from './property';

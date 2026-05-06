@@ -20,6 +20,12 @@ import { MdxCard } from './MdxCardNode';
 import { MdxCodeBlock } from './MdxCodeBlockNode';
 import { MdxFrame } from './MdxFrameNode';
 import { MdxImage } from './MdxImageNode';
+import {
+  MdxTable,
+  MdxTableCell,
+  MdxTableHeader,
+  MdxTableRow,
+} from './MdxTableNode';
 import { MdxAccordion, MdxAccordionGroup } from './MdxAccordionNode';
 import {
   MdxParamField,
@@ -201,6 +207,10 @@ export function MdxEditor({
       MdxMermaid,
       MdxBadge,
       MdxImage,
+      MdxTable,
+      MdxTableRow,
+      MdxTableHeader,
+      MdxTableCell,
       MdxSnippet.configure({
         onInsert: (spec) => {
           // Register the import for this binding/path if not already there.

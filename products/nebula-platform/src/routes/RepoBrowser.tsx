@@ -17,6 +17,7 @@ import { PageLoader } from "@/components/ui/PageLoader";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   buildPageEntryResolver,
+  firstReachablePage,
   useDocsConfig,
   type DocsConfig,
   type Group,
@@ -374,6 +375,10 @@ export function RepoBrowser() {
     lastBranchRef.current = currentBranch;
   }, [currentBranch]);
 
+  // One-shot redirect tracker per branch, so editor → sidebar nav doesn't
+  // re-trigger after the user explicitly navigates back to the no-path URL.
+  const autoRedirectedRef = useRef<string | null>(null);
+
   const handleSelectPath = useCallback(
     (path: string) => {
       if (!currentBranch) return;
@@ -678,6 +683,35 @@ export function RepoBrowser() {
     if (!entry) return null;
     return { path: filePath, content: entry.draft };
   }, [settingsOpen, files]);
+
+  // Land on the first reachable page when the editor opens with no path.
+  // Walks docs.json's nav (tabs → groups → pages, depth-first, skipping
+  // hidden/external) and resolves the slug to an actual file path. Fires
+  // once per branch — the user navigating back to `/editor/<branch>` after
+  // an explicit selection won't get bounced again.
+  useEffect(() => {
+    if (!currentBranch) return;
+    if (selectedPath) return;
+    if (autoRedirectedRef.current === currentBranch) return;
+    if (treeLoading || allPaths.length === 0) return;
+    if (docsConfigState.loading) return;
+    if (!liveDocsConfig) return;
+    const entry = firstReachablePage(liveDocsConfig);
+    if (!entry) return;
+    const filePath = resolvePagePath(entry);
+    if (!filePath) return;
+    autoRedirectedRef.current = currentBranch;
+    navigate(`/editor/${currentBranch}/~/${filePath}`, { replace: true });
+  }, [
+    currentBranch,
+    selectedPath,
+    treeLoading,
+    allPaths.length,
+    docsConfigState.loading,
+    liveDocsConfig,
+    resolvePagePath,
+    navigate,
+  ]);
 
   useEffect(() => {
     if (!active || !currentBranch) return;

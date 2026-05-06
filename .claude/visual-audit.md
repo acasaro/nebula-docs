@@ -376,6 +376,50 @@ Round-trip verified end-to-end:
   data-show-line-numbers="true" data-wrap-code="true">` →
   CSS renders the chip + gutter + soft-wrap.
 
+**Follow-up — square top corners under header.** With the filename
+header showing, the pre's rounded top corners curved away from the
+header's straight bottom edge, leaving visible page-bg gaps in the
+upper corners. Tailwind's `[&_pre]:rounded-t-none` arbitrary variant
+on the wrapper didn't reach the inline-injected Shiki pre (same
+cascade caveat as the margin reset earlier in the round). Added a
+`data-has-filename-header` attribute to the editor's NodeViewWrapper
+and an explicit `!important` rule in `index.css` zeroing
+`border-top-{left,right}-radius` on descendant pre's when that attr
+is true. CLI side: the chip lives inside the pre via `::before`, so
+gave the chip `border-top-{left,right}-radius: inherit` so its top
+corners trace the same curve as the pre's — the chip and code read
+as a single unified card.
+
+**Follow-up — copy-to-clipboard button on CLI.** The editor's
+codeBlock NodeView has had a copy button since Round 15; the CLI
+render shipped without one. Added an inline hydration script in
+`packages/cli/src/layouts/DocsLayout.astro` that walks every
+`pre.astro-code` after `DOMContentLoaded` and appends a `<button
+class="nebula-code-copy">`. CSS in `global.css` positions it
+`absolute; top: 0.375rem; right: 0.5rem` of the pre — when the
+filename chip is present, the button sits at the top-right of the
+chip; without the chip, at the top-right of the code area. Hidden
+by default (opacity 0), revealed on `pre:hover` or button focus.
+Click handler reads `pre.textContent` (chip text isn't in textContent
+since it's a `::before` pseudo-element), shows a check icon for
+1.5s on success. Falls back silently if `navigator.clipboard` is
+unavailable.
+
+**Follow-up — `.nebula-tabs` class collision.** User reported MDX
+Tabs broken: the panel content was rendering to the right of the
+tab buttons instead of below. Root cause: both `Navbar.astro` and
+`Tabs.astro` defined `.nebula-tabs` rules in `<style is:global>`
+blocks, and the navbar's `display: flex` leaked to every MDX Tabs
+block, turning the (list + panels) sibling pair into a flex row.
+Fix: renamed the navbar's class to `.nebula-navbar-tabs` (selectors
+in both the `<nav>` markup and the `<style>` block). MDX Tabs is
+back to `display: block` with panels stacked below the buttons.
+
+Pattern note: any new chrome-side `<style is:global>` block needs
+unique selectors that don't collide with the MDX block components
+(checked the rest — `.nebula-tab` is navbar-only, `.nebula-tabs-list`
+and `.nebula-tabs-panels` are MDX-only, no other clashes today).
+
 ### Round 16 — CodeBlock-inside-CodeGroup
 
 The CodeGroup NodeView's tab strip already exposes filename as the tab

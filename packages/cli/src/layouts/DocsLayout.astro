@@ -82,6 +82,55 @@ const hasToc = tocHeadings.length > 0;
         </aside>
       )}
     </div>
+    {/* Copy-to-clipboard button on every fenced code block. Walks
+        `.astro-code` pres after render and appends a button child;
+        CSS in global.css positions it absolute top-right (over the
+        filename chip when present, over the code area when not). */}
+    <script is:inline>
+      (function () {
+        var COPY = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"></rect><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"></path></svg>';
+        var CHECK = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+        function attach(pre) {
+          if (pre.dataset.nebulaCopyInit === '1') return;
+          pre.dataset.nebulaCopyInit = '1';
+          var btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'nebula-code-copy';
+          btn.setAttribute('aria-label', 'Copy code');
+          btn.innerHTML = COPY;
+          btn.addEventListener('click', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            var text = pre.textContent || '';
+            // Strip the filename chip (rendered via ::before) — it isn't in
+            // textContent, so this is a noop today, but keeps the contract
+            // explicit if the chip ever moves into the DOM.
+            if (pre.hasAttribute('data-filename')) {
+              text = text.replace(pre.getAttribute('data-filename'), '').replace(/^\n+/, '');
+            }
+            (navigator.clipboard ? navigator.clipboard.writeText(text) : Promise.reject())
+              .then(function () {
+                btn.dataset.copied = 'true';
+                btn.innerHTML = CHECK;
+                setTimeout(function () {
+                  btn.dataset.copied = 'false';
+                  btn.innerHTML = COPY;
+                }, 1500);
+              })
+              .catch(function () {});
+          });
+          pre.appendChild(btn);
+        }
+        function run() {
+          document.querySelectorAll('pre.astro-code').forEach(attach);
+        }
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', run);
+        } else {
+          run();
+        }
+      })();
+    </script>
     <style>
       /* Three-column layout when there's a TOC, two-column otherwise. The
          right rail is fixed-width (12rem) like the left, so the article column

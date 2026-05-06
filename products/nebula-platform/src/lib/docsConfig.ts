@@ -202,3 +202,45 @@ export function defaultPageTitle(pagePath: string): string {
     .replace(/[-_]+/g, ' ')
     .replace(/^(.)/, (c) => c.toUpperCase());
 }
+
+/**
+ * First reachable, non-hidden, non-external page entry in the docs config —
+ * walked depth-first across tabs, then groups (recursing into nested groups),
+ * then per-tab direct pages. Used by the editor to land on a sensible default
+ * file when the URL has no path component.
+ */
+export function firstReachablePage(config: DocsConfig | null): PageEntry | null {
+  if (!config) return null;
+  for (const tab of config.navigation?.tabs ?? []) {
+    if (tab.hidden) continue;
+    for (const entry of tab.pages ?? []) {
+      const found = firstReachableInEntry(entry);
+      if (found) return found;
+    }
+    for (const group of tab.groups ?? []) {
+      if (group.hidden) continue;
+      const found = firstReachableInGroup(group);
+      if (found) return found;
+    }
+  }
+  return null;
+}
+
+function firstReachableInGroup(group: Group): PageEntry | null {
+  for (const entry of group.pages ?? []) {
+    const found = firstReachableInEntry(entry);
+    if (found) return found;
+  }
+  return null;
+}
+
+function firstReachableInEntry(entry: PageEntry): PageEntry | null {
+  if (typeof entry === 'string') return entry;
+  if (isGroup(entry)) {
+    if (entry.hidden) return null;
+    return firstReachableInGroup(entry);
+  }
+  if (entry.hidden || entry.externalUrl) return null;
+  if (!entry.page && !entry.slug) return null;
+  return entry;
+}

@@ -10,6 +10,7 @@ import {
 import {
   ChevronDown,
   ChevronRight,
+  ChevronsDownUp,
   FilePlus,
   FolderPlus,
   Folder,
@@ -82,19 +83,23 @@ interface NavTreeProps {
   frontmatterLoaded?: ReadonlySet<string>;
 }
 
+/** Bumped by the Collapse-all header button. Each TabSection / GroupSection
+ *  watches it and resets its local `expanded` to false on change. Kept as a
+ *  number signal (not a boolean) so consecutive presses always re-collapse,
+ *  even when something was re-expanded between presses. */
+type CollapseSignal = number;
+
 // Stable reference so the resolver memo doesn't churn when no repoPaths
 // were passed in (early-render case).
 const EMPTY_PATH_SET: ReadonlySet<string> = new Set<string>();
 
-// Pixel widths used to compute the cascading text-indent. The pattern:
-//   group_text_x = row_indent + chevron + gap + icon + gap
-//   tab_text_x   = row_indent + icon + gap        (tabs don't have chevrons)
-// Children's row_indent = parent's text_x so pages align under their parent's title.
+// Pixel widths used to compute the cascading text-indent. Tabs and groups
+// share the same shape (chevron + icon + label) so children align under
+// their parent's title at the same offset regardless of parent kind.
 const ROOT_PL = 8;
 const CHEVRON = 14;
 const ICON = 14;
 const GAP = 4;
-const TAB_TEXT_OFFSET = ICON + GAP;             // icon + gap
 const GROUP_TEXT_OFFSET = CHEVRON + GAP + ICON + GAP;
 
 export function NavTree({
@@ -112,6 +117,7 @@ export function NavTree({
 }: NavTreeProps) {
   const tabs = (config.navigation?.tabs ?? []).filter((t) => !t.hidden);
   const [addingTab, setAddingTab] = useState(false);
+  const [collapseSignal, setCollapseSignal] = useState<CollapseSignal>(0);
 
   const resolveEntryPath = useMemo(
     () => buildPageEntryResolver(repoPaths ?? EMPTY_PATH_SET, docsSubdirectory ?? ''),
@@ -122,7 +128,10 @@ export function NavTree({
     <div className="flex flex-col gap-1 py-2 pr-2">
       <div className="flex items-center justify-between pl-2 pr-1 pt-1 pb-1 text-xs text-muted-foreground/70">
         <span>Navigation</span>
-        <NavigationAddButton onPickTab={() => setAddingTab(true)} />
+        <div className="flex items-center gap-0.5">
+          <CollapseAllButton onCollapseAll={() => setCollapseSignal((n) => n + 1)} />
+          <NavigationAddButton onPickTab={() => setAddingTab(true)} />
+        </div>
       </div>
       <div className="flex flex-col gap-0.5">
         {tabs.map((tab, i) => (
@@ -139,6 +148,7 @@ export function NavTree({
             resolveEntryPath={resolveEntryPath}
             frontmatterCache={frontmatterCache}
             frontmatterLoaded={frontmatterLoaded}
+            collapseSignal={collapseSignal}
           />
         ))}
         {addingTab ? (
@@ -154,6 +164,30 @@ export function NavTree({
         ) : null}
       </div>
     </div>
+  );
+}
+
+interface CollapseAllButtonProps {
+  onCollapseAll: () => void;
+}
+
+/** Header button that collapses every Tab and Group section in one click.
+ *  Sits next to the `+` so the muscle memory for "navigation toolbar"
+ *  controls stays grouped. */
+function CollapseAllButton({ onCollapseAll }: CollapseAllButtonProps) {
+  return (
+    <button
+      type="button"
+      aria-label="Collapse all navigation folders"
+      title="Collapse all"
+      onClick={(e) => {
+        e.stopPropagation();
+        onCollapseAll();
+      }}
+      className="flex size-5 items-center justify-center rounded text-muted-foreground/70 transition-colors hover:bg-accent hover:text-foreground"
+    >
+      <ChevronsDownUp className="size-3.5" />
+    </button>
   );
 }
 
@@ -230,6 +264,7 @@ interface SectionCommon {
   resolveEntryPath: (entry: PageEntry) => string | null;
   frontmatterCache?: Record<string, Record<string, unknown> | null>;
   frontmatterLoaded?: ReadonlySet<string>;
+  collapseSignal: CollapseSignal;
 }
 
 function TabSection({
@@ -244,6 +279,7 @@ function TabSection({
   resolveEntryPath,
   frontmatterCache,
   frontmatterLoaded,
+  collapseSignal,
 }: {
   tab: Tab;
   tabIndex: number;
@@ -251,14 +287,27 @@ function TabSection({
 } & SectionCommon) {
   const groups = (tab.groups ?? []).filter((g) => !g.hidden);
   const directPages = tab.pages ?? [];
-  // Tabs always get an icon (custom from docs.json, or the LayoutPanelTop
-  // fallback that matches the Navigation `+` popover). So children always
-  // align under the tab title at the post-icon offset.
-  const tabTextX = indent + TAB_TEXT_OFFSET;
+  // Tabs and groups share the same row shape (chevron + icon + label) so
+  // children align under the tab title at the same offset they'd use under
+  // a group title.
+  const tabTextX = indent + GROUP_TEXT_OFFSET;
   const settingsKey: NavSettingsKey = `tab:${tab.tab}`;
   const settingsOpen = settingsOpenKey === settingsKey;
   const groupKeyBase = `tab${tabIndex}`;
   const [addingKind, setAddingKind] = useState<AddEntryKind | null>(null);
+  const [expanded, setExpanded] = useState(true);
+
+  // Collapse-all signal: setting expanded=false on every signal bump (skip
+  // the initial mount so we don't fight the default-open state). The header
+  // button increments the signal; we react.
+  const lastSignalRef = useRef(collapseSignal);
+  useEffect(() => {
+    if (collapseSignal !== lastSignalRef.current) {
+      lastSignalRef.current = collapseSignal;
+      setExpanded(false);
+      setAddingKind(null);
+    }
+  }, [collapseSignal]);
 
   const commitAdd = (value: string) => {
     if (!addingKind) return;
@@ -266,17 +315,23 @@ function TabSection({
     setAddingKind(null);
   };
 
+  const beginAdd = (kind: AddEntryKind) => {
+    if (!expanded) setExpanded(true);
+    setAddingKind(kind);
+  };
+
   return (
     <div className="flex flex-col gap-0.5">
       <Row
         paddingLeft={indent}
         settingsOpen={settingsOpen}
+        onClick={() => setExpanded((e) => !e)}
         showActions
         actions={
           <>
             <AddEntryButton
               parentLabel={tab.tab}
-              onPick={(kind) => setAddingKind(kind)}
+              onPick={beginAdd}
             />
             <SettingsToggle
               label={tab.tab}
@@ -292,51 +347,56 @@ function TabSection({
           </>
         }
       >
+        <Chevron expanded={expanded} />
         <NavIcon icon={tab.icon} fallback="tab" />
         <Title>{tab.tab}</Title>
       </Row>
-      <div className="flex flex-col gap-0.5">
-        {directPages.map((entry, i) => (
-          <PageOrGroup
-            key={pageKey(entry, i)}
-            entry={entry}
-            indent={tabTextX}
-            keyPath={`${groupKeyBase}/d${i}`}
-            selectedPath={selectedPath}
-            onSelectPath={onSelectPath}
-            settingsOpenKey={settingsOpenKey}
-            onOpenSettings={onOpenSettings}
-            onAddEntry={onAddEntry}
-            resolveEntryPath={resolveEntryPath}
-            frontmatterCache={frontmatterCache}
-            frontmatterLoaded={frontmatterLoaded}
-          />
-        ))}
-        {groups.map((group, i) => (
-          <GroupSection
-            key={`${group.group}-${i}`}
-            group={group}
-            indent={tabTextX}
-            keyPath={`${groupKeyBase}/${i}/${group.group}`}
-            selectedPath={selectedPath}
-            onSelectPath={onSelectPath}
-            settingsOpenKey={settingsOpenKey}
-            onOpenSettings={onOpenSettings}
-            onAddEntry={onAddEntry}
-            resolveEntryPath={resolveEntryPath}
-            frontmatterCache={frontmatterCache}
-            frontmatterLoaded={frontmatterLoaded}
-          />
-        ))}
-        {addingKind ? (
-          <InlineAddRow
-            kind={addingKind}
-            indent={tabTextX}
-            onCommit={commitAdd}
-            onCancel={() => setAddingKind(null)}
-          />
-        ) : null}
-      </div>
+      {expanded ? (
+        <div className="flex flex-col gap-0.5">
+          {directPages.map((entry, i) => (
+            <PageOrGroup
+              key={pageKey(entry, i)}
+              entry={entry}
+              indent={tabTextX}
+              keyPath={`${groupKeyBase}/d${i}`}
+              selectedPath={selectedPath}
+              onSelectPath={onSelectPath}
+              settingsOpenKey={settingsOpenKey}
+              onOpenSettings={onOpenSettings}
+              onAddEntry={onAddEntry}
+              resolveEntryPath={resolveEntryPath}
+              frontmatterCache={frontmatterCache}
+              frontmatterLoaded={frontmatterLoaded}
+              collapseSignal={collapseSignal}
+            />
+          ))}
+          {groups.map((group, i) => (
+            <GroupSection
+              key={`${group.group}-${i}`}
+              group={group}
+              indent={tabTextX}
+              keyPath={`${groupKeyBase}/${i}/${group.group}`}
+              selectedPath={selectedPath}
+              onSelectPath={onSelectPath}
+              settingsOpenKey={settingsOpenKey}
+              onOpenSettings={onOpenSettings}
+              onAddEntry={onAddEntry}
+              resolveEntryPath={resolveEntryPath}
+              frontmatterCache={frontmatterCache}
+              frontmatterLoaded={frontmatterLoaded}
+              collapseSignal={collapseSignal}
+            />
+          ))}
+          {addingKind ? (
+            <InlineAddRow
+              kind={addingKind}
+              indent={tabTextX}
+              onCommit={commitAdd}
+              onCancel={() => setAddingKind(null)}
+            />
+          ) : null}
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -353,6 +413,7 @@ function GroupSection({
   resolveEntryPath,
   frontmatterCache,
   frontmatterLoaded,
+  collapseSignal,
 }: {
   group: Group;
   indent: number;
@@ -364,6 +425,15 @@ function GroupSection({
   const childIndent = indent + GROUP_TEXT_OFFSET;
   const settingsKey: NavSettingsKey = `group:${keyPath}`;
   const settingsOpen = settingsOpenKey === settingsKey;
+
+  const lastSignalRef = useRef(collapseSignal);
+  useEffect(() => {
+    if (collapseSignal !== lastSignalRef.current) {
+      lastSignalRef.current = collapseSignal;
+      setExpanded(false);
+      setAddingKind(null);
+    }
+  }, [collapseSignal]);
 
   const beginAdd = (kind: AddEntryKind) => {
     if (!expanded) setExpanded(true);
@@ -423,6 +493,7 @@ function GroupSection({
               resolveEntryPath={resolveEntryPath}
               frontmatterCache={frontmatterCache}
               frontmatterLoaded={frontmatterLoaded}
+              collapseSignal={collapseSignal}
             />
           ))}
           {addingKind ? (
@@ -451,6 +522,7 @@ function PageOrGroup({
   resolveEntryPath,
   frontmatterCache,
   frontmatterLoaded,
+  collapseSignal,
 }: {
   entry: PageEntry;
   indent: number;
@@ -470,6 +542,7 @@ function PageOrGroup({
         resolveEntryPath={resolveEntryPath}
         frontmatterCache={frontmatterCache}
         frontmatterLoaded={frontmatterLoaded}
+        collapseSignal={collapseSignal}
       />
     );
   }

@@ -1,6 +1,7 @@
 import { HeaderSlotProvider } from "@/components/HeaderSlot";
 import { Sidebar } from "@/components/Sidebar";
 import { UserMenu } from "@/components/UserMenu";
+import { env } from "@/lib/env";
 import { cn } from "@/lib/utils";
 import { useCurrentUser } from "@nebula-docs/firebase";
 import { Outlet } from "react-router";
@@ -28,6 +29,13 @@ export function AppShell() {
                 {slot}
               </div>
               <div className={cn("flex shrink-0 items-center gap-2 pr-6", !leading && "border-b")}>
+                {env.isDev ? (
+                  <span
+                    title={`NEBULA_ENV=${env.mode}`}
+                    className='rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-400'>
+                    Dev
+                  </span>
+                ) : null}
                 {auth.status === "authenticated" ? <UserMenu user={auth.user} /> : null}
               </div>
             </header>

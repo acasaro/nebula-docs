@@ -15,6 +15,7 @@
     "typecheck": "pnpm -r typecheck",
     "lint": "pnpm -r lint",
     "clean": "pnpm -r --parallel exec rm -rf node_modules dist build .docusaurus && rm -rf node_modules",
+    "reinstall:public": "pnpm clean && rm -f pnpm-lock.yaml && pnpm install --registry=https://registry.npmjs.org/ && pnpm --filter @nebula-docs/theme build:css",
     "firebase": "pnpm dlx firebase-tools",
     "deploy:rules": "pnpm dlx firebase-tools deploy --only firestore:rules",
     "deploy:functions": "pnpm dlx firebase-tools deploy --only functions",

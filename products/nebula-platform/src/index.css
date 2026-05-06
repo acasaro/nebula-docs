@@ -187,6 +187,15 @@
 :where(.mdx-prose) em { @apply italic; }
 :where(.mdx-prose) del { @apply line-through opacity-70; }
 :where(.mdx-prose) img { @apply my-4 max-w-full rounded-md border; }
+/* Reset for images/videos inside Frame — the Frame manages its own
+ * spacing (8px padding on all sides). Without this, the `.mdx-prose img
+ * { my-4 }` rule above adds 16px top + 16px bottom around the image
+ * inside a Frame, making vertical padding visually larger than L/R. */
+:where(.mdx-prose) [data-component-part='frame'] :is(img, video) {
+  margin: 0;
+  border: 0;
+  border-radius: inherit;
+}
 :where(.mdx-prose) ol { @apply marker:text-gray-500; }
 :where(.mdx-prose) table {
   @apply my-4 w-full overflow-x-auto rounded-md border text-sm;

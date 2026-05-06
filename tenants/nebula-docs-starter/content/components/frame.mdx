@@ -1,7 +1,7 @@
 ---
-title: 'Frame'
-description: 'Bordered surround for screenshots, with an optional caption.'
-icon: 'image'
+title: "Frame"
+description: "Bordered surround for screenshots, with an optional caption."
+icon: "image"
 ---
 
 `<Frame>` wraps a child block (usually an image) in a rounded surround with a subtle dot grid. Use it for screenshots, diagrams, or anything else that benefits from chrome separating it from surrounding prose.
@@ -9,52 +9,49 @@ icon: 'image'
 ## Plain frame
 
 <Frame>
-  <img src="https://placehold.co/640x360/png?text=Console+screenshot" alt="A placeholder console screenshot." />
+  <img
+    src='https://firebasestorage.googleapis.com/v0/b/mcoe-d.firebasestorage.app/o/dev%2F129876467%2Fimages%2Fdd2b1626aec63224.jpg?alt=media&token=e09638ea-add6-4786-9091-5a0c82d7179f'
+    alt='A placeholder console screenshot.'
+  />
 </Frame>
 
 ## With a caption
 
-<Frame caption="The AcmeCloud dashboard, with the project switcher open.">
-  <img src="https://placehold.co/640x360/png?text=Project+switcher" alt="A placeholder dashboard screenshot." />
+<Frame caption='The AcmeCloud dashboard, with the project switcher open.'>
+  <img
+    src='https://firebasestorage.googleapis.com/v0/b/mcoe-d.firebasestorage.app/o/dev%2F129876467%2Fimages%2Fdd2b1626aec63224.jpg?alt=media&token=e09638ea-add6-4786-9091-5a0c82d7179f'
+    alt='A placeholder dashboard screenshot.'
+  />
 </Frame>
 
 ## With a title
 
-<Frame title="Architecture diagram">
-  <img src="https://placehold.co/640x360/png?text=Architecture" alt="Placeholder architecture diagram." />
+<Frame title='Architecture diagram'>
+  <img
+    src='https://firebasestorage.googleapis.com/v0/b/mcoe-d.firebasestorage.app/o/dev%2F129876467%2Fimages%2Fdd2b1626aec63224.jpg?alt=media&token=e09638ea-add6-4786-9091-5a0c82d7179f'
+    alt='Placeholder architecture diagram.'
+  />
 </Frame>
 
 ## Wrapping a video
 
-<Frame caption="A short loop of the dashboard at 2x speed.">
-  <video autoPlay loop muted playsInline width="640">
-    <source src="https://placehold.co/video.mp4" type="video/mp4" />
+<Frame caption='A short loop of the dashboard at 2x speed.'>
+  <video autoPlay loop muted playsInline width='640'>
+    <source src='https://placehold.co/video.mp4' type='video/mp4' />
   </video>
 </Frame>
 
 ## Wrapping arbitrary content
 
-<Frame caption="Diagrams work too.">
-  <Mermaid>
-    {`flowchart LR
-      A[Client SDK] --> B[Edge node]
-      B --> C[Region]
-      C --> D[(Storage)]`}
-  </Mermaid>
+<Frame caption='Diagrams work too.'>
+  <Mermaid
+    chart={
+      "flowchart LR\n    A[Client SDK] --> B[Edge node]\n    B --> C[Region]\n    C --> D[(Storage)]"
+    }
+  />
 </Frame>
 
-## Caption with a link
-
-<Frame caption="Visit the [documentation](/quickstart) for setup steps.">
-  <img src="https://placehold.co/640x360/png?text=Setup+guide" alt="Placeholder setup guide screenshot." />
-</Frame>
-
-## Caption with bold and a link
-
-<Frame caption="**Note:** See the [official guide](https://example.com) for setup instructions.">
-  <img src="https://placehold.co/640x360/png?text=Setup+screenshot" alt="Placeholder setup screenshot." />
-</Frame>
-
-<Callout type="tip">
-  `description` is a documented alias for `caption` and `title` is a documented alias for the heading row, kept for back-compat with editor MDX that uses either name.
-</Callout>
+<Tip>
+  `description` is a documented alias for `caption` and `title` is a documented alias for the
+  heading row, kept for back-compat with editor MDX that uses either name.
+</Tip>

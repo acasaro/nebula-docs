@@ -408,6 +408,18 @@ body {
   border: 1px solid var(--mcoe-border-default);
 }
 
+/* Reset prose margin/border on images and videos inside Frame — the
+ * Frame manages its own spacing (8px padding on all sides) and chrome
+ * (rounded corners, optional border). Without this override, the
+ * `.mdx-prose img { margin: 1rem 0 }` rule above adds 16px top + 16px
+ * bottom around every <img> inside a Frame, making the vertical
+ * padding visually larger than the 8px L/R. */
+:where(.mdx-prose) [data-component-part='frame'] :is(img, video) {
+  margin: 0;
+  border: 0;
+  border-radius: inherit;
+}
+
 :where(.mdx-prose) table {
   margin: 1rem 0;
   width: 100%;

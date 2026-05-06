@@ -90,7 +90,7 @@ export function Frame({
 
       <div
         className={cn(
-          'not-prose relative overflow-hidden rounded-2xl bg-stone-50/60 p-2 dark:bg-stone-800/40',
+          'not-prose relative overflow-hidden rounded-2xl bg-stone-100 p-2 dark:bg-stone-800/40',
           className,
         )}
         data-component-part="frame"
@@ -98,19 +98,7 @@ export function Frame({
         style={style}
       >
         <div
-          aria-hidden="true"
-          className="absolute inset-0 opacity-40 dark:opacity-30"
-          style={{
-            backgroundImage:
-              'radial-gradient(circle at 1px 1px, currentColor 1px, transparent 0)',
-            backgroundSize: '14px 14px',
-            color: 'rgb(168 162 158 / 0.5)',
-            backgroundPosition: '10px 10px',
-          }}
-          data-component-part="frame-background-pattern"
-        />
-        <div
-          className="relative flex w-full justify-center overflow-hidden rounded-xl bg-white dark:bg-stone-900"
+          className="relative flex w-full justify-center overflow-hidden rounded-xl"
           data-component-part="frame-content"
         >
           {src ? (
@@ -119,7 +107,7 @@ export function Frame({
               alt={finalAlt}
               width={width}
               height={height}
-              className="block h-auto max-w-full"
+              className="block h-auto max-w-full rounded-xl"
               data-component-part="frame-image"
             />
           ) : null}
@@ -128,7 +116,18 @@ export function Frame({
 
         {finalCaption ? (
           <div
-            className="relative mt-3 flex min-h-[44px] items-center justify-center rounded-xl bg-white px-5 py-2 text-center text-sm text-stone-600 dark:bg-stone-900 dark:text-stone-400"
+            className={cn(
+              // Vertical balance: image-bottom→caption = mt-3 (12px) + pt-0;
+              // caption→frame-bottom = pb-1 (4px) + frame's p-2 (8px) = 12px.
+              // Both sides land at 12px so the caption sits visually
+              // centered between the image and the frame edge. Mintlify's
+              // own HTML uses pb-2 here, which leaves a 4px tail below —
+              // the user explicitly flagged that as visually uneven.
+              'relative mt-3 px-8 pt-0 pb-1 text-center text-sm text-stone-700 dark:text-stone-400',
+              // Caption-link styling: bold, no text-decoration, custom
+              // border-b underline that thickens on hover.
+              '[&_a]:font-semibold [&_a]:no-underline [&_a]:border-b [&_a]:border-current [&_a:hover]:border-b-2 dark:[&_a]:text-white',
+            )}
             data-component-part="frame-description"
           >
             <p className="m-0">{renderCaptionMarkdown(finalCaption)}</p>

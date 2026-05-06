@@ -420,6 +420,44 @@ unique selectors that don't collide with the MDX block components
 (checked the rest — `.nebula-tab` is navbar-only, `.nebula-tabs-list`
 and `.nebula-tabs-panels` are MDX-only, no other clashes today).
 
+### Round 18b — Frame: full Mintlify HTML alignment
+
+After the initial Round 18 padding pass, the frame still didn't look
+right. User pulled the actual Mintlify production HTML and shared it.
+Five real divergences in our component:
+
+1. **Caption had `bg-white`** — Mintlify's caption has NO background. It
+   sits directly on the frame's `bg-stone-50/50` pattern surface.
+   Removed `bg-white dark:bg-stone-800` from the description div.
+2. **Caption padding L/R was 20px** — Mintlify is `px-8` (32px). The
+   user's earlier "20px" spec was eyeballed; matched the source instead.
+3. **Pattern was dots, Mintlify is a grid** — Mintlify uses
+   `bg-grid-neutral-200/20` (a Tailwind plugin utility). Replaced our
+   `radial-gradient(circle ...)` dot pattern with two crossed
+   `linear-gradient`s drawing 1px hairlines at every 14px:
+   ```
+   linear-gradient(to right, rgb(214 211 209 / 0.45) 1px, transparent 1px),
+   linear-gradient(to bottom, rgb(214 211 209 / 0.45) 1px, transparent 1px)
+   ```
+   Plus the same vertical mask gradient Mintlify ships
+   (`mask-image: linear-gradient(0deg, #fff, rgba(255,255,255,0.6))`)
+   so the grid fades and doesn't compete with the content.
+4. **Caption-link styling didn't match** — Mintlify links inside a frame
+   caption are `font-semibold no-underline border-b border-primary` with
+   `border-b-2` on hover. Added the same Tailwind arbitrary-variant
+   chain `[&_a]:font-semibold [&_a]:no-underline [&_a]:border-b
+   [&_a]:border-current [&_a:hover]:border-b-2 dark:[&_a]:text-white`
+   to the caption div.
+5. **Inner content div had `bg-white`** — Mintlify's content div is just
+   `relative rounded-xl overflow-hidden flex justify-center` with no
+   background. Stripped the bg classes; the rounded-xl clips the image
+   directly.
+
+Verified in CLI: caption padding `mt:12 / pl,pr:32 / pt:0 / pb:8`,
+background transparent, text-align center; pattern uses two
+linear-gradients with the mask. Editor picks up the same shared
+component.
+
 ### Round 18 — Frame: Mintlify-spec padding + markdown captions
 
 Two adjustments to the shared `@nebula-docs/components` Frame so the

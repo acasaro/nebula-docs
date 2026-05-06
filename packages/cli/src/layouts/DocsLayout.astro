@@ -58,30 +58,32 @@ const hasToc = tocHeadings.length > 0;
   </head>
   <body>
     <Navbar docs={docs} currentSlug={currentSlug} />
-    <div class={`nebula-shell ${hasToc ? 'has-toc' : ''}`}>
+    <div class="nebula-shell">
       <aside class="nebula-aside">
         <Sidebar docs={docs} currentSlug={currentSlug} />
       </aside>
-      <main class="nebula-main">
-        <article>
-          <header class="nebula-page-header">
-            {eyebrow && <p class="nebula-eyebrow">{eyebrow}</p>}
-            <h1 class="nebula-page-title">{title}</h1>
-            {description && (
-              <p class="nebula-page-description">{description}</p>
-            )}
-          </header>
-          <div class="mdx-prose">
-            <slot />
-          </div>
-        </article>
-        <Footer docs={docs} />
-      </main>
-      {hasToc && (
-        <aside class="nebula-toc-aside">
-          <TocSidebar headings={headings} />
-        </aside>
-      )}
+      <div class="nebula-content-area">
+        <main class="nebula-main">
+          <article>
+            <header class="nebula-page-header">
+              {eyebrow && <p class="nebula-eyebrow">{eyebrow}</p>}
+              <h1 class="nebula-page-title">{title}</h1>
+              {description && (
+                <p class="nebula-page-description">{description}</p>
+              )}
+            </header>
+            <div class="mdx-prose">
+              <slot />
+            </div>
+          </article>
+          <Footer docs={docs} />
+        </main>
+        {hasToc && (
+          <aside class="nebula-toc-aside">
+            <TocSidebar headings={headings} />
+          </aside>
+        )}
+      </div>
     </div>
     <Lightbox />
     {/* Copy-to-clipboard button on every fenced code block. Walks
@@ -134,22 +136,14 @@ const hasToc = tocHeadings.length > 0;
       })();
     </script>
     <style>
-      /* Three-column layout when there's a TOC, two-column otherwise. The
-         right rail is fixed-width (12rem) like the left, so the article column
-         (`.nebula-main`) flexes between them. The 5rem gap matches the
-         left-side gap so the article reads as the centered focus column. */
+      /* Full-width shell — sidebar pinned to the left, article + TOC live
+         inside `.nebula-content-area` and are centered as a group within
+         the remaining viewport. */
       .nebula-shell {
         display: grid;
         grid-template-columns: 16rem minmax(0, 1fr);
-        max-width: 1280px;
-        margin: 0 auto;
         gap: 4rem;
         padding: 1.5rem 2rem;
-      }
-      .nebula-shell.has-toc {
-        grid-template-columns: 16rem minmax(0, 1fr) 12rem;
-        gap: 4rem 5rem;
-        max-width: 90rem;
       }
       /* Sticky offset = navbar (top row 53px + bottom row 41px = 94px) +
          24px breathing room. The Navbar is the sticky element above us, so
@@ -159,22 +153,44 @@ const hasToc = tocHeadings.length > 0;
       .nebula-toc-aside {
         position: sticky;
         top: calc(94px + 1.5rem);
-        align-self: start;
+        align-self: flex-start;
         max-height: calc(100vh - 94px - 3rem);
         overflow-y: auto;
       }
       .nebula-aside {
         padding-right: 1rem;
+        align-self: start;
       }
-      .nebula-main {
+      .nebula-content-area {
+        display: flex;
+        align-items: flex-start;
+        gap: 5rem;
         min-width: 0;
-        max-width: 48rem;
-        padding-bottom: 4rem;
       }
-      @media (max-width: 1180px) {
-        .nebula-shell.has-toc {
-          grid-template-columns: 16rem minmax(0, 1fr);
-        }
+      /* Article column. The `margin-left` calc centers `.nebula-main` on the
+         viewport (50vw - half its own width) and subtracts the sidebar's
+         offset-from-viewport (16rem sidebar + 2rem shell padding + 4rem gap
+         = 22rem) since `.nebula-main` is positioned relative to the
+         content-area, not the viewport. Below ~1400px the calc clamps to 0
+         and the article falls back to the start of the content area. */
+      .nebula-main {
+        flex: 0 1 auto;
+        width: 100%;
+        max-width: 696px;
+        min-width: 0;
+        margin-left: max(0px, calc(50vw - 348px - 22rem));
+        padding: 1.5rem 1.5rem 4rem;
+      }
+      .nebula-main .mdx-prose {
+        letter-spacing: -0.0125rem;
+      }
+      .nebula-toc-aside {
+        flex: 0 0 12rem;
+      }
+      /* TOC needs sidebar(20rem) + main(696px) + gap(5rem) + toc(12rem) +
+         right-padding(2rem) = ~1340px to fit without overflow. Hide it
+         below that. */
+      @media (max-width: 1340px) {
         .nebula-toc-aside {
           display: none;
         }
@@ -186,6 +202,9 @@ const hasToc = tocHeadings.length > 0;
         .nebula-aside {
           position: static;
           max-height: none;
+        }
+        .nebula-main {
+          margin-left: 0;
         }
       }
     </style>

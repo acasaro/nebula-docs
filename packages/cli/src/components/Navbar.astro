@@ -154,21 +154,17 @@ const showSecondaryRow = tabs.length > 0 || navbarLinks.length > 0 || primary;
   .nebula-navbar-row--bottom {
     border-bottom: 1px solid var(--mcoe-border-default);
   }
-  /* Navbar inner width tracks the page shell. Default matches `.nebula-shell`
-     (1280px). When the layout opts into the TOC layout (`.nebula-shell.has-toc`,
-     90rem wide), the body:has() rule below widens the navbar to match so
-     the header content's left/right edges align with the page content. */
+  /* Navbar inner stretches the full viewport with `padding: 0 2rem` so the
+     brand sits flush-left and the actions flush-right, mirroring the shell
+     below where the sidebar pins left and the content+TOC group centers in
+     the remaining space. */
   .nebula-navbar-row-inner {
-    max-width: 1280px;
-    margin: 0 auto;
+    width: 100%;
     padding: 0 2rem;
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 1rem;
-  }
-  body:has(.nebula-shell.has-toc) .nebula-navbar-row-inner {
-    max-width: 90rem;
   }
   .nebula-navbar-row--top .nebula-navbar-row-inner {
     height: 3.25rem;

@@ -70,6 +70,13 @@ export function Property({
 
   if (hidden) return null;
 
+  // Defensive: when MDX passes `pre={['Required']}` the editor's mdast attr
+  // extractor falls through to `{ __expression: "[...]" }` if JSON.parse
+  // can't handle the JS literal (single quotes, trailing commas, etc.).
+  // `.map()` on that object would throw — fall back to an empty list.
+  const preList = Array.isArray(pre) ? pre : [];
+  const postList = Array.isArray(post) ? post : [];
+
   return (
     <div
       className={cn(
@@ -79,7 +86,7 @@ export function Property({
       data-component-part="field"
     >
       <div className="flex flex-wrap items-center gap-2 break-all font-mono text-sm">
-        {pre?.map((item, i) => (
+        {preList.map((item, i) => (
           <Pill key={`pre-${i}`}>{item}</Pill>
         ))}
         <span
@@ -99,7 +106,7 @@ export function Property({
         ) : null}
         {required ? <RequiredPill label={requiredLabel} /> : null}
         {deprecated ? <DeprecatedPill label={deprecatedLabel} /> : null}
-        {post?.map((item, i) => (
+        {postList.map((item, i) => (
           <Pill key={`post-${i}`}>{item}</Pill>
         ))}
       </div>
@@ -160,16 +167,51 @@ function DeprecatedPill({ label = DEFAULT_DEPRECATED_LABEL }: { label?: string }
 
 /**
  * Mintlify aliases — `<ParamField>` and `<ResponseField>` in MDX both resolve
- * to the same Property primitive. Mintlify uses `path` for ParamField and
- * `name` for ResponseField; we accept both and normalize.
+ * to the same Property primitive. Mintlify uses any of `path` / `query` /
+ * `header` / `body` / `cookie` for ParamField (the attribute name doubles
+ * as the parameter location), `name` for ResponseField; we accept all and
+ * surface the location as a pill so the rendered field reads
+ * "id [string] [query]" without needing a separate `location=` prop.
  */
 type FieldProps = Omit<PropertyProps, 'name'> & {
   name?: string;
   path?: string;
+  query?: string;
+  header?: string;
+  body?: string;
+  cookie?: string;
 };
 
-export function ParamField({ name, path, ...rest }: FieldProps) {
-  return <Property name={path ?? name ?? ''} {...rest} />;
+const PARAM_LOCATIONS: Array<keyof FieldProps> = [
+  'path',
+  'query',
+  'header',
+  'body',
+  'cookie',
+];
+
+export function ParamField({
+  name,
+  location,
+  ...rest
+}: FieldProps) {
+  let resolvedName = name;
+  let resolvedLocation = location;
+  for (const key of PARAM_LOCATIONS) {
+    const v = rest[key];
+    if (typeof v === 'string' && !resolvedName) {
+      resolvedName = v;
+      resolvedLocation = resolvedLocation ?? key;
+    }
+    delete rest[key];
+  }
+  return (
+    <Property
+      name={resolvedName ?? ''}
+      location={resolvedLocation}
+      {...rest}
+    />
+  );
 }
 
 export function ResponseField({ name, path, ...rest }: FieldProps) {

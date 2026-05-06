@@ -1,6 +1,6 @@
 ---
 title: 'Installation'
-description: 'How to install and run Example Docs locally.'
+description: 'How to install and run a Nebula Docs site locally.'
 icon: 'download'
 ---
 
@@ -19,8 +19,8 @@ icon: 'download'
     Pull the tenant repo from GitHub.
 
     ```bash
-    git clone git@github.com:your-org/example-docs.git
-    cd example-docs
+    git clone git@github.com:your-org/your-docs.git
+    cd your-docs
     ```
   </Step>
   <Step title="Install dependencies">
@@ -38,7 +38,7 @@ icon: 'download'
     The CLI's dev server gives you HMR-backed local rendering.
 
     ```bash
-    pnpm nebula-docs dev
+    pnpm nebula dev
     ```
 
     Open [http://localhost:4321](http://localhost:4321) in your browser.
@@ -47,7 +47,7 @@ icon: 'download'
     When you're ready to ship, run the build.
 
     ```bash
-    pnpm nebula-docs build
+    pnpm nebula build
     ```
 
     The static output lands in `dist/`. Your CI workflow uploads that directory to your OOSS bucket.

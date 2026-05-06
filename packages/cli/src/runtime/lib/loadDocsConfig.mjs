@@ -9,7 +9,7 @@ import { resolve } from 'node:path';
 export function loadDocsConfig() {
   const tenantRoot = process.env.NEBULA_TENANT_ROOT;
   if (!tenantRoot) {
-    throw new Error('NEBULA_TENANT_ROOT not set — run through the nebula-docs CLI.');
+    throw new Error('NEBULA_TENANT_ROOT not set — run through the nebula CLI.');
   }
   const text = readFileSync(resolve(tenantRoot, 'docs.json'), 'utf8');
   return JSON.parse(text);

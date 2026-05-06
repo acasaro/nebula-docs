@@ -106,6 +106,8 @@ function serializeBlock(node: TiptapNode): string {
       return serializeMermaid(node);
     case 'mdxCodeGroup':
       return serializeCodeGroup(node);
+    case 'mdxSnippet':
+      return serializeSnippet(node);
     case 'hardBreak':
       return '  \n';
     default:
@@ -163,6 +165,14 @@ function serializeSteps(node: TiptapNode): string {
     .filter(Boolean)
     .join('\n\n');
   return `<Steps${attrs}>\n${stepBlocks}\n</Steps>`;
+}
+
+function serializeSnippet(node: TiptapNode): string {
+  const file = (node.attrs?.file as string | undefined) ?? '';
+  // Always self-close on the original `file` attribute — never serialize
+  // resolved snippet content back. The NodeView renders content read-only
+  // from the resolver context; the source on disk stays the JSX include.
+  return `<Snippet file="${file.replace(/"/g, '\\"')}" />`;
 }
 
 function serializeCodeGroup(node: TiptapNode): string {

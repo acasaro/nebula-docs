@@ -13,6 +13,6 @@ export async function runBuild({ tenant, flags }) {
   const outDir = resolve(tenant, 'dist');
   process.env.NEBULA_OUT_DIR = outDir;
 
-  process.stdout.write(`nebula-docs build: ${tenant} -> ${outDir}\n`);
+  process.stdout.write(`nebula build: ${tenant} -> ${outDir}\n`);
   await build({ root: CLI_ROOT });
 }

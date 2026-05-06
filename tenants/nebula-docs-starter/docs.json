@@ -1,0 +1,33 @@
+{
+  "$schema": "https://nebula-docs.uhg.com/docs.schema.json",
+  "name": "Nebula Docs Starter",
+  "description": "Full kitchen-sink Nebula Docs starter. Skeleton — Phase 3 fills out every component / nav-pattern / frontmatter combination.",
+  "logo": { "href": "/" },
+  "versions": [{ "version": "v0.1", "default": true }],
+  "theme": {
+    "base": "mcoe-default",
+    "extends": "./theme.json"
+  },
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "icon": "book",
+        "groups": [
+          {
+            "group": "Get Started",
+            "icon": "rocket",
+            "pages": ["index"]
+          }
+        ]
+      }
+    ]
+  },
+  "navbar": {
+    "primary": { "type": "button", "label": "Get Started", "href": "/" },
+    "links": []
+  },
+  "footer": {
+    "copyright": "Nebula Docs Starter — placeholder content."
+  }
+}

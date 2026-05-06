@@ -1,26 +1,23 @@
-import { useMemo, useState, type MouseEvent as ReactMouseEvent, type ReactNode } from 'react';
+import {
+  forwardRef,
+  useEffect,
+  useRef,
+  useState,
+  type MouseEvent as ReactMouseEvent,
+  type ReactNode,
+} from 'react';
 import {
   ChevronDown,
   ChevronRight,
   FilePlus,
   FolderPlus,
-  FileSearch,
   Folder,
+  LayoutPanelTop,
   Plus,
   Settings,
 } from 'lucide-react';
 import * as Popover from '@radix-ui/react-popover';
 import { Icon } from '@nebula-docs/components';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import {
   defaultPageTitle,
@@ -47,7 +44,7 @@ export type NavSettingsKey = string;
 
 export type NavSettingsKind = 'tab' | 'group' | 'page';
 
-export type AddEntryKind = 'page' | 'group' | 'existing';
+export type AddEntryKind = 'page' | 'group';
 
 export interface OpenNavSettings {
   key: NavSettingsKey;
@@ -65,9 +62,13 @@ interface NavTreeProps {
    * descriptor (kind + title + key) so the parent can render the right panel
    * without re-walking the tree. */
   onOpenSettings: (next: OpenNavSettings | null) => void;
-  /** Add a page / group / existing-file entry to the named group. */
+  /** Append a page or group entry under a named group. */
   onAddEntry?: (parentKey: NavSettingsKey, kind: AddEntryKind, value: string) => void;
-  /** All file paths in the repo — used by the "add existing file" flow. */
+  /** Append a top-level tab to `navigation.tabs`. */
+  onAddTab?: (name: string) => void;
+  /** All file paths in the repo — currently unused after the existing-file
+   *  picker was dropped; kept on the prop bag for future "move into group"
+   *  affordances. */
   repoPaths?: string[];
   /** Per-page frontmatter values keyed by file path. NavTree uses
    *  `sidebarTitle`, `icon`, `tag`, `hidden` from each entry as overrides
@@ -96,23 +97,19 @@ export function NavTree({
   settingsOpenKey,
   onOpenSettings,
   onAddEntry,
+  onAddTab,
   repoPaths,
   frontmatterCache,
   frontmatterLoaded,
 }: NavTreeProps) {
   const tabs = (config.navigation?.tabs ?? []).filter((t) => !t.hidden);
+  const [addingTab, setAddingTab] = useState(false);
 
   return (
     <div className="flex flex-col gap-1 py-2 pr-2">
       <div className="flex items-center justify-between pl-2 pr-1 pt-1 pb-1 text-xs text-muted-foreground/70">
         <span>Navigation</span>
-        <button
-          type="button"
-          aria-label="Add to navigation"
-          className="flex size-5 items-center justify-center rounded text-muted-foreground/70 transition-colors hover:bg-accent hover:text-foreground"
-        >
-          <Plus className="size-3.5" />
-        </button>
+        <NavigationAddButton onPickTab={() => setAddingTab(true)} />
       </div>
       <div className="flex flex-col gap-0.5">
         {tabs.map((tab, i) => (
@@ -131,8 +128,79 @@ export function NavTree({
             frontmatterLoaded={frontmatterLoaded}
           />
         ))}
+        {addingTab ? (
+          <InlineAddRow
+            kind="tab"
+            indent={ROOT_PL}
+            onCommit={(value) => {
+              onAddTab?.(value);
+              setAddingTab(false);
+            }}
+            onCancel={() => setAddingTab(false)}
+          />
+        ) : null}
       </div>
     </div>
+  );
+}
+
+interface NavigationAddButtonProps {
+  onPickTab: () => void;
+}
+
+/**
+ * Top-level Navigation `+` — the only thing you can add at the root of
+ * navigation is a tab, so the popover has a single item. Mirrors the
+ * group-level `AddEntryButton` shape so the muscle memory transfers.
+ */
+function NavigationAddButton({ onPickTab }: NavigationAddButtonProps) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <Popover.Root open={open} onOpenChange={setOpen}>
+      <Popover.Trigger asChild>
+        <button
+          type="button"
+          aria-label="Add to navigation"
+          onClick={(e) => {
+            e.stopPropagation();
+            setOpen(true);
+          }}
+          className="flex size-5 items-center justify-center rounded text-muted-foreground/70 transition-colors hover:bg-accent hover:text-foreground"
+        >
+          <Plus className="size-3.5" />
+        </button>
+      </Popover.Trigger>
+      <Popover.Portal>
+        <Popover.Content
+          sideOffset={4}
+          align="end"
+          className={cn(
+            'z-50 min-w-[160px] rounded-md border bg-popover p-1 shadow-md',
+            'data-[state=open]:animate-in data-[state=closed]:animate-out',
+            'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
+            'data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95',
+          )}
+          onCloseAutoFocus={(e) => e.preventDefault()}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="px-2 pb-1 pt-1.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground/70">
+            Add
+          </div>
+          <button
+            type="button"
+            className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent"
+            onClick={() => {
+              setOpen(false);
+              onPickTab();
+            }}
+          >
+            <LayoutPanelTop className="size-3.5" />
+            Tab
+          </button>
+        </Popover.Content>
+      </Popover.Portal>
+    </Popover.Root>
   );
 }
 
@@ -165,11 +233,22 @@ function TabSection({
   indent: number;
 } & SectionCommon) {
   const groups = (tab.groups ?? []).filter((g) => !g.hidden);
-  const hasIcon = !!iconNameOf(tab.icon);
-  const tabTextX = indent + (hasIcon ? TAB_TEXT_OFFSET : 0);
+  const directPages = tab.pages ?? [];
+  // Tabs always get an icon (custom from docs.json, or the LayoutPanelTop
+  // fallback that matches the Navigation `+` popover). So children always
+  // align under the tab title at the post-icon offset.
+  const tabTextX = indent + TAB_TEXT_OFFSET;
   const settingsKey: NavSettingsKey = `tab:${tab.tab}`;
   const settingsOpen = settingsOpenKey === settingsKey;
   const groupKeyBase = `tab${tabIndex}`;
+  const [addingKind, setAddingKind] = useState<AddEntryKind | null>(null);
+
+  const commitAdd = (value: string) => {
+    if (!addingKind) return;
+    onAddEntry?.(settingsKey, addingKind, value);
+    setAddingKind(null);
+  };
+
   return (
     <div className="flex flex-col gap-0.5">
       <Row
@@ -177,23 +256,45 @@ function TabSection({
         settingsOpen={settingsOpen}
         showActions
         actions={
-          <SettingsToggle
-            label={tab.tab}
-            isOpen={settingsOpen}
-            onToggle={() =>
-              onOpenSettings(
-                settingsOpen
-                  ? null
-                  : { key: settingsKey, kind: 'tab', title: tab.tab },
-              )
-            }
-          />
+          <>
+            <AddEntryButton
+              parentLabel={tab.tab}
+              onPick={(kind) => setAddingKind(kind)}
+            />
+            <SettingsToggle
+              label={tab.tab}
+              isOpen={settingsOpen}
+              onToggle={() =>
+                onOpenSettings(
+                  settingsOpen
+                    ? null
+                    : { key: settingsKey, kind: 'tab', title: tab.tab },
+                )
+              }
+            />
+          </>
         }
       >
-        {hasIcon ? <NavIcon icon={tab.icon} fallback={null} /> : null}
+        <NavIcon icon={tab.icon} fallback="tab" />
         <Title>{tab.tab}</Title>
       </Row>
       <div className="flex flex-col gap-0.5">
+        {directPages.map((entry, i) => (
+          <PageOrGroup
+            key={pageKey(entry, i)}
+            entry={entry}
+            indent={tabTextX}
+            keyPath={`${groupKeyBase}/d${i}`}
+            selectedPath={selectedPath}
+            onSelectPath={onSelectPath}
+            settingsOpenKey={settingsOpenKey}
+            onOpenSettings={onOpenSettings}
+            onAddEntry={onAddEntry}
+            repoPaths={repoPaths}
+            frontmatterCache={frontmatterCache}
+            frontmatterLoaded={frontmatterLoaded}
+          />
+        ))}
         {groups.map((group, i) => (
           <GroupSection
             key={`${group.group}-${i}`}
@@ -210,6 +311,14 @@ function TabSection({
             frontmatterLoaded={frontmatterLoaded}
           />
         ))}
+        {addingKind ? (
+          <InlineAddRow
+            kind={addingKind}
+            indent={tabTextX}
+            onCommit={commitAdd}
+            onCancel={() => setAddingKind(null)}
+          />
+        ) : null}
       </div>
     </div>
   );
@@ -233,10 +342,23 @@ function GroupSection({
   keyPath: string;
 } & SectionCommon) {
   const [expanded, setExpanded] = useState(group.expanded ?? true);
+  const [addingKind, setAddingKind] = useState<AddEntryKind | null>(null);
   const pages = group.pages ?? [];
   const childIndent = indent + GROUP_TEXT_OFFSET;
   const settingsKey: NavSettingsKey = `group:${keyPath}`;
   const settingsOpen = settingsOpenKey === settingsKey;
+
+  const beginAdd = (kind: AddEntryKind) => {
+    if (!expanded) setExpanded(true);
+    setAddingKind(kind);
+  };
+
+  const commitAdd = (value: string) => {
+    if (!addingKind) return;
+    onAddEntry?.(settingsKey, addingKind, value);
+    setAddingKind(null);
+  };
+
   return (
     <div className="flex flex-col gap-0.5">
       <Row
@@ -248,9 +370,7 @@ function GroupSection({
           <>
             <AddEntryButton
               parentLabel={group.group}
-              parentKey={settingsKey}
-              onAddEntry={onAddEntry}
-              repoPaths={repoPaths}
+              onPick={beginAdd}
             />
             <SettingsToggle
               label={group.group}
@@ -288,6 +408,14 @@ function GroupSection({
               frontmatterLoaded={frontmatterLoaded}
             />
           ))}
+          {addingKind ? (
+            <InlineAddRow
+              kind={addingKind}
+              indent={childIndent}
+              onCommit={commitAdd}
+              onCancel={() => setAddingKind(null)}
+            />
+          ) : null}
         </div>
       ) : null}
     </div>
@@ -466,7 +594,7 @@ function NavIcon({
   fallback,
 }: {
   icon: IconValue | undefined;
-  fallback?: 'folder' | null;
+  fallback?: 'folder' | 'tab' | null;
 }) {
   const name = iconNameOf(icon);
   if (name) {
@@ -481,6 +609,11 @@ function NavIcon({
   }
   if (fallback === 'folder') {
     return <Folder className="size-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />;
+  }
+  if (fallback === 'tab') {
+    // Matches the icon used in the Navigation `+` popover so a new tab the
+    // user creates inline shows the same shape they just clicked to make it.
+    return <LayoutPanelTop className="size-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />;
   }
   return null;
 }
@@ -517,26 +650,35 @@ function SettingsToggle({
   );
 }
 
-function ActionButton({
-  ariaLabel,
-  onClick,
-  children,
-}: {
+type ActionButtonProps = {
   ariaLabel: string;
   onClick: (e: ReactMouseEvent) => void;
   children: ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      aria-label={ariaLabel}
-      onClick={onClick}
-      className="flex size-5 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-    >
-      {children}
-    </button>
-  );
-}
+} & Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, 'aria-label' | 'onClick' | 'children' | 'type' | 'className'>;
+
+/**
+ * Forwards refs and spreads extra props so it can be the child of
+ * `<Popover.Trigger asChild>` — Radix attaches a ref + ARIA state via Slot,
+ * and without forwarding the popover renders at (0, 0) (visibly offscreen
+ * above the sidebar) because Radix can't measure the trigger's bounding
+ * rect. Same applies to any other Radix `asChild` slot we route through.
+ */
+const ActionButton = forwardRef<HTMLButtonElement, ActionButtonProps>(
+  function ActionButton({ ariaLabel, onClick, children, ...rest }, ref) {
+    return (
+      <button
+        ref={ref}
+        type="button"
+        aria-label={ariaLabel}
+        onClick={onClick}
+        className="flex size-5 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+        {...rest}
+      >
+        {children}
+      </button>
+    );
+  },
+);
 
 function pageKey(entry: PageEntry, i: number): string {
   if (typeof entry === 'string') return entry;
@@ -546,199 +688,137 @@ function pageKey(entry: PageEntry, i: number): string {
 
 interface AddEntryButtonProps {
   parentLabel: string;
-  parentKey: NavSettingsKey;
-  onAddEntry?: (parentKey: NavSettingsKey, kind: AddEntryKind, value: string) => void;
-  repoPaths?: string[];
+  onPick: (kind: AddEntryKind) => void;
 }
 
-function AddEntryButton({
-  parentLabel,
-  parentKey,
-  onAddEntry,
-  repoPaths,
-}: AddEntryButtonProps) {
-  const [popoverOpen, setPopoverOpen] = useState(false);
-  const [dialogKind, setDialogKind] = useState<AddEntryKind | null>(null);
-  const [textValue, setTextValue] = useState('');
-  const [pickedFile, setPickedFile] = useState<string | null>(null);
-  const [filter, setFilter] = useState('');
-
-  const closeAll = () => {
-    setPopoverOpen(false);
-    setDialogKind(null);
-    setTextValue('');
-    setPickedFile(null);
-    setFilter('');
-  };
+function AddEntryButton({ parentLabel, onPick }: AddEntryButtonProps) {
+  const [open, setOpen] = useState(false);
 
   const handlePick = (kind: AddEntryKind) => {
-    setPopoverOpen(false);
-    setDialogKind(kind);
+    setOpen(false);
+    onPick(kind);
   };
-
-  const submit = () => {
-    if (!onAddEntry || !dialogKind) return;
-    if (dialogKind === 'existing') {
-      if (!pickedFile) return;
-      const slug = pickedFile.replace(/\.mdx?$/i, '');
-      onAddEntry(parentKey, 'existing', slug);
-    } else {
-      const value = textValue.trim();
-      if (!value) return;
-      onAddEntry(parentKey, dialogKind, value);
-    }
-    closeAll();
-  };
-
-  const mdxPaths = useMemo(
-    () => (repoPaths ?? []).filter((p) => /\.mdx?$/i.test(p)),
-    [repoPaths],
-  );
-  const filtered = useMemo(() => {
-    const q = filter.trim().toLowerCase();
-    return q
-      ? mdxPaths.filter((p) => p.toLowerCase().includes(q))
-      : mdxPaths.slice(0, 100);
-  }, [mdxPaths, filter]);
 
   return (
-    <>
-      <Popover.Root open={popoverOpen} onOpenChange={setPopoverOpen}>
-        <Popover.Trigger asChild>
-          <ActionButton
-            ariaLabel={`Add to ${parentLabel}`}
-            onClick={(e) => {
-              e.stopPropagation();
-              setPopoverOpen(true);
-            }}
-          >
-            <Plus className="size-3.5" />
-          </ActionButton>
-        </Popover.Trigger>
-        <Popover.Portal>
-          <Popover.Content
-            sideOffset={4}
-            align="end"
-            className={cn(
-              'z-50 min-w-[180px] rounded-md border bg-popover p-1 shadow-md',
-              'data-[state=open]:animate-in data-[state=closed]:animate-out',
-              'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
-              'data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95',
-            )}
-            onCloseAutoFocus={(e) => e.preventDefault()}
-          >
-            <button
-              type="button"
-              className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent"
-              onClick={() => handlePick('page')}
-            >
-              <FilePlus className="size-3.5" />
-              Add a page
-            </button>
-            <button
-              type="button"
-              className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent"
-              onClick={() => handlePick('group')}
-            >
-              <FolderPlus className="size-3.5" />
-              Add a group
-            </button>
-            <button
-              type="button"
-              className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent"
-              onClick={() => handlePick('existing')}
-            >
-              <FileSearch className="size-3.5" />
-              Add existing file
-            </button>
-          </Popover.Content>
-        </Popover.Portal>
-      </Popover.Root>
-
-      <Dialog open={!!dialogKind} onOpenChange={(open) => !open && closeAll()}>
-        <DialogContent
-          onClick={(e) => e.stopPropagation()}
-          onMouseDown={(e) => e.stopPropagation()}
+    <Popover.Root open={open} onOpenChange={setOpen}>
+      <Popover.Trigger asChild>
+        <ActionButton
+          ariaLabel={`Add to ${parentLabel}`}
+          onClick={(e) => {
+            e.stopPropagation();
+            setOpen(true);
+          }}
         >
-          <DialogHeader>
-            <DialogTitle>
-              {dialogKind === 'page'
-                ? `Add a page to ${parentLabel}`
-                : dialogKind === 'group'
-                  ? `Add a group inside ${parentLabel}`
-                  : `Add an existing file to ${parentLabel}`}
-            </DialogTitle>
-            <DialogDescription>
-              {dialogKind === 'page'
-                ? 'Enter a slug — a new MDX file will be created on the next commit.'
-                : dialogKind === 'group'
-                  ? 'Enter the group title — pages can be moved into it later.'
-                  : 'Pick an MDX file already in the repo.'}
-            </DialogDescription>
-          </DialogHeader>
-          {dialogKind === 'existing' ? (
-            <div className="flex flex-col gap-2">
-              <Input
-                placeholder="Filter…"
-                value={filter}
-                onChange={(e) => setFilter(e.target.value)}
-                autoFocus
-              />
-              <div className="max-h-64 overflow-y-auto rounded border border-border/40">
-                {filtered.length === 0 ? (
-                  <p className="px-3 py-4 text-sm text-muted-foreground">
-                    No matching files.
-                  </p>
-                ) : (
-                  filtered.map((path) => (
-                    <button
-                      key={path}
-                      type="button"
-                      onClick={() => setPickedFile(path)}
-                      className={cn(
-                        'flex w-full items-center px-3 py-1.5 text-left text-sm hover:bg-accent',
-                        pickedFile === path && 'bg-accent text-accent-foreground',
-                      )}
-                    >
-                      {path}
-                    </button>
-                  ))
-                )}
-              </div>
-            </div>
-          ) : (
-            <Input
-              placeholder={
-                dialogKind === 'page' ? 'getting-started' : 'Group title'
-              }
-              value={textValue}
-              onChange={(e) => setTextValue(e.target.value)}
-              autoFocus
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  submit();
-                }
-              }}
-            />
+          <Plus className="size-3.5" />
+        </ActionButton>
+      </Popover.Trigger>
+      <Popover.Portal>
+        <Popover.Content
+          sideOffset={4}
+          align="end"
+          className={cn(
+            'z-50 min-w-[180px] rounded-md border bg-popover p-1 shadow-md',
+            'data-[state=open]:animate-in data-[state=closed]:animate-out',
+            'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
+            'data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95',
           )}
-          <DialogFooter>
-            <Button variant="outline" onClick={closeAll}>
-              Cancel
-            </Button>
-            <Button
-              onClick={submit}
-              disabled={
-                dialogKind === 'existing'
-                  ? !pickedFile
-                  : !textValue.trim()
-              }
-            >
-              Add
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </>
+          onCloseAutoFocus={(e) => e.preventDefault()}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button
+            type="button"
+            className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent"
+            onClick={() => handlePick('page')}
+          >
+            <FilePlus className="size-3.5" />
+            Add a page
+          </button>
+          <button
+            type="button"
+            className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent"
+            onClick={() => handlePick('group')}
+          >
+            <FolderPlus className="size-3.5" />
+            Add a group
+          </button>
+        </Popover.Content>
+      </Popover.Portal>
+    </Popover.Root>
   );
 }
+
+type InlineAddKind = AddEntryKind | 'tab';
+
+interface InlineAddRowProps {
+  kind: InlineAddKind;
+  indent: number;
+  onCommit: (value: string) => void;
+  onCancel: () => void;
+}
+
+/**
+ * Inline editable row used for naming a new page, sub-group, or tab. Commits
+ * on Enter, cancels on Escape. Blurring with a non-empty value commits too —
+ * matches the "click outside to save" feel of file-explorer rename UIs.
+ */
+function InlineAddRow({ kind, indent, onCommit, onCancel }: InlineAddRowProps) {
+  const placeholder =
+    kind === 'page'
+      ? 'untitled-page'
+      : kind === 'group'
+        ? 'untitled-group'
+        : 'untitled-tab';
+  const [value, setValue] = useState(placeholder);
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  const committedRef = useRef(false);
+
+  useEffect(() => {
+    inputRef.current?.focus();
+    inputRef.current?.select();
+  }, []);
+
+  const finish = (mode: 'commit' | 'cancel') => {
+    if (committedRef.current) return;
+    committedRef.current = true;
+    const trimmed = value.trim();
+    if (mode === 'commit' && trimmed) onCommit(trimmed);
+    else onCancel();
+  };
+
+  const KindIcon =
+    kind === 'page' ? FilePlus : kind === 'group' ? FolderPlus : LayoutPanelTop;
+
+  return (
+    <div
+      className="group/nav-row relative flex h-8 items-center rounded-xl bg-accent/40 pl-2 pr-1 text-sm font-semibold"
+      style={{ marginLeft: `${indent}px` }}
+      onClick={(e) => e.stopPropagation()}
+    >
+      <div className="flex min-w-0 items-center gap-1">
+        <KindIcon className="size-3.5 shrink-0 text-muted-foreground" />
+        <input
+          ref={inputRef}
+          type="text"
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              finish('commit');
+            } else if (e.key === 'Escape') {
+              e.preventDefault();
+              finish('cancel');
+            }
+          }}
+          onBlur={() => finish('commit')}
+          spellCheck={false}
+          className={cn(
+            'min-w-0 flex-1 border-0 border-b border-primary bg-transparent px-0 py-0',
+            'text-sm font-semibold text-foreground outline-none placeholder:text-muted-foreground',
+          )}
+        />
+      </div>
+    </div>
+  );
+}
+

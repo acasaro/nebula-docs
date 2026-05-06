@@ -4,7 +4,7 @@ import { resolve } from 'node:path';
 
 const tenantRoot = process.env.NEBULA_TENANT_ROOT;
 if (!tenantRoot) {
-  throw new Error('NEBULA_TENANT_ROOT is not set — run through the nebula-docs CLI.');
+  throw new Error('NEBULA_TENANT_ROOT is not set — run through the nebula CLI.');
 }
 
 // Load every routable MDX page. Snippets are resolved by remarkSnippets at

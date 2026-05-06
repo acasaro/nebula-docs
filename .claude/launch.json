@@ -11,11 +11,20 @@
       "port": 8081
     },
     {
-      "name": "nebula-cli-example-docs",
+      "name": "nebula-cli-starter",
       "runtimeExecutable": "/bin/bash",
       "runtimeArgs": [
         "-lc",
-        "source ~/.nvm/nvm.sh && nvm use 22 >/dev/null && exec pnpm --filter @nebula-docs/cli dev tenants/example-docs"
+        "source ~/.nvm/nvm.sh && nvm use 22 >/dev/null && exec pnpm --filter @nebula-docs/cli dev tenants/nebula-docs-starter"
+      ],
+      "port": 4321
+    },
+    {
+      "name": "nebula-cli-starter-empty",
+      "runtimeExecutable": "/bin/bash",
+      "runtimeArgs": [
+        "-lc",
+        "source ~/.nvm/nvm.sh && nvm use 22 >/dev/null && exec pnpm --filter @nebula-docs/cli dev tenants/nebula-docs-starter-empty"
       ],
       "port": 4321
     }

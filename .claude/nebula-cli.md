@@ -25,7 +25,7 @@ the Platform half of the story is there.
 - **Nebula Docs CLI is a multi-tenant docs renderer.** Any team in the
   enterprise can stand up a docs site by creating a repo with a `docs.json`,
   some MDX content, and a `theme.json` override. Their CI runs
-  `nebula-docs build` and uploads `dist/` to their OOSS bucket.
+  `nebula build` and uploads `dist/` to their OOSS bucket.
 - **MCOE is tenant zero.** `products/docs` migrates onto the CLI; the visual
   result is preserved or improved (Stripe-class clean is the bar).
 - **`docs.json` is the contract** between Nebula Docs Platform and the CLI. Nebula
@@ -35,8 +35,8 @@ the Platform half of the story is there.
   needed (theme switcher, search box, tabs). Stripe-class perf becomes the
   baseline, not a goal.
 - **Distribution: an npm package + CLI.** `@nebula-docs/cli` ships the
-  `nebula-docs` binary. Tenants pull it in like any other dev dep, then run
-  `nebula-docs build`. Versioned releases, semver discipline.
+  `nebula` binary (the only place "Nebula Docs" is shortened). Tenants pull it in like any other dev dep, then run
+  `nebula build`. Versioned releases, semver discipline.
 - **Theming layers on `@nebula-docs/theme`.** Tenants pick a base theme
   (`mcoe-default`, `uhc`, `optum`) or supply their own via a `theme.json`
   override. The `applyTokensToDOM()` runtime work that already exists in
@@ -118,7 +118,7 @@ Each tenant **owns**:
 
 - Their docs repo (`docs.json`, content, assets, optional theme + components)
 - Their GitHub App installation (one Nebula App, installed per repo)
-- Their CI pipeline (one workflow that runs `nebula-docs build` and uploads)
+- Their CI pipeline (one workflow that runs `nebula build` and uploads)
 - Their bucket / domain (e.g., `docs.uhc.uhg.com`)
 
 Each tenant **does NOT** own:
@@ -137,7 +137,7 @@ and MDX; everything else is the platform.
 ### Onboarding flow for a new tenant
 
 1. Team lead creates a repo (e.g., `optum-docs`).
-2. Runs `npx nebula-docs init` → scaffolds `docs.json`, `theme.json`,
+2. Runs `npx nebula init` → scaffolds `docs.json`, `theme.json`,
    `content/index.mdx`, `package.json`, `.github/workflows/deploy.yml`.
 3. Installs the Nebula GitHub App on the repo (via the install link from
    the Platform, or directly).
@@ -488,7 +488,7 @@ component set.
 | **Image optimization** | Astro's built-in `astro:assets` | Free; per-tenant build → per-tenant optimized assets |
 | **Diagrams** | Mermaid via `@astrojs/mdx` + a Mermaid integration, lazy-hydrated | Avoid shipping mermaid runtime to pages without diagrams |
 | **Analytics** | Pluggable provider system; first-class GA4, Firebase, PostHog, Plausible | Tenants pick their own in `docs.json` |
-| **CLI** | `nebula-docs` (built on `commander` or `clack`) | `init` / `dev` / `build` / `preview` / `validate` |
+| **CLI** | `nebula` (built on a small built-in argv parser; commander/clack TBD if needed) | `init` / `dev` / `build` / `preview` / `validate` |
 | **Schema** | JSON Schema 2020-12 published at a stable URL | One contract, two consumers (Platform + CLI) |
 | **Distribution** | npm package `@nebula-docs/cli` | Versioned; tenants opt into upgrades |
 
@@ -555,12 +555,12 @@ A tenant who sets `analytics.providers: []` ships zero analytics JS.
 ### CLI
 
 ```
-nebula-docs init       # scaffold a new tenant repo
-nebula-docs dev        # local dev server with HMR
-nebula-docs build      # produce dist/ (static)
-nebula-docs preview    # preview built output locally
-nebula-docs validate   # validate docs.json + theme.json + content frontmatter
-nebula-docs upgrade    # bump @nebula-docs/cli + run any codemods
+nebula init       # scaffold a new tenant repo
+nebula dev        # local dev server with HMR
+nebula build      # produce dist/ (static)
+nebula preview    # preview built output locally
+nebula validate   # validate docs.json + theme.json + content frontmatter
+nebula upgrade    # bump @nebula-docs/cli + run any codemods
 ```
 
 `init` produces a tenant repo with: `docs.json`, `theme.json`, `package.json`,
@@ -583,7 +583,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v3
       - run: pnpm install
-      - run: pnpm nebula-docs build
+      - run: pnpm nebula build
       - uses: ./.github/actions/upload-to-oss
         with:
           source: dist
@@ -633,7 +633,7 @@ Phased plan (sequenced after the CLI is buildable for a synthetic tenant):
 7. **Side-by-side build.** Both Docusaurus and the CLI build until visual
    QA passes on the CLI output. Then the Docusaurus build is removed.
 8. **Cut over the deploy workflow.** Existing `build-deploy.yml` swaps
-   `pnpm --filter @mcoe/docs build` for `pnpm nebula-docs build` and the
+   `pnpm --filter @mcoe/docs build` for `pnpm nebula build` and the
    `dist/` path. Same OOSS bucket, same firewall, same domain.
 
 **Visual QA bar:** the migrated MCOE site is at least as clean as the
@@ -700,20 +700,31 @@ Create `packages/cli/` (or `packages/nebula-docs-ssg/`):
 - Publish dry-run: `pnpm publish --dry-run` succeeds
 
 **Done when**: `pnpm --filter @nebula-docs/cli build` produces a
-publishable package; `nebula-docs --help` runs.
+publishable package; `nebula --help` runs.
 
-### Phase 1 — synthetic tenant
+### Phase 1 — synthetic tenants (the starters)
 
-Create `tenants/example-docs/` (in the monorepo, just for development):
+Two starter tenants live in the monorepo and double as `nebula init`'s
+output templates:
 
-- `docs.json` with two tabs, three pages each
-- `theme.json` extending `mcoe-default`, no overrides
-- A handful of MDX pages exercising every core block
-- `nebula-docs dev` serves it on `localhost:4321`
-- `nebula-docs build` emits `dist/` that opens in a browser
+- **`tenants/nebula-docs-starter/`** — full kitchen-sink (default for
+  `nebula init`). Multiple tabs, nested groups, every component block,
+  long-form prose, snippets. Doubles as the renderer's dev/test fixture
+  and as the visual-parity audit target against the editor.
+- **`tenants/nebula-docs-starter-empty/`** — minimal "smallest valid
+  tenant" (output of `nebula init --empty`). Stays small as a reference
+  for what a tenant *needs* to render.
 
-**Done when**: a fictional tenant boots, navigates, theme-switches,
-searches.
+Both:
+
+- `docs.json`, `theme.json` (extending `mcoe-default`)
+- `content/` with at least `index.mdx`
+- `package.json` pinning `@nebula-docs/cli`
+- `.github/workflows/deploy.yml` (uhg-runner) — generated by `init`
+- `nebula dev` serves on `localhost:4321`; `nebula build` emits `dist/`
+
+**Done when**: both starters boot, navigate, theme-switch, search; the
+full starter exercises every component block at least once.
 
 ### Phase 2 — Mintlify-parity blocks
 
@@ -771,7 +782,7 @@ in under one working day, with no help from us.
 - Snippets: `content/snippets/*.mdx` reusable fragments via remark plugin
 - Versioned docs (deferred unless a tenant asks for it)
 - i18n / multi-language (deferred similarly)
-- Codemod story for `nebula-docs upgrade` — making schema bumps painless
+- Codemod story for `nebula upgrade` — making schema bumps painless
   for tenants
 
 ## Locked decisions
@@ -784,10 +795,12 @@ in practice.
    as islands. Stripe-class perf becomes the baseline; tenants who write
    pure prose ship zero JS.
 
-2. **Package + CLI: `@nebula-docs/cli` and `nebula-docs`.** Matches the
-   existing `@nebula-docs/*` workspace scope. The CLI binary is
-   `nebula-docs` (`init` / `dev` / `build` / `preview` / `validate` /
-   `upgrade`).
+2. **Package + CLI: `@nebula-docs/cli` (package), `nebula` (binary).** The
+   package name matches the existing `@nebula-docs/*` workspace scope. The
+   CLI binary is intentionally **`nebula`** — the single place "Nebula Docs"
+   is shortened, because tenants type the command name often and the longer
+   form taxes ergonomics for no benefit. Subcommands: `init` / `dev` /
+   `build` / `preview` / `validate` / `upgrade`.
 
 3. **Tenant repo strategy: per-tenant repo, owned by the tenant team.**
    No monorepo of tenants, no hybrid arrangement. Each team owns their
@@ -806,7 +819,7 @@ in practice.
 6. **Schema versioning: pin the CLI version in tenant `package.json`,
    tenants upgrade when they choose.** Schema bumps don't break old
    tenants — they keep their pinned version until they run
-   `nebula-docs upgrade`, which runs codemods on their `docs.json` and
+   `nebula upgrade`, which runs codemods on their `docs.json` and
    bumps the dep. Schema version travels with the CLI version (semver:
    breaking schema = major bump).
 

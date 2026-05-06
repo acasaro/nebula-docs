@@ -75,7 +75,14 @@ export interface ResolvedPage {
   pageObject: PageObject | null;
   filePath: string;
   tabIndex: number;
+  /** When `inTabDirect` is false: `[groupIndex, ...nestedGroupIndices, pageIndex]`
+   *  walks `tab.groups[g0].pages[g1]…pages[pageIndex]`.
+   *  When `inTabDirect` is true: `[pageIndex]` indexes directly into
+   *  `tab.pages[pageIndex]`. */
   pagePath: number[];
+  /** True when the page lives directly under `tab.pages` (the Mintlify-style
+   *  ungrouped-page slot the Tab `+` adds into). False for grouped pages. */
+  inTabDirect: boolean;
 }
 
 export type ResolvedEntry = ResolvedTab | ResolvedGroup | ResolvedPage;
@@ -112,9 +119,26 @@ export function findEntry(
     };
   }
 
-  // page — walk every group's pages looking for one whose file path matches.
+  // page — check direct-under-tab pages first, then walk every group's pages.
   for (let ti = 0; ti < tabs.length; ti++) {
     const tab = tabs[ti]!;
+    const directPages = tab.pages ?? [];
+    for (let pi = 0; pi < directPages.length; pi++) {
+      const entry = directPages[pi]!;
+      if (isGroup(entry)) continue; // tab.pages should hold pages only
+      const fp = pageEntryToFilePath(entry);
+      if (fp === parsed.filePath) {
+        return {
+          kind: 'page',
+          page: entry,
+          pageObject: isPageObject(entry) ? entry : null,
+          filePath: parsed.filePath,
+          tabIndex: ti,
+          pagePath: [pi],
+          inTabDirect: true,
+        };
+      }
+    }
     const groups = tab.groups ?? [];
     for (let gi = 0; gi < groups.length; gi++) {
       const path: number[] = [gi];
@@ -127,6 +151,7 @@ export function findEntry(
           filePath: parsed.filePath,
           tabIndex: ti,
           pagePath: found.path,
+          inTabDirect: false,
         };
       }
     }
@@ -227,6 +252,20 @@ function mutateAt(
   // page
   const tab = tabs[resolved.tabIndex];
   if (!tab) return next;
+
+  // Direct-under-tab pages: pagePath = [pageIndex] indexes tab.pages.
+  if (resolved.inTabDirect) {
+    const pages = tab.pages ?? [];
+    if (!tab.pages) tab.pages = pages;
+    const idx = resolved.pagePath[0]!;
+    if (opts.remove) {
+      pages.splice(idx, 1);
+    } else {
+      pages[idx] = replacement() as PageEntry;
+    }
+    return next;
+  }
+
   const groups = tab.groups ?? [];
   let group = groups[resolved.pagePath[0]!];
   for (let i = 1; i < resolved.pagePath.length - 1; i++) {
@@ -243,6 +282,47 @@ function mutateAt(
   } else {
     pages[idx] = replacement() as PageEntry;
   }
+  return next;
+}
+
+/**
+ * Append a page or group entry directly under a tab. For pages, pushes onto
+ * `tab.pages`; for groups, pushes onto `tab.groups`. Pre-tab-shaped entries
+ * stay in `tab.groups`; new direct-pages land in `tab.pages` so they render
+ * above their grouped siblings.
+ */
+export function appendToTab(
+  config: DocsConfig,
+  parentKey: string,
+  entry: PageEntry,
+): DocsConfig {
+  const resolved = findEntry(config, parentKey);
+  if (!resolved || resolved.kind !== 'tab') return config;
+  const next: DocsConfig = JSON.parse(JSON.stringify(config));
+  const tabs = next.navigation?.tabs ?? [];
+  const tab = tabs[resolved.tabIndex];
+  if (!tab) return next;
+  if (isGroup(entry)) {
+    if (!tab.groups) tab.groups = [];
+    tab.groups.push(entry);
+  } else {
+    if (!tab.pages) tab.pages = [];
+    tab.pages.push(entry);
+  }
+  return next;
+}
+
+/**
+ * Append a new tab to `navigation.tabs`. The tab name is the only required
+ * field — groups and other settings are added later via the tab's settings
+ * panel. Idempotent on no-op (returns the same config reference if the tabs
+ * shape couldn't be found).
+ */
+export function appendTab(config: DocsConfig, tab: Tab): DocsConfig {
+  const next: DocsConfig = JSON.parse(JSON.stringify(config));
+  if (!next.navigation) next.navigation = { tabs: [] };
+  if (!next.navigation.tabs) next.navigation.tabs = [];
+  next.navigation.tabs.push(tab);
   return next;
 }
 

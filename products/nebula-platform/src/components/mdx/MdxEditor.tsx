@@ -24,6 +24,7 @@ import { MdxCodeGroup } from './MdxCodeGroupNode';
 import { MdxExpandable } from './MdxExpandableNode';
 import { MdxMermaid } from './MdxMermaidNode';
 import { MdxRaw } from './MdxRawNode';
+import { MdxSnippet } from './MdxSnippetNode';
 import { MdxTree, MdxTreeFile, MdxTreeFolder } from './MdxTreeNode';
 import { MdxStep, MdxSteps } from './MdxStepsNode';
 import { MdxTab, MdxTabs } from './MdxTabsNode';
@@ -83,6 +84,7 @@ export function MdxEditor({
       MdxResponseExample,
       MdxMermaid,
       MdxBadge,
+      MdxSnippet,
       MdxRaw,
       SlashCommand,
       Placeholder.configure({

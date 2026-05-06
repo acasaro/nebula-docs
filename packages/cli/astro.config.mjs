@@ -14,7 +14,7 @@ const base = process.env.NEBULA_BASE;
 
 if (!tenantRoot) {
   throw new Error(
-    'NEBULA_TENANT_ROOT is not set. Run via `nebula-docs <command> <tenant-path>` instead of invoking astro directly.',
+    'NEBULA_TENANT_ROOT is not set. Run via `nebula <command> <tenant-path>` instead of invoking astro directly.',
   );
 }
 

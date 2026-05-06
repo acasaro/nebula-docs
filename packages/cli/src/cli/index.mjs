@@ -9,24 +9,28 @@ import { runValidate } from './commands/validate.mjs';
 import { runInit } from './commands/init.mjs';
 import { runUpgrade } from './commands/upgrade.mjs';
 
-const HELP = `nebula-docs <command> [tenant-path] [options]
+const HELP = `nebula <command> [tenant-path] [options]
 
 Commands:
   dev       [tenant-path]   Start the dev server (default port 4321).
   build     [tenant-path]   Build the static site to <tenant>/dist.
   preview   [tenant-path]   Preview a built site locally.
   validate  [tenant-path]   Validate docs.json + theme.json + frontmatter.
-  init      [target-dir]    Scaffold a new tenant repo. (Phase 0 stub.)
+  init      [target-dir]    Scaffold a new tenant repo from a starter.
+                            Defaults to the full starter; pass --empty for
+                            the minimal "smallest valid tenant" template.
   upgrade                   Bump @nebula-docs/cli + run codemods. (Phase 0 stub.)
 
 Options:
   --help, -h                Show this help.
   --port <number>           Dev server port (dev, preview).
   --base <path>             Base URL path passed to Astro (build).
+  --empty                   On \`init\`: scaffold the minimal starter instead
+                            of the full kitchen-sink starter.
 
 If [tenant-path] is omitted the current working directory is used. Inside this
-monorepo \`pnpm --filter @nebula-docs/cli dev tenants/example-docs\` works because
-pnpm forwards the tenant arg.`;
+monorepo \`pnpm --filter @nebula-docs/cli dev tenants/nebula-docs-starter\` works
+because pnpm forwards the tenant arg.`;
 
 export async function run(argv) {
   const [cmd, ...rest] = argv;

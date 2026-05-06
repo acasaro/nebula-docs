@@ -5,7 +5,7 @@
   "type": "module",
   "description": "Multi-tenant docs renderer + tooling for Nebula Docs. Astro + MDX + React + Tailwind v4.",
   "bin": {
-    "nebula-docs": "./bin/nebula-docs.mjs"
+    "nebula": "./bin/nebula.mjs"
   },
   "files": [
     "bin",
@@ -18,10 +18,10 @@
     "./schemas/theme": "./schemas/theme.schema.json"
   },
   "scripts": {
-    "dev": "node --import tsx ./bin/nebula-docs.mjs dev",
-    "build": "node --import tsx ./bin/nebula-docs.mjs build",
-    "preview": "node --import tsx ./bin/nebula-docs.mjs preview",
-    "validate": "node --import tsx ./bin/nebula-docs.mjs validate",
+    "dev": "node --import tsx ./bin/nebula.mjs dev",
+    "build": "node --import tsx ./bin/nebula.mjs build",
+    "preview": "node --import tsx ./bin/nebula.mjs preview",
+    "validate": "node --import tsx ./bin/nebula.mjs validate",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

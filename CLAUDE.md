@@ -3,7 +3,7 @@
 pnpm-workspace monorepo for **Nebula Docs**, a multi-tenant documentation platform shipping:
 
 - **Nebula Docs Platform** — the editor SPA in `products/nebula-platform/`. Vite + React 19 + Tailwind v4 + shadcn/ui + Tiptap. Substantially built; Phase 3 editor work in flight. See [.claude/nebula.md](.claude/nebula.md).
-- **Nebula Docs CLI** — the renderer + tooling planned at `packages/cli/`. Astro + MDX + React + Tailwind v4. Distributed as `@nebula-docs/cli`; binary `nebula-docs`. Not yet bootstrapped (a separate chat is starting on it). See [.claude/nebula-cli.md](.claude/nebula-cli.md).
+- **Nebula Docs CLI** — the renderer + tooling at `packages/cli/`. Astro + MDX + React + Tailwind v4. Distributed as `@nebula-docs/cli`; binary `nebula` (the only place the brand is shortened). See [.claude/nebula-cli.md](.claude/nebula-cli.md).
 - **Shared packages** — `@nebula-docs/{components,schemas,theme,firebase}` exist; `@nebula-docs/mdx` and `@nebula-docs/analytics` are planned (extracted when their second consumer needs them).
 - **Cloud Functions** in `functions/` — three deployed prod functions (`mintGithubToken`, `getInstallation`, `githubWebhook`) plus three deployed dev variants for the parallel `nebula-docs-dev` GitHub App.
 - **Tenants** in `tenants/` — synthetic dev fixture and the in-flight MCOE migration target. Eventually each tenant moves to its own external repo.
@@ -23,10 +23,10 @@ products/
                          #   tenant zero of the CLI's render pipeline. No new features here.
 
 packages/                # The seven-package framework
-  cli/                   # @nebula-docs/cli — CLI binary + Astro integration + runtime +
-                         #   layouts + starter template. Single npm package; tenants
-                         #   pull this in as a dev dep and run `nebula-docs build`.
-                         #   PLANNED — bootstrap pending.
+  cli/                   # @nebula-docs/cli — CLI binary (`nebula`) + Astro integration
+                         #   + runtime + layouts + starter templates. Single npm package;
+                         #   tenants pull this in as a dev dep and run `nebula build`.
+                         #   Phase 0 + Phase 1 done; see .claude/status.md.
   components/            # @nebula-docs/components — React MDX block components (callout,
                          #   card, frame, code-block, tabs, accordion, mermaid, property,
                          #   steps, tree, update, etc.). Single source of truth, consumed
@@ -45,8 +45,16 @@ packages/                # The seven-package framework
                          #   Firebase Analytics provider; abstracted for GA4/Plausible/
                          #   PostHog later.
 
-tenants/                 # Synthetic + transitional tenant repos.
-  example-docs/          # Synthetic dev fixture for CLI iteration. PLANNED.
+tenants/                 # Synthetic + transitional tenant repos. Two starters
+                         #   double as `nebula init` templates and as renderer
+                         #   development fixtures.
+  nebula-docs-starter/        # Full kitchen-sink starter — exercises every component,
+                              #   nav pattern, frontmatter field. `nebula init` default.
+                              #   Also the dev-fixture target for CLI work + visual-parity
+                              #   audit against the editor.
+  nebula-docs-starter-empty/  # Minimal "smallest valid tenant" — `nebula init --empty`.
+                              #   Stays small as a reference for what the absolute
+                              #   minimum tenant looks like.
   mcoe-docs/             # MCOE migration target. PLANNED — eventually external repo.
 
 functions/               # Firebase Cloud Functions. Three prod functions (enterprise GH

@@ -14,10 +14,23 @@ import { PublishMenu, type PublishChange } from "@/components/PublishMenu";
 import { InlineSpinner } from "@/components/ui/NebulaLoader";
 import { PageLoader } from "@/components/ui/PageLoader";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useDocsConfig, type DocsConfig, type Group } from "@/lib/docsConfig";
-import { appendToGroup, deleteEntry, findEntry } from "@/lib/docsConfigOps";
+import { useDocsConfig, type DocsConfig, type Group, type Tab } from "@/lib/docsConfig";
+import {
+  appendTab,
+  appendToGroup,
+  appendToTab,
+  deleteEntry,
+  findEntry,
+} from "@/lib/docsConfigOps";
 import { applyFrontmatterPatch } from "@/lib/frontmatter";
 import { useFrontmatterCache } from "@/lib/frontmatterCache";
+import { SnippetResolverProvider } from "@/lib/mdx/snippetResolver";
+import {
+  buildSnippetResolver,
+  pickActiveSnippetsBase,
+  useSnippetPrefetch,
+  type SnippetCacheEntry,
+} from "@/lib/snippetCache";
 import {
   commitFiles,
   createBranch,
@@ -393,6 +406,59 @@ export function RepoBrowser() {
     knownFiles: files,
   });
 
+  // Snippet files referenced from page MDX as `<Snippet file="x" />`.
+  // Resolution tries `<docsSubdirectory>/content/snippets/x.mdx` first
+  // (the Nebula CLI convention) then `<docsSubdirectory>/snippets/x.mdx`
+  // (the Mintlify-shaped convention some pre-migration tenants still use).
+  // Pre-fetch them so the editor's snippet NodeView has content to render
+  // the moment a page mounts. Until a fetch lands, the NodeView shows
+  // "Snippet not found".
+  const snippetsBases = useMemo(() => {
+    const subdir = (active?.docsSubdirectory ?? "").replace(/\/+$/, "");
+    const prefix = subdir ? `${subdir}/` : "";
+    return [`${prefix}content/snippets`, `${prefix}snippets`];
+  }, [active?.docsSubdirectory]);
+
+  const loadedFilePaths = useMemo(
+    () => new Set(Object.keys(files)),
+    [files],
+  );
+
+  const handleSnippetLoad = useCallback(
+    (path: string, entry: SnippetCacheEntry) => {
+      setFiles((prev) => (prev[path] ? prev : { ...prev, [path]: entry }));
+      // Mark prefetched snippets as fetched so opening one directly in the
+      // file tree skips the duplicate Octokit round-trip.
+      fetchedPathsRef.current.add(path);
+    },
+    [],
+  );
+
+  useSnippetPrefetch({
+    installationId: active?.installationId ?? null,
+    owner: active?.owner ?? null,
+    repo: active?.repo ?? null,
+    ref: currentBranch,
+    allPaths,
+    snippetsBases,
+    loadedPaths: loadedFilePaths,
+    onLoad: handleSnippetLoad,
+  });
+
+  const resolveSnippetContent = useMemo(
+    () => buildSnippetResolver(files, snippetsBases),
+    [files, snippetsBases],
+  );
+
+  const resolveSnippetPath = useCallback(
+    (file: string) => {
+      const cleaned = file.replace(/^\/+/, "").replace(/\.mdx?$/i, "");
+      const activeBase = pickActiveSnippetsBase(allPaths, snippetsBases);
+      return `${activeBase}/${cleaned}.mdx`;
+    },
+    [allPaths, snippetsBases],
+  );
+
   // Live in-memory docs config — derived from `files['docs.json'].draft` once
   // the user has touched any setting; otherwise from the initial fetch via
   // `useDocsConfig`. This single derivation keeps revert behaviour consistent
@@ -475,34 +541,52 @@ export function RepoBrowser() {
   const handleAddEntry = useCallback(
     (parentKey: string, kind: AddEntryKind, value: string) => {
       if (!liveDocsConfig) return;
+      const isTabParent = parentKey.startsWith("tab:");
+      const append = (cfg: DocsConfig, entry: string | Group) =>
+        isTabParent
+          ? appendToTab(cfg, parentKey, entry)
+          : appendToGroup(cfg, parentKey, entry);
+
       if (kind === "group") {
         const newGroup: Group = { group: value, pages: [] };
-        handleConfigChange((cfg) => appendToGroup(cfg, parentKey, newGroup));
+        handleConfigChange((cfg) => append(cfg, newGroup));
         return;
       }
+      // kind === 'page' — append to docs.json AND seed a draft MDX file so the
+      // next commit creates the file. The page navigates immediately when the
+      // user clicks the new tree entry; the seeded body shows up in the editor.
       const slug = value.replace(/\.mdx?$/i, "");
       const filePath = `${slug}.mdx`;
-      handleConfigChange((cfg) => appendToGroup(cfg, parentKey, slug));
-      if (kind === "page") {
-        // Seed an empty MDX file in the files map so the next commit creates it.
-        const title =
-          slug.split("/").pop()?.replace(/[-_]+/g, " ").replace(/^./, (c) => c.toUpperCase()) ?? slug;
-        const initial = `---\ntitle: ${JSON.stringify(title)}\n---\n\n# ${title}\n`;
-        setFiles((prev) =>
-          prev[filePath]
-            ? prev
-            : {
-                ...prev,
-                [filePath]: {
-                  original: "",
-                  draft: initial,
-                  sha: "",
-                  revertNonce: 0,
-                },
+      handleConfigChange((cfg) => append(cfg, slug));
+      const title =
+        slug.split("/").pop()?.replace(/[-_]+/g, " ").replace(/^./, (c) => c.toUpperCase()) ?? slug;
+      const initial = `---\ntitle: ${JSON.stringify(title)}\n---\n\n# ${title}\n`;
+      setFiles((prev) =>
+        prev[filePath]
+          ? prev
+          : {
+              ...prev,
+              [filePath]: {
+                original: "",
+                draft: initial,
+                sha: "",
+                revertNonce: 0,
               },
-        );
-      }
-      // For "existing" kind the file already lives in the repo — no file-map edit.
+            },
+      );
+      // Mark as fetched so the file-load effect skips the Octokit GET — the
+      // file doesn't exist on GitHub yet (only after Publish creates it). The
+      // seeded draft is the source of truth until then.
+      fetchedPathsRef.current.add(filePath);
+    },
+    [liveDocsConfig, handleConfigChange],
+  );
+
+  const handleAddTab = useCallback(
+    (name: string) => {
+      if (!liveDocsConfig) return;
+      const newTab: Tab = { tab: name };
+      handleConfigChange((cfg) => appendTab(cfg, newTab));
     },
     [liveDocsConfig, handleConfigChange],
   );
@@ -904,6 +988,7 @@ export function RepoBrowser() {
                 settingsOpenKey={settingsOpen?.key ?? null}
                 onOpenSettings={setSettingsOpen}
                 onAddEntry={handleAddEntry}
+                onAddTab={handleAddTab}
                 repoPaths={allPaths}
                 frontmatterCache={frontmatterCacheState.cache}
                 frontmatterLoaded={frontmatterCacheState.loaded}
@@ -950,15 +1035,20 @@ export function RepoBrowser() {
         />
       ) : null}
       <main className='flex flex-1 flex-col overflow-hidden bg-background'>
-        <FileViewer
-          path={selectedPath}
-          content={currentEntry?.draft ?? null}
-          revertNonce={currentEntry?.revertNonce ?? 0}
-          loading={fileLoading}
-          error={fileError}
-          mode={mode}
-          onContentChange={handleContentChange}
-        />
+        <SnippetResolverProvider
+          resolveContent={resolveSnippetContent}
+          resolvePath={resolveSnippetPath}
+        >
+          <FileViewer
+            path={selectedPath}
+            content={currentEntry?.draft ?? null}
+            revertNonce={currentEntry?.revertNonce ?? 0}
+            loading={fileLoading}
+            error={fileError}
+            mode={mode}
+            onContentChange={handleContentChange}
+          />
+        </SnippetResolverProvider>
       </main>
     </div>
   );

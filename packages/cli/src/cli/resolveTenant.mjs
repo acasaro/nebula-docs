@@ -38,7 +38,7 @@ function verify(abs) {
   if (!existsSync(docsJson)) {
     throw new Error(
       `tenant path is missing docs.json: ${abs}\n` +
-        `expected ${docsJson} — pass a directory containing docs.json or run \`nebula-docs init\`.`,
+        `expected ${docsJson} — pass a directory containing docs.json or run \`nebula init\`.`,
     );
   }
   return abs;

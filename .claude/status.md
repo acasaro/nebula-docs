@@ -20,6 +20,14 @@ The editor surface for MDX files. Tiptap (ProseMirror) doc is the in-memory stat
 - Contextual placeholders (Step, Callout, Card child paragraphs).
 - Inline JSX support added in parser/serializer for `<Badge>` (handled in both `convertInlineNode` and a standalone `convertBlock` fallback so single-line Badge usage round-trips).
 - `<CodeGroup>` supported end-to-end: React component in `@nebula-docs/components/code-group`, runtime registry hookup, `CodeBlock.filename` prop, `MdxRenderer.renderCode` extracts the first non-`key=value` token of `code.meta` as filename, Tiptap node `mdxCodeGroup` (content `codeBlock+`) with editable filename inputs in the tab strip, parser converts `code` MDAST children directly, serializer emits ` ```lang filename\n…\n``` ` blocks inside `<CodeGroup>` wrappers.
+- Page header bar: `MdxEditor` parses frontmatter and renders a static header above the editable surface with the page `title` (h1) + `description` (muted paragraph) + bottom border. Outside the contentEditable region so it can't be accidentally typed into; updates via the page-settings panel.
+- Frontmatter preservation across editor transactions: the Tiptap parser drops yaml nodes, so naive `tiptapDocToMdx` emits body-only MDX. `MdxEditor` holds a `frontmatterRef` that re-extracts the frontmatter block whenever `source` changes and prepends it to every `onUpdate` emission. `normalizeMdx` does the same. Without this, any cursor move in the editor would wipe frontmatter the settings panel just wrote. The parser's `mdxRaw` fallback strips frontmatter from `attrs.source` so the prepend doesn't double up.
+- Parse-failure UI: when `@mdx-js/mdx` throws, `parseMdxSafe` (in `MdxRenderer.tsx`) catches and `analyzeParseError` extracts `reason` / `line` / `column` from the `VFileMessage`, builds a 5-line excerpt with the offending line marked `>`, and assigns a pattern-based hint (4-backtick-fences-with-JSX, unbalanced braces, unclosed tag/expression). `mdxToTiptapDoc` falls back to a single `mdxRaw` node carrying the file body so the editor still mounts. Verified on `accordian.mdx` (Mintlify's 4-backtick-with-inner-JSX pattern that throws "Unexpected closing slash `/` in tag").
+- Accordion: dropped the permanent description input — the popover edits it; `inlinePopover: true` on the schema suppresses the BlockHandle's central kebab so the inline ellipsis is the only entry point. `AccordionGroup` gains a hover-revealed `Add accordion` button at the bottom-right.
+- Tabs UX overhaul: `MdxTabsNode` uses `@dnd-kit/sortable` with a nested `DndContext` for drag-handle reorder, X-to-remove on each tab, `+` floats right via `ml-auto`, ellipsis kebab on the active panel opens `AttributesPopover` with the new `tabSchema` (title + id). New schemas `tabSchema` + `stepsSchema` + `cardGroupSchema` + `columnsSchema` + `expandableSchema` + `accordionSchema` + `paramFieldSchema` + `responseFieldSchema` + `requestExampleSchema` + `responseExampleSchema` + `badgeSchema` all set `inlinePopover: true`.
+- `+` icon in `BlockHandle` now inserts a new paragraph containing `/` so the slash menu opens automatically. Empty paragraph placeholders read `Start typing something or press "/" for commands` for top-level + Step parents.
+- Frame: equal `p-2` all around; caption (when present) renders as a centered flex row with `min-h-[44px]`, no longer asymmetric.
+- Source mode is editable: `SourceEditor` uses Shiki-rendered `<pre>` overlaid by a transparent `<textarea>` (caret visible, text invisible). Theme tracks `documentElement.dark` via MutationObserver. **GitHub-style line-number gutter** on the left: right-aligned `tabular-nums`, scroll-synced with the textarea + pre, active-line highlighted from the textarea's caret position. Width auto-sizes to digit count.
 - Dev convenience: `window.__nebulaEditor` exposed in dev mode for REPL inspection.
 
 **OPEN**
@@ -37,8 +45,12 @@ Three forms (Page, Group, Tab) for nav-tree configuration.
 **DONE**
 
 - `products/nebula-platform/src/components/nav-settings/{PageSettingsForm,GroupSettingsForm,TabSettingsForm}.tsx`. Forms are fully controlled via `values` + `onChange` props.
-- Helper rows: `FormRow.tsx` (TextRow / SelectRow / ToggleRow), `IconRow.tsx`, `KeywordsRow.tsx`.
-- `NavSettingsPanel.tsx` orchestrates entry resolution, value extraction, patch routing. For pages, splits patches between docs.json (icon, sidebarTitle, externalUrl, tag, hidden) and MDX frontmatter (title, description, ogImage, keywords, mode).
+- Helper rows: `FormRow.tsx` (TextRow / SelectRow / ToggleRow), `IconRow.tsx`, `KeywordsRow.tsx`. `UNDERLINE_INPUT_CLASSES` overrides `dark:bg-transparent` so inputs match the panel's `bg-muted/30` overlay in dark mode.
+- `NavSettingsPanel.tsx` orchestrates entry resolution and patch routing. **Mintlify-aligned model**: every page setting writes to MDX frontmatter; legacy `PageObject` overrides in `docs.json` are honoured as read-side fallbacks. The page form surfaces Mintlify's editor field-set verbatim: title, slug (read-only), External URL (`url`), description, icon, sidebar title, OG Image URL, tag (toggle), hidden, keywords, mode. Other Mintlify-supported keys (noindex, boost, deprecated, groups, iconType, hideFooterPagination, hideApiMarker, timestamp) round-trip silently if a tenant authored them by hand — the form just doesn't surface them.
+- `lib/frontmatterCache.ts` — `useFrontmatterCache` hook fans out per-MDX-file fetches with concurrency 6, parses frontmatter via `splitFrontmatter`, and reuses in-editor drafts via `knownFiles` so the sidebar updates immediately as the user edits the page-settings panel. Returns `{ cache, loaded, loading }`.
+- `NavTree` reads frontmatter `sidebarTitle` / `icon` / `tag` / `hidden` from the cache as overrides on top of `PageObject` defaults; `hidden: true` removes the row entirely. Sidebar titles "pop in" with proper Mintlify-style casing once each file's frontmatter loads.
+- `NavTreeSkeleton` (9 mixed-width pulse rows) replaces the "Loading navigation…" text while `docsConfigState.loading` is true.
+- `PublishMenu` trigger button: neutral (border + bg-background) until `dirtyCount > 0`, then switches to primary fill.
 - `lib/docsConfigOps.ts` — `parseSettingsKey`, `findEntry`, `updateEntry`, `deleteEntry`, `appendToGroup` helpers walking the docs.json tree by key path.
 - `lib/frontmatter.ts` — minimal YAML splitter/serializer + `applyFrontmatterPatch` for the editor-time mutations.
 - `RepoBrowser.tsx` — derives `liveDocsConfig` from `files['docs.json'].draft` (or initial `useDocsConfig` fetch) so docs.json edits flow through the same dirty-tracking + save pipeline as MDX. Added `handleConfigChange`, `handleFrontmatterChange`, `handleDeleteOpenEntry`, `handleAddEntry`, plus a `deletions: Set<string>` queue for paths to remove on commit.
@@ -47,10 +59,20 @@ Three forms (Page, Group, Tab) for nav-tree configuration.
 - Trash button → confirm `Dialog` → removes the docs.json entry and queues the MDX for deletion (page kind only).
 - `+` button on group rows → Radix popover with three options (Add page / Add group / Add existing file). Each opens a `Dialog` with appropriate input.
 
+**Add-entry UX (revised)**
+
+- Per [Mintlify's editor pattern](https://www.mintlify.com/docs/editor/tutorial), creation is **inline, not modal**. Clicking the `+` on a row opens a small popover; picking an option appends an editable row in the tree, focused with the placeholder selected, that commits on Enter (or blur with non-empty value) and cancels on Escape.
+- **Three add-entry surfaces, all using the same `InlineAddRow` component**:
+  - **Navigation header `+`** → popover with one option (`Tab`) → inline tab row at the root of the tab list. `RepoBrowser.handleAddTab` calls `appendTab(cfg, { tab })`.
+  - **Tab row `+`** → popover with `Add a page` / `Add a group` → inline row at the top of the tab's children. Pages land in `tab.pages` (a new optional slot on the `Tab` interface, Mintlify-aligned), groups land in `tab.groups`. `RepoBrowser.handleAddEntry` dispatches via the `tab:` parentKey prefix to `appendToTab`.
+  - **Group row `+`** → popover with `Add a page` / `Add a group` → inline row at the bottom of the group's children. Existing `appendToGroup` path; unchanged.
+- Scope locked at **Pages, Groups, Tabs** for now. The earlier "Add existing file" option was dropped (the file-tree view already exposes existing files; no need for a duplicate add-from-picker flow). Anchors / Dropdowns / Versions / Languages / Menus / Products from the Mintlify spec are out of scope until a tenant asks for them.
+- Pages: when committed, the slug appends to docs.json AND a draft MDX file is seeded into the `files` map (`---\ntitle: <Slug>\n---\n\n# <Slug>\n`) so the next commit creates the file. Existing dirty-tracking + `commitFiles` pipeline takes it from there.
+
 **OPEN**
 
 - Slug field on the page form is read-only. Renaming a page (slug change → file move) is a follow-up — needs path-aware tracking that survives until the next commit.
-- The `+` button on the top-level "Navigation" header is still inert (only group-row `+` buttons are wired). Add top-level group / tab creation if needed.
+- Renaming an existing tab/group/page from the inline editor is not yet wired (only NEW entries are inline-editable; existing rows still go through the settings panel for label changes). Could share the `InlineAddRow` shape if/when that's wanted.
 
 ---
 
@@ -63,8 +85,9 @@ Per-component prop editor opened from the BlockHandle kebab.
 - `products/nebula-platform/src/components/AttributesForm.tsx` — schema-driven field rendering. Switches on `field.kind` (text / toggle / select / icon).
 - `products/nebula-platform/src/components/AttributesPopover.tsx` — Radix popover anchored to the right side of the trigger element. Header (title + close), body (children), footer (Trash + Save Changes).
 - Field primitives in `products/nebula-platform/src/components/fields/`: `TextField`, `ToggleField`, `SelectField`. Plus `IconField.tsx` at the components root.
-- `products/nebula-platform/src/lib/blockSchemas/` — `BlockAttrSchema` type with `sections` and `AttrField` discriminated union. Schemas cover: callout, card, frame, step, steps, update, accordion, columns, cardGroup, expandable, paramField, responseField, requestExample, responseExample, badge.
+- `products/nebula-platform/src/lib/blockSchemas/` — `BlockAttrSchema` type with `sections`, `AttrField` discriminated union, and an `inlinePopover` flag. Schemas cover: callout, card, frame, step, steps, update, accordion, columns, cardGroup, expandable, paramField, responseField, requestExample, responseExample, badge, tab.
 - `BlockHandle` kebab → `AttributesPopover` is wired in `EditorWithBlockHandle`. `getBlockSchema(nodeType)` resolves the right schema. Patches apply via a `setNodeMarkup` transaction (functionally equivalent to `updateAttributes`); trash uses `deleteRange` over the active block. Edit happens on every keystroke; the "Save Changes" button is a confirm-and-close affordance.
+- Schemas opt out of the central kebab by setting `inlinePopover: true` — used by mdxCard, mdxStep, mdxAccordion, mdxColumns, mdxCardGroup, mdxExpandable, mdxParamField, mdxResponseField, mdxRequestExample, mdxResponseExample, mdxBadge, mdxTab. Each renders its own `EllipsisVertical` trigger inside the NodeView.
 
 **OPEN**
 
@@ -123,8 +146,8 @@ Multi-tenant Astro-based static site generator. Design doc: [nebula-cli.md](nebu
 
 - `packages/cli/` bootstrapped: Astro 6 + `@astrojs/mdx` 5 + `@astrojs/react` 5 + Tailwind v4 (via `@tailwindcss/vite`). Workspace deps wired (`@nebula-docs/{components,mdx,schemas,theme}`).
 - `bin/nebula-docs.mjs` thin dispatcher → `src/cli/{commands/*,resolveTenant.mjs,prepareAstro.mjs,paths.mjs}`. Subcommands: `dev`, `build`, `preview`, `validate` are functional; `init` and `upgrade` are signature-stubs with a help message pointing at the planned scaffold.
-- `pnpm --filter @nebula-docs/cli dev tenants/example-docs` boots Astro on `localhost:4321` rendering the synthetic tenant. `INIT_CWD` propagation in `resolveTenant.mjs` makes the relative-path arg work from the monorepo root (pnpm runs lifecycle scripts from the package dir, so naive `resolve(cwd, arg)` would fail).
-- `pnpm --filter @nebula-docs/cli build tenants/example-docs` emits `tenants/example-docs/dist/{index.html, getting-started/installation/index.html, components/{cards,tabs}/index.html, api/users/index.html}` plus the `_astro/` bundle.
+- `pnpm --filter @nebula-docs/cli dev tenants/nebula-docs-starter-empty` boots Astro on `localhost:4321` rendering the synthetic tenant. `INIT_CWD` propagation in `resolveTenant.mjs` makes the relative-path arg work from the monorepo root (pnpm runs lifecycle scripts from the package dir, so naive `resolve(cwd, arg)` would fail).
+- `pnpm --filter @nebula-docs/cli build tenants/nebula-docs-starter-empty` emits `tenants/nebula-docs-starter-empty/dist/{index.html, getting-started/installation/index.html, components/{cards,tabs}/index.html, api/users/index.html}` plus the `_astro/` bundle.
 - File-routed pages via Astro 5 content collections: `src/content.config.ts` defines a `docs` collection with `glob({ pattern: ['**/*.mdx', '!snippets/**'], base: <tenant>/content })`. `src/pages/[...slug].astro` does `getStaticPaths` over the collection, mapping `entry.id === 'index'` → `/` and everything else to its id.
 - Token composition: `src/cli/prepareAstro.mjs` reads tenant `docs.json` + `theme.json`, deep-merges `theme.json.tokens` over `getThemeById(theme.base)`, and emits `packages/cli/.nebula/tokens.css` via `@nebula-docs/theme`'s `generateTokensCss`. The CLI's `src/styles/global.css` `@import`s that file. Output verified: brand-primary CSS var resolves correctly on the rendered pages.
 - Snippet resolution: `astro.config.mjs` registers `@nebula-docs/mdx`'s `remarkSnippets` plugin with a filesystem `resolveFile` that reads `<tenant>/content/snippets/<file>.mdx`. Verified end-to-end with the fixture's `<Snippet file="disclaimer" />` inlining the disclaimer Callout.
@@ -164,15 +187,19 @@ Per-PR builds at `bucket/previews/<PR-number>/`, surfaced via the dashboard's ex
   - `products/nebula-platform/` — Preview button reads `build.previewUrl` and opens in new tab
 - **Order**: CLI flag first (depends on Phase 2 bootstrap); workflow YAML in tenant template; webhook URL computation; Platform button wiring last.
 
-### 2. Snippets
+### ~~2. Snippets~~ — DONE
 
-`<Snippet file="..." />` resolves to inlined MDX content. Resolves at **both** build-time (CLI) and editor-time (Platform) so the editor shows resolved content without a preview build.
+`<Snippet file="..." />` resolves to inlined MDX content at both build-time (CLI) and editor-time (Platform).
 
-- **Where it lives**:
-  - `@nebula-docs/mdx` — `remarkSnippets({ resolveFile })` plugin. Walks MDAST for `mdxJsxFlowElement` with `name='Snippet'` and `file` attribute, calls `resolveFile(path) → string`, parses content, splices into parent.
-  - `@nebula-docs/cli` — passes a filesystem-based `resolveFile` (reads `content/snippets/<file>.mdx` from disk).
-  - `products/nebula-platform/` — passes an in-memory `resolveFile` reading from the loaded files map (Octokit-fetched MDX cached in `RepoBrowser`).
-- **Convention**: tenant snippets live in `content/snippets/*.mdx`. Path attribute is relative to that directory: `<Snippet file="disclaimer" />` resolves to `content/snippets/disclaimer.mdx`.
+**Landed:**
+
+- `@nebula-docs/mdx` — `remarkSnippets({ resolveFile })` plugin walks both `mdxJsxFlowElement` (block) and `mdxJsxTextElement` (inline) named `Snippet` with a `file` attribute, calls `resolveFile(file) → string | undefined`, parses, splices into parent. Inline snippets only flatten when the resolved content is a single paragraph (we splice its phrasing children); otherwise the inline JSX is left in place. Unresolved snippets are left untouched.
+- `@nebula-docs/cli` — already passing a filesystem `resolveFile` from `astro.config.mjs`. Unchanged. Verified `<Snippet file="disclaimer" />` still inlines on `tenants/nebula-docs-starter-empty/getting-started/installation`.
+- `products/nebula-platform/` — does NOT apply the plugin in the editor walk. Instead, `mdastToTiptap.ts` emits a `mdxSnippet` Tiptap atom carrying `{ file }`. The atom's NodeView (`MdxSnippetNode.tsx`) reads from a React context (`SnippetResolverProvider` + `useSnippetContent`) and renders the resolved MDX through `MdxFragment` inside a `contentEditable={false}` wrapper. Read-only by construction. Round-trip: serializer always emits `<Snippet file="..." />` (never the resolved children), so opening a page → no edit → no dirty marker. Verified byte-exact on four MDX shapes.
+- Snippet prefetch: `useSnippetPrefetch` in `lib/snippetCache.ts` fans out `fetchFileContent` calls for every `<snippetsBase>/*.mdx` discovered in the repo tree at branch-load time, with concurrency 4. `RepoBrowser` adds prefetched snippets to its existing `files` map and marks them in `fetchedPathsRef` so opening a snippet directly doesn't double-fetch. The resolver reads `files[path].draft`, so editing a snippet file in another tab updates every page that includes it live.
+- Resolver tries two bases in order — `<docsSubdirectory>/content/snippets` (the Nebula CLI convention) then `<docsSubdirectory>/snippets` (the Mintlify-shaped convention some pre-migration tenants still use). The first base with files in the tree wins for the "open source" affordance.
+- Missing-snippet UX: destructive-themed inline callout matching `MdxRenderer.tsx`'s parse-failure styling. Resolved snippets get a subtle left-border treatment (`border-l-2 border-primary/40`) + a hover-revealed "open source" button that navigates to the snippet file. The same `<Snippet>` JSX inside an `mdxRaw` fallback (e.g. nested in an unrecognized JSX block) renders via a `SnippetInline` component registered on the MDX renderer's component map, so resolution is consistent across both surfaces.
+- `pnpm --filter @nebula-docs/mdx typecheck` and `pnpm --filter @nebula-docs/platform typecheck` both pass.
 
 ### 3. Custom theming (visual branding)
 
@@ -226,17 +253,17 @@ Two chats to spawn after this refactor lands. Each is self-contained — paste t
 
 ### Kickoff: CLI bootstrap + local dev server
 
-> Read `CLAUDE.md`, `.claude/architecture.md`, `.claude/nebula-cli.md`, and `.claude/status.md`. The synthetic tenant is at `tenants/example-docs/` (already exists). The CLI doesn't exist yet. Bootstrap it.
+> Read `CLAUDE.md`, `.claude/architecture.md`, `.claude/nebula-cli.md`, and `.claude/status.md`. The synthetic tenant is at `tenants/nebula-docs-starter-empty/` (already exists). The CLI doesn't exist yet. Bootstrap it.
 >
-> **Goal**: `pnpm --filter @nebula-docs/cli dev tenants/example-docs` starts an Astro dev server that renders `tenants/example-docs/content/*.mdx` using `@nebula-docs/components` and the composed theme tokens, with the navigation/sidebar from `tenants/example-docs/docs.json`.
+> **Goal**: `pnpm --filter @nebula-docs/cli dev tenants/nebula-docs-starter-empty` starts an Astro dev server that renders `tenants/nebula-docs-starter-empty/content/*.mdx` using `@nebula-docs/components` and the composed theme tokens, with the navigation/sidebar from `tenants/nebula-docs-starter-empty/docs.json`.
 >
 > **Phase 0** (per `nebula-cli.md`): create `packages/cli/` with Astro 5 + `@astrojs/mdx` + `@astrojs/react` + Tailwind v4. Workspace deps: `@nebula-docs/components`, `@nebula-docs/schemas`, `@nebula-docs/theme`, `@nebula-docs/mdx`. Stub `bin/nebula-docs.ts` with subcommands (`init`, `dev`, `build`, `preview`, `validate`, `upgrade`). Stub JSON Schemas at `packages/cli/schemas/{docs,theme}.schema.json` (use Zod schemas in `@nebula-docs/schemas` as source).
 >
-> **Phase 1**: render `tenants/example-docs/` correctly. Read `docs.json` → produce file-routed Astro pages. Render MDX via `@astrojs/mdx` with components from `@nebula-docs/components`. Compose tokens (globals → `mcoe-default` base → tenant `theme.json` overrides) → CSS vars at build. Snippet resolution via `@nebula-docs/mdx`'s `remarkSnippets({ resolveFile })` plugin (filesystem-based resolveFile reading `content/snippets/`).
+> **Phase 1**: render `tenants/nebula-docs-starter-empty/` correctly. Read `docs.json` → produce file-routed Astro pages. Render MDX via `@astrojs/mdx` with components from `@nebula-docs/components`. Compose tokens (globals → `mcoe-default` base → tenant `theme.json` overrides) → CSS vars at build. Snippet resolution via `@nebula-docs/mdx`'s `remarkSnippets({ resolveFile })` plugin (filesystem-based resolveFile reading `content/snippets/`).
 >
 > Don't relitigate Astro vs Next/Vite/Eleventy — settled in `nebula-cli.md`. Don't introduce new packages without flagging — the seven-package framework is the boundary (see `architecture.md`).
 >
-> Definition of done: `pnpm --filter @nebula-docs/cli dev tenants/example-docs` shows the synthetic tenant rendering with correct theme tokens, navigation from `docs.json`, all blocks (Card, Frame, Tabs, Steps, Callout, ParamField, etc.) rendering correctly. `pnpm --filter @nebula-docs/cli build tenants/example-docs` produces a static `tenants/example-docs/dist/` that opens in a browser.
+> Definition of done: `pnpm --filter @nebula-docs/cli dev tenants/nebula-docs-starter-empty` shows the synthetic tenant rendering with correct theme tokens, navigation from `docs.json`, all blocks (Card, Frame, Tabs, Steps, Callout, ParamField, etc.) rendering correctly. `pnpm --filter @nebula-docs/cli build tenants/nebula-docs-starter-empty` produces a static `tenants/nebula-docs-starter-empty/dist/` that opens in a browser.
 
 ---
 

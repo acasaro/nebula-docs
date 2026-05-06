@@ -145,6 +145,7 @@ function convertBlock(node: RootContent, source: string): TiptapNode | null {
         return convertGenericBlock(jsx, source, 'mdxResponseExample');
       if (name === 'Mermaid') return convertMermaid(jsx, source);
       if (name === 'CodeGroup') return convertCodeGroup(jsx);
+      if (name === 'Snippet') return convertSnippet(jsx);
       if (name === 'Badge') {
         // MDX parses a standalone `<Badge>...</Badge>` line as a flow element.
         // Wrap it in a paragraph so it round-trips through the inline node.
@@ -509,6 +510,17 @@ function parseFilenameFromMeta(meta: string | null | undefined): string | undefi
     return token;
   }
   return undefined;
+}
+
+function convertSnippet(node: MdxJsxFlowElement): TiptapNode {
+  const file =
+    node.attributes.find(
+      (a) => a.type === 'mdxJsxAttribute' && a.name === 'file',
+    )?.value;
+  return {
+    type: 'mdxSnippet',
+    attrs: { file: typeof file === 'string' ? file : '' },
+  };
 }
 
 function convertCodeGroup(node: MdxJsxFlowElement): TiptapNode {

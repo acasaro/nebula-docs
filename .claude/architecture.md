@@ -4,7 +4,7 @@ The 10000-ft view of the whole framework. For per-pillar deep-dives see [nebula.
 
 ## What Nebula Docs is
 
-A multi-tenant documentation platform for UHG. Each tenant team owns a docs repo (MDX content + a `docs.json` config + an optional `theme.json`), pulls in `@nebula-docs/cli` as a dev dep, and runs `nebula-docs build` in CI to produce a static site they upload to their OOSS bucket. Editors sign into the **Nebula Docs Platform** SPA to edit visually; the Platform commits MDX changes to the tenant repo via a custom GitHub App; CI rebuilds the site.
+A multi-tenant documentation platform for UHG. Each tenant team owns a docs repo (MDX content + a `docs.json` config + an optional `theme.json`), pulls in `@nebula-docs/cli` as a dev dep, and runs `nebula build` in CI to produce a static site they upload to their OOSS bucket. Editors sign into the **Nebula Docs Platform** SPA to edit visually; the Platform commits MDX changes to the tenant repo via a custom GitHub App; CI rebuilds the site.
 
 ## The four pillars
 
@@ -29,7 +29,7 @@ A multi-tenant documentation platform for UHG. Each tenant team owns a docs repo
    └─────────────────────────────────────────┘
           ▲                         │
           │                         │  CI runs
-          │  webhooks → Firestore   │  nebula-docs build
+          │  webhooks → Firestore   │  nebula build
           │                         │
    ┌──────┴───────┐           ┌────▼─────────┐
    │  Functions   │           │  OOSS bucket │
@@ -43,7 +43,7 @@ A multi-tenant documentation platform for UHG. Each tenant team owns a docs repo
 | Pillar | Lives at | Role |
 |---|---|---|
 | **Platform** | `products/nebula-platform/` | Editor SPA. Vite + React 19 + Tailwind v4 + shadcn/ui + Tiptap (ProseMirror). Users sign into this. |
-| **CLI** | `packages/cli/` (planned) | Renderer + tooling. Astro + MDX + React + Tailwind v4. Distributed as `@nebula-docs/cli`; binary `nebula-docs`. Tenants invoke this in CI. |
+| **CLI** | `packages/cli/` | Renderer + tooling. Astro + MDX + React + Tailwind v4. Distributed as `@nebula-docs/cli`; binary `nebula` (only place the brand is shortened). Tenants invoke this in CI. |
 | **Shared packages** | `packages/{components,schemas,theme,firebase,mdx,analytics}` | Six libraries consumed by Platform + CLI. Single source of truth for components, schemas, tokens, MDX parsing, analytics, and Firebase auth. |
 | **Cloud Functions** | `functions/` | Server-side glue for the Platform: GitHub App token minting, installation lookup, webhook receiver. Six functions deployed (three prod + three dev). |
 
@@ -80,7 +80,8 @@ A tenant is a docs repo (docs.json + content + theme.json). Tenant repos are own
 
 | Fixture | Role |
 |---|---|
-| `tenants/example-docs/` | Synthetic dev fixture. Designed to exercise every block in `@nebula-docs/components` so the CLI can iterate against it without round-tripping through GitHub. |
+| `tenants/nebula-docs-starter/` | Full kitchen-sink starter — exercises every block in `@nebula-docs/components`, multiple tabs, nested groups, snippets, long-form prose. Doubles as the renderer's dev/test fixture and as `nebula init`'s default scaffold. |
+| `tenants/nebula-docs-starter-empty/` | Minimal "smallest valid tenant" — what `nebula init --empty` produces. Reference for the absolute minimum a tenant repo needs. |
 | `tenants/mcoe-docs/` | MCOE migration target. Carved out of `products/docs/` during the Docusaurus → CLI migration. Eventually extracted to its own external repo. |
 
 Five vendored references in `vendor/` informed our designs and serve as study sources:
@@ -90,7 +91,7 @@ Five vendored references in `vendor/` informed our designs and serve as study so
 | `vendor/mintlify-nodemodule/` | Architecture study (CLI/build package layout) |
 | `vendor/mintlify-components/` | Component port reference |
 | `vendor/mint-docs-ref/` | Full upstream rendering reference |
-| `vendor/mint-empty-starter-main/` | Blueprint for `packages/cli/template/` (what `nebula-docs init` produces) |
+| `vendor/mint-empty-starter-main/` | Blueprint for `tenants/nebula-docs-starter-empty/` (what `nebula init --empty` produces) |
 | `vendor/mcoe-docs-main/` | Reference for a populated tenant repo's shape and content |
 
 All `vendor/*` folders are MIT-licensed verbatim copies. Each gets deleted as we stop referencing it.
@@ -106,7 +107,7 @@ All `vendor/*` folders are MIT-licensed verbatim copies. Each gets deleted as we
 6. Editor clicks "Commit & PR":
      → Platform creates branch, commits MDX, opens PR
      → Commit attribution: nebula-docs[bot]; user noted in commit body
-7. GitHub Actions runs `nebula-docs build` in the tenant repo
+7. GitHub Actions runs `nebula build` in the tenant repo
      → If main: build to bucket root
      → If PR: build with --base /previews/<PR#>/ to bucket sub-path
 8. Static site live in tenant's OOSS bucket

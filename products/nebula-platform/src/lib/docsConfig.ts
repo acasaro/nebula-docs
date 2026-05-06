@@ -13,6 +13,9 @@ export interface Tab {
   icon?: IconValue;
   hidden?: boolean;
   groups?: Group[];
+  /** Mintlify-style direct pages under a tab (no group wrapper). Mixed with
+   *  `groups` they render together — pages first by convention. */
+  pages?: PageEntry[];
 }
 
 export interface Group {

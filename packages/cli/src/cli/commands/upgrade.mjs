@@ -1,6 +1,6 @@
 export async function runUpgrade() {
   process.stderr.write(
-    `nebula-docs upgrade: not implemented yet (Phase 0 stub).\n` +
+    `nebula upgrade: not implemented yet (Phase 0 stub).\n` +
       `\n` +
       `Planned behavior: bump @nebula-docs/cli to the latest tagged release in\n` +
       `the tenant's package.json, then run any registered codemods against\n` +

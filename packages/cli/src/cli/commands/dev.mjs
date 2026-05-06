@@ -8,7 +8,7 @@ export async function runDev({ tenant, flags }) {
   const { dev } = await import('astro');
   const port = flags.port ? Number(flags.port) : undefined;
 
-  process.stdout.write(`nebula-docs dev: ${tenant}\n`);
+  process.stdout.write(`nebula dev: ${tenant}\n`);
   await dev({
     root: CLI_ROOT,
     server: port ? { port } : undefined,

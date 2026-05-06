@@ -12,6 +12,7 @@ export const cardGroupSchema: BlockAttrSchema = {
   blockType: 'mdxCardGroup',
   title: 'Edit Card Group',
   headerIcon: LayoutGrid,
+  inlinePopover: true,
   sections: [
     {
       label: 'Layout',

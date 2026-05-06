@@ -34,6 +34,7 @@ export const badgeSchema: BlockAttrSchema = {
   blockType: 'mdxBadge',
   title: 'Edit Badge',
   headerIcon: Tag,
+  inlinePopover: true,
   sections: [
     {
       label: 'Content',

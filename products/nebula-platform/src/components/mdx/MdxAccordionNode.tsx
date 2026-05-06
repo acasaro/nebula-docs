@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { ChevronRight, EllipsisVertical } from 'lucide-react';
+import { ChevronRight, EllipsisVertical, Plus } from 'lucide-react';
 import { Node, mergeAttributes } from '@tiptap/core';
 import {
   NodeViewContent,
@@ -74,18 +74,68 @@ export const MdxAccordionGroup = Node.create({
   },
 });
 
-function MdxAccordionGroupView({ selected }: NodeViewProps) {
+function MdxAccordionGroupView({
+  node,
+  selected,
+  editor,
+  getPos,
+}: NodeViewProps) {
+  const stopPm = (e: React.SyntheticEvent) => e.stopPropagation();
+  const appendAccordion = () => {
+    if (typeof getPos !== 'function' || !editor.isEditable) return;
+    const start = getPos();
+    if (start == null) return;
+    const insertAt = start + node.nodeSize - 1;
+    editor
+      .chain()
+      .focus()
+      .insertContentAt(insertAt, {
+        type: 'mdxAccordion',
+        attrs: { title: null },
+        content: [{ type: 'paragraph' }],
+      })
+      .run();
+  };
   return (
     <NodeViewWrapper
       data-mdx-accordion-group=""
-      className={cn(
-        'my-3 overflow-hidden rounded-xl border border-stone-200/70 dark:border-white/10',
-        '[&>[data-mdx-accordion]]:rounded-none [&>[data-mdx-accordion]]:border-0 [&>[data-mdx-accordion]]:my-0',
-        '[&>[data-mdx-accordion]+[data-mdx-accordion]]:border-t [&>[data-mdx-accordion]+[data-mdx-accordion]]:border-stone-200/70 dark:[&>[data-mdx-accordion]+[data-mdx-accordion]]:border-white/10',
-        selected && 'ring-2 ring-primary/40',
-      )}
+      className={cn('group/accordion-group relative my-3')}
     >
-      <NodeViewContent />
+      <div
+        className={cn(
+          'overflow-hidden rounded-xl border border-stone-200/70 dark:border-white/10',
+          '[&>[data-mdx-accordion]]:rounded-none [&>[data-mdx-accordion]]:border-0 [&>[data-mdx-accordion]]:my-0',
+          '[&>[data-mdx-accordion]+[data-mdx-accordion]]:border-t [&>[data-mdx-accordion]+[data-mdx-accordion]]:border-stone-200/70 dark:[&>[data-mdx-accordion]+[data-mdx-accordion]]:border-white/10',
+          selected && 'ring-2 ring-primary/40',
+        )}
+      >
+        <NodeViewContent />
+      </div>
+      {editor.isEditable ? (
+        <div
+          contentEditable={false}
+          className="mt-2 flex justify-end"
+        >
+          <button
+            type="button"
+            aria-label="Add accordion"
+            onMouseDown={stopPm}
+            onClick={(e) => {
+              stopPm(e);
+              appendAccordion();
+            }}
+            className={cn(
+              'flex h-7 items-center gap-1.5 rounded-md border border-dashed border-stone-300 bg-stone-50/40 px-2.5 text-xs text-stone-500',
+              'hover:border-stone-400 hover:bg-stone-100 hover:text-stone-700',
+              'dark:border-white/15 dark:bg-white/5 dark:text-stone-400 dark:hover:border-white/30 dark:hover:bg-white/10 dark:hover:text-stone-200',
+              'opacity-0 transition-opacity group-hover/accordion-group:opacity-100',
+            )}
+          >
+            <Plus className="size-3.5" />
+            Add accordion
+          </button>
+        </div>
+      ) : null}
     </NodeViewWrapper>
   );
 }
@@ -158,16 +208,11 @@ function MdxAccordionView({
               onChange={(e) => updateAttributes({ title: e.target.value || null })}
               className="not-prose w-full border-0 bg-transparent p-0 text-sm font-semibold leading-tight outline-none placeholder:text-stone-400 dark:placeholder:text-stone-600"
             />
-            <input
-              value={attrs.description ?? ''}
-              placeholder="Optional description"
-              onMouseDown={stopPm}
-              onClick={stopPm}
-              onChange={(e) =>
-                updateAttributes({ description: e.target.value || null })
-              }
-              className="not-prose mt-0.5 w-full border-0 bg-transparent p-0 text-xs leading-tight text-stone-500 outline-none placeholder:text-stone-400 dark:text-stone-400 dark:placeholder:text-stone-600"
-            />
+            {attrs.description ? (
+              <p className="not-prose mt-0.5 truncate text-xs text-stone-500 dark:text-stone-400">
+                {attrs.description}
+              </p>
+            ) : null}
           </div>
           <button
             type="button"

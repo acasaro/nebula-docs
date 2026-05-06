@@ -13,6 +13,7 @@ import { responseExampleSchema } from './responseExample';
 import { responseFieldSchema } from './responseField';
 import { stepSchema } from './step';
 import { stepsSchema } from './steps';
+import { tabSchema } from './tab';
 import { updateSchema } from './update';
 
 const REGISTRY: Record<string, BlockAttrSchema> = {
@@ -30,6 +31,7 @@ const REGISTRY: Record<string, BlockAttrSchema> = {
   [responseFieldSchema.blockType]: responseFieldSchema,
   [stepSchema.blockType]: stepSchema,
   [stepsSchema.blockType]: stepsSchema,
+  [tabSchema.blockType]: tabSchema,
   [updateSchema.blockType]: updateSchema,
 };
 

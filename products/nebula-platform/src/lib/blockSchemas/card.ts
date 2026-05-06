@@ -11,6 +11,7 @@ export const cardSchema: BlockAttrSchema = {
   blockType: 'mdxCard',
   title: 'Edit Card Attributes',
   headerIcon: LayoutTemplate,
+  inlinePopover: true,
   sections: [
     {
       label: 'Content',

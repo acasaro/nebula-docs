@@ -74,10 +74,10 @@ export function Frame({
 
         {finalCaption ? (
           <div
-            className="relative mt-3 flex w-full justify-center rounded-2xl bg-white px-8 pb-2 pt-0 text-center text-sm text-stone-600 dark:bg-stone-900 dark:text-stone-400"
+            className="relative mt-2 flex min-h-[44px] items-center justify-center rounded-xl bg-white px-4 py-2 text-center text-sm text-stone-600 dark:bg-stone-900 dark:text-stone-400"
             data-component-part="frame-description"
           >
-            <p>{finalCaption}</p>
+            <p className="m-0">{finalCaption}</p>
           </div>
         ) : null}
 

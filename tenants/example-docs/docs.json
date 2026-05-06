@@ -4,10 +4,11 @@
   "description": "Synthetic tenant for Nebula Docs CLI development.",
   "favicon": "/assets/favicon.svg",
   "logo": {
-    "light": "/assets/logo-light.svg",
-    "dark": "/assets/logo-dark.svg",
     "href": "/"
   },
+  "versions": [
+    { "version": "v0.1", "default": true }
+  ],
   "theme": {
     "base": "mcoe-default",
     "extends": "./theme.json",
@@ -48,10 +49,12 @@
   "navbar": {
     "primary": {
       "type": "button",
-      "label": "Get Started",
+      "label": "Chat with us",
       "href": "/getting-started/installation"
     },
-    "links": []
+    "links": [
+      { "label": "Support", "href": "/getting-started/installation" }
+    ]
   },
   "footer": {
     "columns": [

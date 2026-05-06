@@ -24,7 +24,7 @@ const eyebrow = findGroupForSlug(docs, currentSlug);
     {description && <meta name="description" content={description} />}
   </head>
   <body>
-    <Navbar docs={docs} />
+    <Navbar docs={docs} currentSlug={currentSlug} />
     <div class="nebula-shell">
       <aside class="nebula-aside">
         <Sidebar docs={docs} currentSlug={currentSlug} />

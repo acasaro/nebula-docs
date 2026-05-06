@@ -20,6 +20,7 @@ export const stepSchema: BlockAttrSchema = {
   blockType: 'mdxStep',
   title: 'Edit Step',
   headerIcon: Footprints,
+  inlinePopover: true,
   sections: [
     {
       label: 'Icon',

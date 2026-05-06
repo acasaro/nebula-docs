@@ -46,6 +46,9 @@ export interface BlockAttrSchema {
   title: string;
   /** Optional small icon shown next to the title. */
   headerIcon?: LucideIcon;
+  /** When true, the BlockHandle's right-side kebab is suppressed for this
+   * node — its NodeView is expected to render its own ellipsis trigger. */
+  inlinePopover?: boolean;
   sections: ReadonlyArray<AttrSection>;
 }
 

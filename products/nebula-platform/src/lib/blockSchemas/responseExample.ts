@@ -5,6 +5,7 @@ export const responseExampleSchema: BlockAttrSchema = {
   blockType: 'mdxResponseExample',
   title: 'Edit Response Example',
   headerIcon: ArrowDownLeft,
+  inlinePopover: true,
   sections: [
     {
       label: 'Content',

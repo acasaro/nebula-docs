@@ -5,6 +5,7 @@ export const requestExampleSchema: BlockAttrSchema = {
   blockType: 'mdxRequestExample',
   title: 'Edit Request Example',
   headerIcon: ArrowUpRight,
+  inlinePopover: true,
   sections: [
     {
       label: 'Content',

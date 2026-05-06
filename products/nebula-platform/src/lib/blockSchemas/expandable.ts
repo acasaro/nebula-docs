@@ -5,6 +5,7 @@ export const expandableSchema: BlockAttrSchema = {
   blockType: 'mdxExpandable',
   title: 'Edit Expandable',
   headerIcon: Maximize2,
+  inlinePopover: true,
   sections: [
     {
       label: 'Content',

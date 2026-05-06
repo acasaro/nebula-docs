@@ -176,6 +176,19 @@
     "metadata": {
       "type": "object",
       "additionalProperties": true
+    },
+    "versions": {
+      "type": "array",
+      "description": "Version selector entries shown next to the logo. The default-flagged entry (or the first entry) renders as a small pill in the top navbar.",
+      "items": {
+        "type": "object",
+        "required": ["version"],
+        "properties": {
+          "version": { "type": "string" },
+          "default": { "type": "boolean" },
+          "href": { "type": "string" }
+        }
+      }
     }
   },
   "$defs": {

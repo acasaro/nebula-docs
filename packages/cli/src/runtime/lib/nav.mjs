@@ -72,3 +72,69 @@ function prettifySlug(slug) {
     .map((s) => (s.length ? s[0].toUpperCase() + s.slice(1) : s))
     .join(' ');
 }
+
+/** First reachable page slug in a group (recurses into nested sub-groups). */
+export function firstPageInGroup(group) {
+  for (const page of group.pages ?? []) {
+    if (isHidden(page)) continue;
+    if (typeof page === 'string') return page;
+    if (page && typeof page === 'object') {
+      if ('group' in page) {
+        const nested = firstPageInGroup(page);
+        if (nested) return nested;
+      } else if (page.slug || page.page) {
+        return page.slug || page.page;
+      }
+    }
+  }
+  return null;
+}
+
+/** First reachable page slug in a tab (across all its groups). */
+export function firstPageInTab(tab) {
+  for (const group of tab.groups ?? []) {
+    const first = firstPageInGroup(group);
+    if (first) return first;
+  }
+  return null;
+}
+
+/** Whether a tab contains the given slug anywhere in its tree. */
+export function tabContainsSlug(tab, slug) {
+  if (!slug) return false;
+  for (const group of tab.groups ?? []) {
+    if (groupContainsSlug(group, slug)) return true;
+  }
+  return false;
+}
+
+function groupContainsSlug(group, slug) {
+  for (const page of group.pages ?? []) {
+    if (typeof page === 'string') {
+      if (page === slug) return true;
+    } else if (page && typeof page === 'object') {
+      if ('group' in page && groupContainsSlug(page, slug)) return true;
+      if ((page.slug || page.page) === slug) return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Active tab index for a given slug. Falls back to 0 when no tab claims the
+ * page (e.g. /index when index isn't in any tab's tree). Tenants who want a
+ * different default for the home page can set `tab.default: true` (Phase 3).
+ */
+export function activeTabIndex(tabs, slug) {
+  const i = tabs.findIndex((t) => tabContainsSlug(t, slug));
+  return i === -1 ? 0 : i;
+}
+
+/** href for a tab — first page in tree, or explicit `tab.href` if set. */
+export function tabHref(tab) {
+  if (tab.href) return tab.href;
+  const slug = firstPageInTab(tab);
+  if (!slug) return '/';
+  if (slug === 'index') return '/';
+  return `/${slug}`;
+}

@@ -5,6 +5,7 @@ export const responseFieldSchema: BlockAttrSchema = {
   blockType: 'mdxResponseField',
   title: 'Edit ResponseField',
   headerIcon: ShieldCheck,
+  inlinePopover: true,
   sections: [
     {
       label: 'Identity',

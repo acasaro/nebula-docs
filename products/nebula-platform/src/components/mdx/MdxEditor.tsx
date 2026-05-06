@@ -82,18 +82,19 @@ export function MdxEditor({
           } catch {
             parentName = null;
           }
-          if (parentName === 'mdxStep') {
-            return 'Start typing or press "/" for commands';
-          }
           if (parentName === 'mdxCallout') {
             return 'Start typing…';
           }
           if (parentName === 'mdxCard') {
             return 'Card description…';
           }
+          // Top-level paragraphs and step bodies share the same hint.
+          if (parentName === 'doc' || parentName === 'mdxStep') {
+            return 'Start typing something or press "/" for commands';
+          }
           return '';
         },
-        showOnlyCurrent: false,
+        showOnlyCurrent: true,
         includeChildren: true,
       }),
     ],

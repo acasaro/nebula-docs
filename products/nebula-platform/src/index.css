@@ -169,6 +169,15 @@
 :where(.mdx-prose) pre {
   background: transparent !important;
 }
+.mdx-source-pre,
+.mdx-source-pre code,
+.mdx-source-pre .shiki {
+  background: transparent !important;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace !important;
+  font-size: 0.75rem !important;
+  line-height: 1.625 !important;
+  tab-size: 2 !important;
+}
 :where(.mdx-prose) :not(pre) > code {
   @apply rounded bg-muted px-1.5 py-0.5 font-mono text-[0.85em];
 }

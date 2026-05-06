@@ -3,6 +3,7 @@ import { FileTypeIcon, isBinaryFile } from "@/components/FileTypeIcon";
 import { useHeaderLeading, useHeaderSlot } from "@/components/HeaderSlot";
 import { MdxEditor, normalizeMdx } from "@/components/mdx/MdxEditor";
 import { NavSettingsPanel } from "@/components/NavSettingsPanel";
+import { SourceEditor } from "@/components/SourceEditor";
 import {
   NavTree,
   type AddEntryKind,
@@ -241,9 +242,12 @@ function FileViewer({
         />
       </div>
     ) : (
-      <pre className='flex-1 overflow-auto whitespace-pre-wrap break-words p-6 font-mono text-xs leading-relaxed text-foreground/90'>
-        {content}
-      </pre>
+      <SourceEditor
+        key={`${path}:${revertNonce}`}
+        value={content}
+        onChange={onContentChange}
+        className='flex-1'
+      />
     );
   }
 

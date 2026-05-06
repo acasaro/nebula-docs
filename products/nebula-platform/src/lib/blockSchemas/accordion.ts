@@ -5,6 +5,7 @@ export const accordionSchema: BlockAttrSchema = {
   blockType: 'mdxAccordion',
   title: 'Edit Accordion',
   headerIcon: PanelTopOpen,
+  inlinePopover: true,
   sections: [
     {
       label: 'Content',

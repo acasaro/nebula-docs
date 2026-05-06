@@ -12,6 +12,7 @@ export const columnsSchema: BlockAttrSchema = {
   blockType: 'mdxColumns',
   title: 'Edit Columns',
   headerIcon: Columns2,
+  inlinePopover: true,
   sections: [
     {
       label: 'Layout',

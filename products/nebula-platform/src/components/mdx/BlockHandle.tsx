@@ -366,11 +366,17 @@ function BlockHandleUI({
 
   const insertBelow = () => {
     const insertPos = block.pos + block.node.nodeSize;
+    // Insert a fresh paragraph containing `/` so the slash menu opens
+    // immediately. The suggestion plugin keys off the `/` character at the
+    // cursor; the user can type to filter or press Escape to dismiss.
     editor
       .chain()
       .focus()
-      .insertContentAt(insertPos, { type: 'paragraph' })
-      .setTextSelection(insertPos + 1)
+      .insertContentAt(insertPos, {
+        type: 'paragraph',
+        content: [{ type: 'text', text: '/' }],
+      })
+      .setTextSelection(insertPos + 2)
       .run();
   };
 
@@ -441,9 +447,7 @@ function BlockHandleUI({
           </Popover.Portal>
         </Popover.Root>
       </div>
-      {schema &&
-      block.node.type.name !== 'mdxCard' &&
-      block.node.type.name !== 'mdxStep' ? (
+      {schema && !schema.inlinePopover ? (
         <div
           className={cn(
             'absolute z-30 flex items-center text-muted-foreground',

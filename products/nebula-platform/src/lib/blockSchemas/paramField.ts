@@ -13,6 +13,7 @@ export const paramFieldSchema: BlockAttrSchema = {
   blockType: 'mdxParamField',
   title: 'Edit ParamField',
   headerIcon: Sliders,
+  inlinePopover: true,
   sections: [
     {
       label: 'Identity',

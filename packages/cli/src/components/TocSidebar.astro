@@ -1,0 +1,148 @@
+---
+// Right-side "On this page" table of contents.
+// Driven by Astro's render(entry) `headings` output ([{ depth, slug, text }]).
+// Only renders H2 + H3 — H4+ tend to clutter the TOC and the visual rhythm
+// matches Stripe-class docs sites (Mintlify, Vercel, Linear) which all stop
+// at H3 in the sidebar.
+//
+// Active state is driven client-side by an IntersectionObserver (scroll-spy):
+// the heading nearest the top of the viewport gets aria-current="true",
+// which the CSS underlines + brightens.
+
+interface Heading {
+  depth: number;
+  slug: string;
+  text: string;
+}
+
+interface Props {
+  headings: Heading[];
+}
+
+const { headings } = Astro.props as Props;
+const tocItems = (headings ?? []).filter((h) => h.depth === 2 || h.depth === 3);
+---
+{tocItems.length > 0 && (
+  <nav class="nebula-toc" aria-label="On this page">
+    <p class="nebula-toc-title">On this page</p>
+    <ul class="nebula-toc-list">
+      {tocItems.map((h) => (
+        <li class={`nebula-toc-item nebula-toc-depth-${h.depth}`}>
+          <a href={`#${h.slug}`} data-toc-link={h.slug}>{h.text}</a>
+        </li>
+      ))}
+    </ul>
+  </nav>
+)}
+
+<script is:inline>
+  // Scroll-spy: the active TOC entry is the heading whose top has scrolled
+  // closest to (but not yet past) a 120px offset from the viewport top. That
+  // offset accounts for the sticky navbar height so the "active" heading
+  // matches what the reader is actually looking at, not what's been hidden
+  // under the navbar. Falls back to the first heading before any scroll.
+  (function () {
+    function init() {
+      var links = document.querySelectorAll('.nebula-toc [data-toc-link]');
+      if (!links.length) return;
+      var bySlug = new Map();
+      links.forEach(function (link) {
+        bySlug.set(link.getAttribute('data-toc-link'), link);
+      });
+      var headings = [];
+      bySlug.forEach(function (_link, slug) {
+        var el = document.getElementById(slug);
+        if (el) headings.push(el);
+      });
+      if (!headings.length) return;
+
+      var OFFSET = 120; // sticky-navbar height + breathing room
+
+      function setActive(slug) {
+        bySlug.forEach(function (link, key) {
+          if (key === slug) link.setAttribute('aria-current', 'true');
+          else link.removeAttribute('aria-current');
+        });
+      }
+
+      function update() {
+        // Walk headings top-down; the active one is the last whose top is
+        // above the offset line. If none has scrolled past yet, the first
+        // heading is active.
+        var active = headings[0].id;
+        for (var i = 0; i < headings.length; i++) {
+          var top = headings[i].getBoundingClientRect().top;
+          if (top - OFFSET < 0) active = headings[i].id;
+          else break;
+        }
+        setActive(active);
+      }
+
+      var raf = null;
+      function onScroll() {
+        if (raf !== null) return;
+        raf = requestAnimationFrame(function () {
+          raf = null;
+          update();
+        });
+      }
+
+      window.addEventListener('scroll', onScroll, { passive: true });
+      window.addEventListener('resize', onScroll, { passive: true });
+      update();
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', init);
+    } else {
+      init();
+    }
+  })();
+</script>
+
+<style is:global>
+  .nebula-toc {
+    font-size: 0.8125rem;
+    line-height: 1.5;
+    border-left: 1px solid var(--mcoe-border-default);
+    padding-left: 1rem;
+  }
+  .nebula-toc-title {
+    margin: 0 0 0.625rem;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--mcoe-text-secondary);
+  }
+  .nebula-toc-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .nebula-toc-item a {
+    display: inline-block;
+    color: var(--mcoe-text-link);
+    text-decoration: none;
+    transition: color 0.1s;
+  }
+  .nebula-toc-item a:hover {
+    text-decoration: underline;
+    text-underline-offset: 0.25em;
+    text-decoration-thickness: 1.5px;
+  }
+  /* Active item — brand-color text, no underline. Underline is reserved for
+     hover so the active item reads as "you are here" without competing with
+     the affordance signal. */
+  .nebula-toc-item a[aria-current='true'] {
+    color: var(--mcoe-brand-primary);
+  }
+  /* H3 entries indent under the H2 they belong to, keeping the visual
+     hierarchy without making the column wider. */
+  .nebula-toc-depth-3 {
+    padding-left: 0.875rem;
+  }
+</style>

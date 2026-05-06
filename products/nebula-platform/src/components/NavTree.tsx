@@ -69,6 +69,13 @@ interface NavTreeProps {
   onAddEntry?: (parentKey: NavSettingsKey, kind: AddEntryKind, value: string) => void;
   /** All file paths in the repo — used by the "add existing file" flow. */
   repoPaths?: string[];
+  /** Per-page frontmatter values keyed by file path. NavTree uses
+   *  `sidebarTitle`, `icon`, `tag`, `hidden` from each entry as overrides
+   *  on top of the docs.json defaults. */
+  frontmatterCache?: Record<string, Record<string, unknown> | null>;
+  /** Set of paths the cache has finished fetching (regardless of parse
+   *  success). Used to gate skeleton loaders. */
+  frontmatterLoaded?: ReadonlySet<string>;
 }
 
 // Pixel widths used to compute the cascading text-indent. The pattern:
@@ -90,6 +97,8 @@ export function NavTree({
   onOpenSettings,
   onAddEntry,
   repoPaths,
+  frontmatterCache,
+  frontmatterLoaded,
 }: NavTreeProps) {
   const tabs = (config.navigation?.tabs ?? []).filter((t) => !t.hidden);
 
@@ -118,6 +127,8 @@ export function NavTree({
             onOpenSettings={onOpenSettings}
             onAddEntry={onAddEntry}
             repoPaths={repoPaths}
+            frontmatterCache={frontmatterCache}
+            frontmatterLoaded={frontmatterLoaded}
           />
         ))}
       </div>
@@ -132,6 +143,8 @@ interface SectionCommon {
   onOpenSettings: (next: OpenNavSettings | null) => void;
   onAddEntry?: (parentKey: NavSettingsKey, kind: AddEntryKind, value: string) => void;
   repoPaths?: string[];
+  frontmatterCache?: Record<string, Record<string, unknown> | null>;
+  frontmatterLoaded?: ReadonlySet<string>;
 }
 
 function TabSection({
@@ -144,6 +157,8 @@ function TabSection({
   onOpenSettings,
   onAddEntry,
   repoPaths,
+  frontmatterCache,
+  frontmatterLoaded,
 }: {
   tab: Tab;
   tabIndex: number;
@@ -191,6 +206,8 @@ function TabSection({
             onOpenSettings={onOpenSettings}
             onAddEntry={onAddEntry}
             repoPaths={repoPaths}
+            frontmatterCache={frontmatterCache}
+            frontmatterLoaded={frontmatterLoaded}
           />
         ))}
       </div>
@@ -208,6 +225,8 @@ function GroupSection({
   onOpenSettings,
   onAddEntry,
   repoPaths,
+  frontmatterCache,
+  frontmatterLoaded,
 }: {
   group: Group;
   indent: number;
@@ -265,6 +284,8 @@ function GroupSection({
               onOpenSettings={onOpenSettings}
               onAddEntry={onAddEntry}
               repoPaths={repoPaths}
+              frontmatterCache={frontmatterCache}
+              frontmatterLoaded={frontmatterLoaded}
             />
           ))}
         </div>
@@ -283,6 +304,8 @@ function PageOrGroup({
   onOpenSettings,
   onAddEntry,
   repoPaths,
+  frontmatterCache,
+  frontmatterLoaded,
 }: {
   entry: PageEntry;
   indent: number;
@@ -300,17 +323,35 @@ function PageOrGroup({
         onOpenSettings={onOpenSettings}
         onAddEntry={onAddEntry}
         repoPaths={repoPaths}
+        frontmatterCache={frontmatterCache}
+        frontmatterLoaded={frontmatterLoaded}
       />
     );
   }
   const filePath = pageEntryToFilePath(entry);
   const isSelected = filePath !== null && filePath === selectedPath;
-  const title =
+
+  // Frontmatter is the source of truth per Mintlify; docs.json values are
+  // legacy fallbacks. `hidden` removes the row entirely.
+  const fm = filePath ? frontmatterCache?.[filePath] ?? null : null;
+  if (fm && fm.hidden === true) return null;
+
+  const fmSidebarTitle = typeof fm?.sidebarTitle === 'string' ? fm.sidebarTitle : null;
+  const fmTitle = typeof fm?.title === 'string' ? fm.title : null;
+  const fmIcon = typeof fm?.icon === 'string' ? fm.icon : null;
+
+  const slugTitle =
     typeof entry === 'string'
       ? defaultPageTitle(entry)
-      : entry.sidebarTitle ?? (entry.page ? defaultPageTitle(entry.page) : 'Untitled');
-  const icon = isPageObject(entry) ? entry.icon : undefined;
-  const hasIcon = !!iconNameOf(icon);
+      : entry.page
+        ? defaultPageTitle(entry.page)
+        : 'Untitled';
+  const docsObjTitle = isPageObject(entry) ? entry.sidebarTitle : undefined;
+  const title = fmSidebarTitle ?? fmTitle ?? docsObjTitle ?? slugTitle;
+
+  const docsObjIcon = isPageObject(entry) ? entry.icon : undefined;
+  const iconValue = fmIcon ?? docsObjIcon;
+  const hasIcon = !!iconNameOf(iconValue);
 
   // Page settings keys prefer file path so settings persist across renders
   // even when the docs.json position shifts.
@@ -338,7 +379,7 @@ function PageOrGroup({
         />
       }
     >
-      {hasIcon ? <NavIcon icon={icon} fallback={null} /> : null}
+      {hasIcon ? <NavIcon icon={iconValue} fallback={null} /> : null}
       <Title>{title}</Title>
     </Row>
   );

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type {
   BundledLanguage,
   BundledTheme,
@@ -37,19 +37,32 @@ interface SourceEditorProps {
 }
 
 /**
- * Editable source view with MDX syntax highlighting.
+ * Editable source view with MDX syntax highlighting and a GitHub-style
+ * line-number gutter.
  *
  * The textarea is the source of truth — its caret + selection drive editing.
  * A `<pre>` rendered via shiki is positioned underneath; the textarea text
  * is transparent (`color: transparent`), so the user sees the highlighted
- * pre but interacts with the textarea. Both must share identical font
- * metrics — same family, size, line-height, and tab-size.
+ * pre but interacts with the textarea. The gutter is a third overlay on the
+ * left, scroll-synced with the textarea so each number tracks its row.
+ *
+ * All three layers must share identical font metrics — same family, size,
+ * line-height, and tab-size — or the gutter drifts as the file scrolls.
  */
 export function SourceEditor({ value, onChange, className }: SourceEditorProps) {
   const [html, setHtml] = useState<string>('');
+  const [activeLine, setActiveLine] = useState(1);
   const isDark = useDarkMode();
   const taRef = useRef<HTMLTextAreaElement>(null);
   const preRef = useRef<HTMLPreElement>(null);
+  const gutterRef = useRef<HTMLDivElement>(null);
+
+  const lineCount = useMemo(() => {
+    if (!value) return 1;
+    // Mirror what GitHub shows: a trailing `\n` produces an empty line N+1.
+    const newlines = (value.match(/\n/g) ?? []).length;
+    return Math.max(1, newlines + (value.endsWith('\n') ? 1 : 1));
+  }, [value]);
 
   useEffect(() => {
     let cancelled = false;
@@ -69,60 +82,105 @@ export function SourceEditor({ value, onChange, className }: SourceEditorProps) 
     };
   }, [value, isDark]);
 
-  // Sync the pre's scroll position with the textarea's so highlighting
-  // stays aligned with the caret when the content is longer than the view.
+  // Sync the pre + gutter scroll positions with the textarea's so the
+  // highlighting and line numbers stay aligned with the caret.
   const onScroll = () => {
-    if (!taRef.current || !preRef.current) return;
-    preRef.current.scrollTop = taRef.current.scrollTop;
-    preRef.current.scrollLeft = taRef.current.scrollLeft;
+    const ta = taRef.current;
+    if (!ta) return;
+    if (preRef.current) {
+      preRef.current.scrollTop = ta.scrollTop;
+      preRef.current.scrollLeft = ta.scrollLeft;
+    }
+    if (gutterRef.current) {
+      gutterRef.current.scrollTop = ta.scrollTop;
+    }
+  };
+
+  const onSelectionChange = () => {
+    const ta = taRef.current;
+    if (!ta) return;
+    const before = value.slice(0, ta.selectionStart);
+    const line = (before.match(/\n/g) ?? []).length + 1;
+    setActiveLine(line);
   };
 
   const editable = !!onChange;
+  const gutterWidth = `${Math.max(2, String(lineCount).length)}ch`;
 
   return (
     <div
       className={cn(
-        'relative h-full w-full overflow-hidden bg-background',
+        'relative flex h-full w-full overflow-hidden bg-background',
         className,
       )}
+      data-component-part="source-editor"
     >
-      {html ? (
-        <pre
-          ref={preRef}
-          aria-hidden="true"
-          className={cn(
-            'mdx-source-pre absolute inset-0 m-0 overflow-auto whitespace-pre p-4 font-mono text-xs leading-relaxed',
-            'pointer-events-none',
-          )}
-          dangerouslySetInnerHTML={{ __html: html }}
-        />
-      ) : (
-        <pre
-          ref={preRef}
-          aria-hidden="true"
-          className={cn(
-            'mdx-source-pre absolute inset-0 m-0 overflow-auto whitespace-pre p-4 font-mono text-xs leading-relaxed text-foreground/90',
-            'pointer-events-none',
-          )}
-        >
-          {value}
-        </pre>
-      )}
-      <textarea
-        ref={taRef}
-        value={value}
-        onChange={(e) => onChange?.(e.target.value)}
-        onScroll={onScroll}
-        readOnly={!editable}
-        spellCheck={false}
-        autoCorrect="off"
-        autoCapitalize="off"
-        wrap="off"
+      <div
+        ref={gutterRef}
+        aria-hidden="true"
         className={cn(
-          'absolute inset-0 m-0 block h-full w-full resize-none overflow-auto whitespace-pre border-0 bg-transparent p-4 font-mono text-xs leading-relaxed outline-none',
-          'text-transparent caret-foreground selection:bg-primary/30 selection:text-foreground',
+          'mdx-source-gutter pointer-events-none shrink-0 select-none overflow-hidden border-r border-border/40 py-4 pl-3 pr-2 font-mono text-xs leading-relaxed text-muted-foreground/60',
         )}
-      />
+        style={{ width: `calc(${gutterWidth} + 1.25rem)` }}
+      >
+        {Array.from({ length: lineCount }).map((_, i) => {
+          const n = i + 1;
+          return (
+            <div
+              key={n}
+              className={cn(
+                'text-right tabular-nums',
+                n === activeLine && 'text-foreground',
+              )}
+              style={{ width: gutterWidth }}
+            >
+              {n}
+            </div>
+          );
+        })}
+      </div>
+      <div className="relative flex-1 overflow-hidden">
+        {html ? (
+          <pre
+            ref={preRef}
+            aria-hidden="true"
+            className={cn(
+              'mdx-source-pre absolute inset-0 m-0 overflow-auto whitespace-pre py-4 pr-4 pl-2 font-mono text-xs leading-relaxed',
+              'pointer-events-none',
+            )}
+            dangerouslySetInnerHTML={{ __html: html }}
+          />
+        ) : (
+          <pre
+            ref={preRef}
+            aria-hidden="true"
+            className={cn(
+              'mdx-source-pre absolute inset-0 m-0 overflow-auto whitespace-pre py-4 pr-4 pl-2 font-mono text-xs leading-relaxed text-foreground/90',
+              'pointer-events-none',
+            )}
+          >
+            {value}
+          </pre>
+        )}
+        <textarea
+          ref={taRef}
+          value={value}
+          onChange={(e) => onChange?.(e.target.value)}
+          onScroll={onScroll}
+          onSelect={onSelectionChange}
+          onKeyUp={onSelectionChange}
+          onClick={onSelectionChange}
+          readOnly={!editable}
+          spellCheck={false}
+          autoCorrect="off"
+          autoCapitalize="off"
+          wrap="off"
+          className={cn(
+            'absolute inset-0 m-0 block h-full w-full resize-none overflow-auto whitespace-pre border-0 bg-transparent py-4 pr-4 pl-2 font-mono text-xs leading-relaxed outline-none',
+            'text-transparent caret-foreground selection:bg-primary/30 selection:text-foreground',
+          )}
+        />
+      </div>
     </div>
   );
 }

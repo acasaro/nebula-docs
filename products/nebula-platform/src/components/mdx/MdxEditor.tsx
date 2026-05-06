@@ -1,9 +1,10 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { EditorContent, useEditor } from '@tiptap/react';
 import { StarterKit } from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
 import { mdxToTiptapDoc } from '@/lib/mdx/mdastToTiptap';
 import { tiptapDocToMdx } from '@/lib/mdx/tiptapToMdx';
+import { splitFrontmatter } from '@/lib/frontmatter';
 import { cn } from '@/lib/utils';
 import { EditorWithBlockHandle } from './BlockHandle';
 import { MdxCallout } from './MdxCalloutNode';
@@ -41,6 +42,18 @@ export function MdxEditor({
   className,
 }: MdxEditorProps) {
   const initialDoc = useMemo(() => mdxToTiptapDoc(source), [source]);
+
+  // The Tiptap parser drops yaml frontmatter — the editor's doc is body-only.
+  // To stop the editor's onUpdate from clobbering frontmatter the settings
+  // panel just wrote, remember the current frontmatter block and re-attach
+  // it on every emission. The settings panel updates the file's draft via a
+  // separate path; we sync the latest frontmatter into this ref through a
+  // `data-frontmatter` attribute the host can refresh without re-mounting
+  // the editor (handled by RepoBrowser's `handleContentChange`).
+  const frontmatterRef = useRef<string>(extractFrontmatterBlock(source));
+  useEffect(() => {
+    frontmatterRef.current = extractFrontmatterBlock(source);
+  }, [source]);
 
   const editor = useEditor({
     extensions: [
@@ -107,7 +120,8 @@ export function MdxEditor({
     },
     onUpdate: ({ editor }) => {
       const doc = editor.getJSON() as ReturnType<typeof mdxToTiptapDoc>;
-      onSourceChange?.(tiptapDocToMdx(doc));
+      const body = tiptapDocToMdx(doc);
+      onSourceChange?.(frontmatterRef.current + body);
     },
   });
 
@@ -118,8 +132,40 @@ export function MdxEditor({
     }
   }, [editor]);
 
+  const { frontmatter } = splitFrontmatter(source);
+  const fmTitle =
+    typeof frontmatter?.values.title === 'string'
+      ? frontmatter.values.title
+      : null;
+  const fmDescription =
+    typeof frontmatter?.values.description === 'string'
+      ? frontmatter.values.description
+      : null;
+
   return (
     <div className={cn('mdx-prose mx-auto max-w-3xl py-10', className)}>
+      {fmTitle || fmDescription ? (
+        <header
+          className="mb-8 border-b border-border pb-6 px-16"
+          data-component-part="page-header"
+        >
+          {fmTitle ? (
+            <h1 className="text-3xl font-semibold tracking-tight text-foreground">
+              {fmTitle}
+            </h1>
+          ) : null}
+          {fmDescription ? (
+            <p
+              className={cn(
+                'text-base text-muted-foreground',
+                fmTitle && 'mt-2',
+              )}
+            >
+              {fmDescription}
+            </p>
+          ) : null}
+        </header>
+      ) : null}
       <EditorWithBlockHandle editor={onSourceChange ? editor : null}>
         <div className="px-16">
           <EditorContent editor={editor} />
@@ -133,7 +179,18 @@ export function MdxEditor({
  * Round-trip MDX through the parser and serializer. Used at load time so
  * the stored "original" matches the editor's first emission — without this,
  * any whitespace drift in the serializer would mark a file dirty on open.
+ *
+ * Frontmatter is preserved verbatim — the Tiptap parser drops yaml nodes,
+ * so we splice the original frontmatter block back in front of the
+ * round-tripped body.
  */
 export function normalizeMdx(source: string): string {
-  return tiptapDocToMdx(mdxToTiptapDoc(source));
+  const fmBlock = extractFrontmatterBlock(source);
+  return fmBlock + tiptapDocToMdx(mdxToTiptapDoc(source));
+}
+
+function extractFrontmatterBlock(source: string): string {
+  const split = splitFrontmatter(source);
+  if (!split.frontmatter) return '';
+  return source.slice(0, split.frontmatter.length);
 }

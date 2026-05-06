@@ -5,7 +5,6 @@ import {
   GroupSettingsForm,
   type GroupConfigValues,
   PageSettingsForm,
-  type PageConfigValues,
   type PageFrontmatterValues,
   TabSettingsForm,
   type TabConfigValues,
@@ -213,58 +212,76 @@ function SettingsBody({
     return <GroupSettingsForm values={values} onChange={onChange} />;
   }
 
-  // page
+  // page — Mintlify model: every page setting lives in frontmatter; docs.json
+  // only carries the slug. Legacy PageObject overrides in docs.json are
+  // honoured as read-side fallbacks; edits always write through to the MDX
+  // frontmatter so the next save migrates the value forward.
   const pageObj = resolved.pageObject;
-  const stringEntry = !pageObj && typeof resolved.page === 'string'
-    ? resolved.page
-    : null;
+  const stringEntry =
+    !pageObj && typeof resolved.page === 'string' ? resolved.page : null;
   const slug = pageObj?.page ?? stringEntry ?? '';
-  const configValues: PageConfigValues = {
-    externalUrl: pageObj?.externalUrl ?? '',
-    icon: docsIconToForm(pageObj?.icon),
-    sidebarTitle: pageObj?.sidebarTitle ?? '',
-    tag: pageObj?.tag ?? '',
-    hidden: !!pageObj?.hidden,
-  };
   const fmParsed =
     pageDraft && pageDraft.path === resolved.filePath
       ? splitFrontmatter(pageDraft.content).frontmatter
       : null;
-  const fmValues: PageFrontmatterValues = {
-    title: stringValue(fmParsed?.values.title) ?? '',
-    description: stringValue(fmParsed?.values.description) ?? pageObj?.description ?? '',
-    ogImage: stringValue(fmParsed?.values.ogImage) ?? pageObj?.ogImage ?? '',
-    keywords: arrayValue(fmParsed?.values.keywords) ?? pageObj?.keywords ?? [],
-    mode: stringValue(fmParsed?.values.mode) ?? pageObj?.mode ?? 'default',
+  const fm = fmParsed?.values ?? {};
+
+  const values: PageFrontmatterValues = {
+    title: stringValue(fm.title) ?? '',
+    description:
+      stringValue(fm.description) ?? pageObj?.description ?? '',
+    sidebarTitle:
+      stringValue(fm.sidebarTitle) ?? pageObj?.sidebarTitle ?? '',
+    icon: docsIconToForm(
+      stringValue(fm.icon) ?? (pageObj?.icon as DocsIconValue | undefined),
+    ),
+    tag: stringValue(fm.tag) ?? pageObj?.tag ?? '',
+    hidden: boolValue(fm.hidden) ?? !!pageObj?.hidden,
+    mode: stringValue(fm.mode) ?? pageObj?.mode ?? 'default',
+    url: stringValue(fm.url) ?? pageObj?.externalUrl ?? '',
+    keywords: arrayValue(fm.keywords) ?? pageObj?.keywords ?? [],
+    ogImage: stringValue(fm.ogImage) ?? pageObj?.ogImage ?? '',
   };
-  const onConfigPatch = (patch: Partial<PageConfigValues>) => {
-    onConfigChange((config) =>
-      replaceResolvedEntry(config, settingsKey, (e) =>
-        e.kind === 'page' ? mergePage(e.page, patch) : (e as ResolvedEntry),
-      ),
-    );
-  };
-  const onFmPatch = (patch: Partial<PageFrontmatterValues>) => {
+
+  const onPatch = (patch: Partial<PageFrontmatterValues>) => {
     if (!pageDraft) return;
-    onFrontmatterChange(pageDraft.path, patch);
+    const out: Record<string, unknown> = {};
+    for (const [key, raw] of Object.entries(patch)) {
+      if (key === 'icon') {
+        const next = formIconToFrontmatterString(raw as PageFrontmatterValues['icon']);
+        out.icon = next;
+        continue;
+      }
+      out[key] = raw === '' ? null : raw;
+    }
+    onFrontmatterChange(pageDraft.path, out);
   };
-  return (
-    <PageSettingsForm
-      slug={slug}
-      configValues={configValues}
-      frontmatterValues={fmValues}
-      onConfigChange={onConfigPatch}
-      onFrontmatterChange={onFmPatch}
-    />
-  );
+  return <PageSettingsForm slug={slug} values={values} onChange={onPatch} />;
 }
 
 function stringValue(v: unknown): string | null {
   return typeof v === 'string' ? v : null;
 }
 
+function boolValue(v: unknown): boolean | null {
+  return typeof v === 'boolean' ? v : null;
+}
+
+function numberOrEmpty(v: unknown): string {
+  if (typeof v === 'number') return String(v);
+  if (typeof v === 'string') return v;
+  return '';
+}
+
 function arrayValue(v: unknown): string[] | null {
   return Array.isArray(v) ? v.map(String) : null;
+}
+
+function formIconToFrontmatterString(
+  icon: PageFrontmatterValues['icon'],
+): string | null {
+  if (!icon || !icon.icon) return null;
+  return icon.icon;
 }
 
 function docsIconToForm(icon: DocsIconValue | undefined): FormIconValue {
@@ -316,42 +333,6 @@ function mergeGroup(group: Group, patch: Partial<GroupConfigValues>): Group {
   return next;
 }
 
-function mergePage(
-  page: string | Group | PageObject,
-  patch: Partial<PageConfigValues>,
-): string | PageObject {
-  // Normalize string entries to objects so we can carry config-level overrides.
-  const base: PageObject =
-    typeof page === 'string' ? { page } : 'group' in page ? { page: '' } : page;
-  const next: PageObject = { ...base };
-  if (patch.externalUrl !== undefined)
-    next.externalUrl = patch.externalUrl ? patch.externalUrl : undefined;
-  if (patch.icon !== undefined) next.icon = formIconToDocs(patch.icon);
-  if (patch.sidebarTitle !== undefined)
-    next.sidebarTitle = patch.sidebarTitle ? patch.sidebarTitle : undefined;
-  if (patch.tag !== undefined) next.tag = patch.tag.trim() || undefined;
-  if (patch.hidden !== undefined) next.hidden = patch.hidden || undefined;
-  // If the entry was a plain string and no overrides remain, keep it a string
-  // to preserve diff cleanliness.
-  if (
-    typeof page === 'string' &&
-    !hasAnyDefinedField(next as unknown as Record<string, unknown>, ['page'])
-  ) {
-    return page;
-  }
-  return next;
-}
-
-function hasAnyDefinedField(
-  obj: Record<string, unknown>,
-  exceptKeys: string[],
-): boolean {
-  for (const [k, v] of Object.entries(obj)) {
-    if (exceptKeys.includes(k)) continue;
-    if (v !== undefined && v !== null && v !== '') return true;
-  }
-  return false;
-}
 
 function replaceResolvedEntry(
   config: DocsConfig,

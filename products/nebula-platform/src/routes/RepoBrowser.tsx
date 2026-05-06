@@ -3,6 +3,7 @@ import { FileTypeIcon, isBinaryFile } from "@/components/FileTypeIcon";
 import { useHeaderLeading, useHeaderSlot } from "@/components/HeaderSlot";
 import { MdxEditor, normalizeMdx } from "@/components/mdx/MdxEditor";
 import { NavSettingsPanel } from "@/components/NavSettingsPanel";
+import { NavTreeSkeleton } from "@/components/NavTreeSkeleton";
 import { SourceEditor } from "@/components/SourceEditor";
 import {
   NavTree,
@@ -16,6 +17,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useDocsConfig, type DocsConfig, type Group } from "@/lib/docsConfig";
 import { appendToGroup, deleteEntry, findEntry } from "@/lib/docsConfigOps";
 import { applyFrontmatterPatch } from "@/lib/frontmatter";
+import { useFrontmatterCache } from "@/lib/frontmatterCache";
 import {
   commitFiles,
   createBranch,
@@ -376,6 +378,19 @@ export function RepoBrowser() {
     owner: active?.owner ?? null,
     repo: active?.repo ?? null,
     ref: currentBranch,
+  });
+
+  const mdxPaths = useMemo(
+    () => allPaths.filter((p) => p.endsWith(".mdx") || p.endsWith(".md")),
+    [allPaths],
+  );
+  const frontmatterCacheState = useFrontmatterCache({
+    installationId: active?.installationId ?? null,
+    owner: active?.owner ?? null,
+    repo: active?.repo ?? null,
+    ref: currentBranch,
+    paths: mdxPaths,
+    knownFiles: files,
   });
 
   // Live in-memory docs config — derived from `files['docs.json'].draft` once
@@ -878,7 +893,7 @@ export function RepoBrowser() {
           </TabsList>
           <TabsContent value='navigation' className='flex-1 overflow-y-auto'>
             {docsConfigState.loading ? (
-              <p className='px-3 py-2 text-sm text-muted-foreground'>Loading navigation…</p>
+              <NavTreeSkeleton />
             ) : docsConfigState.error ? (
               <p className='px-3 py-2 text-sm text-destructive'>{docsConfigState.error}</p>
             ) : liveDocsConfig ? (
@@ -890,6 +905,8 @@ export function RepoBrowser() {
                 onOpenSettings={setSettingsOpen}
                 onAddEntry={handleAddEntry}
                 repoPaths={allPaths}
+                frontmatterCache={frontmatterCacheState.cache}
+                frontmatterLoaded={frontmatterCacheState.loaded}
               />
             ) : (
               <FileTreePanel

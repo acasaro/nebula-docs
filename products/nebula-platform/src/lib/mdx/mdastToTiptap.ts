@@ -16,6 +16,7 @@ import type {
 } from 'mdast';
 import type { MdxJsxFlowElement, MdxJsxTextElement } from 'mdast-util-mdx';
 import { parseMdx } from '@nebula-docs/mdx';
+import { splitFrontmatter } from '@/lib/frontmatter';
 
 const CALLOUT_NAMES = new Set([
   'Note',
@@ -77,7 +78,23 @@ export interface TiptapDoc {
 }
 
 export function mdxToTiptapDoc(source: string): TiptapDoc {
-  const tree: Root = parseMdx(source);
+  let tree: Root;
+  try {
+    tree = parseMdx(source);
+  } catch {
+    // Files with malformed JSX (e.g. 4-backtick fences containing
+    // unclosed-looking tags) trip @mdx-js/mdx's parser. Don't unmount the
+    // editor over it — surface the file as a single opaque MdxRaw block so
+    // the user can still see, switch to source mode, and fix it by hand.
+    // Strip frontmatter so MdxEditor's onUpdate path doesn't double-prepend
+    // it (it always re-attaches the current frontmatter to the emitted body).
+    const split = splitFrontmatter(source);
+    const body = split.frontmatter ? split.body : source;
+    return {
+      type: 'doc',
+      content: [{ type: 'mdxRaw', attrs: { source: body } }],
+    };
+  }
   const content: TiptapNode[] = [];
   for (const node of tree.children) {
     const converted = convertBlock(node, source);

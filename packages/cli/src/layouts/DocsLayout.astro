@@ -3,17 +3,27 @@ import '../styles/global.css';
 import Sidebar from '../components/Sidebar.astro';
 import Navbar from '../components/Navbar.astro';
 import Footer from '../components/Footer.astro';
+import TocSidebar from '../components/TocSidebar.astro';
 import { loadDocsConfig, findGroupForSlug } from '../runtime/lib/loadDocsConfig.mjs';
+
+interface Heading {
+  depth: number;
+  slug: string;
+  text: string;
+}
 
 interface Props {
   title: string;
   description?: string;
   currentSlug: string;
+  headings?: Heading[];
 }
 
-const { title, description, currentSlug } = Astro.props as Props;
+const { title, description, currentSlug, headings = [] } = Astro.props as Props;
 const docs = loadDocsConfig();
 const eyebrow = findGroupForSlug(docs, currentSlug);
+const tocHeadings = headings.filter((h) => h.depth === 2 || h.depth === 3);
+const hasToc = tocHeadings.length > 0;
 ---
 <!doctype html>
 <html lang="en">
@@ -25,7 +35,7 @@ const eyebrow = findGroupForSlug(docs, currentSlug);
   </head>
   <body>
     <Navbar docs={docs} currentSlug={currentSlug} />
-    <div class="nebula-shell">
+    <div class={`nebula-shell ${hasToc ? 'has-toc' : ''}`}>
       <aside class="nebula-aside">
         <Sidebar docs={docs} currentSlug={currentSlug} />
       </aside>
@@ -44,8 +54,17 @@ const eyebrow = findGroupForSlug(docs, currentSlug);
         </article>
         <Footer docs={docs} />
       </main>
+      {hasToc && (
+        <aside class="nebula-toc-aside">
+          <TocSidebar headings={headings} />
+        </aside>
+      )}
     </div>
     <style>
+      /* Three-column layout when there's a TOC, two-column otherwise. The
+         right rail is fixed-width (12rem) like the left, so the article column
+         (`.nebula-main`) flexes between them. The 5rem gap matches the
+         left-side gap so the article reads as the centered focus column. */
       .nebula-shell {
         display: grid;
         grid-template-columns: 16rem minmax(0, 1fr);
@@ -54,18 +73,38 @@ const eyebrow = findGroupForSlug(docs, currentSlug);
         gap: 4rem;
         padding: 1.5rem 2rem;
       }
-      .nebula-aside {
+      .nebula-shell.has-toc {
+        grid-template-columns: 16rem minmax(0, 1fr) 12rem;
+        gap: 4rem 5rem;
+        max-width: 90rem;
+      }
+      /* Sticky offset = navbar (top row 53px + bottom row 41px = 94px) +
+         24px breathing room. The Navbar is the sticky element above us, so
+         our sticky top has to clear it; otherwise the asides hide behind it
+         and only their bottom slice is visible. */
+      .nebula-aside,
+      .nebula-toc-aside {
         position: sticky;
-        top: 1.5rem;
+        top: calc(94px + 1.5rem);
         align-self: start;
-        max-height: calc(100vh - 3rem);
+        max-height: calc(100vh - 94px - 3rem);
         overflow-y: auto;
+      }
+      .nebula-aside {
         padding-right: 1rem;
       }
       .nebula-main {
         min-width: 0;
         max-width: 48rem;
         padding-bottom: 4rem;
+      }
+      @media (max-width: 1180px) {
+        .nebula-shell.has-toc {
+          grid-template-columns: 16rem minmax(0, 1fr);
+        }
+        .nebula-toc-aside {
+          display: none;
+        }
       }
       @media (max-width: 900px) {
         .nebula-shell {

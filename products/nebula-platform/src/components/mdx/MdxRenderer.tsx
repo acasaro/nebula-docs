@@ -33,10 +33,12 @@ interface MdxRendererProps {
 }
 
 export function MdxRenderer({ source, className }: MdxRendererProps) {
-  const tree = useMemo(() => parseMdx(source), [source]);
+  const parsed = useMemo(() => parseMdxSafe(source), [source]);
   return (
     <article className={cn('mdx-prose mx-auto max-w-3xl px-8 py-10', className)}>
-      {renderChildren(tree.children, 'root')}
+      {parsed.tree
+        ? renderChildren(parsed.tree.children, 'root')
+        : renderParseFailure(source, parsed.failure)}
     </article>
   );
 }
@@ -47,8 +49,163 @@ export function MdxRenderer({ source, className }: MdxRendererProps) {
  * Steps, etc.) at full fidelity inside the Tiptap surface.
  */
 export function MdxFragment({ source }: { source: string }) {
-  const tree = useMemo(() => parseMdx(source), [source]);
-  return <>{renderChildren(tree.children, 'fragment')}</>;
+  const parsed = useMemo(() => parseMdxSafe(source), [source]);
+  if (!parsed.tree) return <>{renderParseFailure(source, parsed.failure)}</>;
+  return <>{renderChildren(parsed.tree.children, 'fragment')}</>;
+}
+
+interface ParseFailure {
+  message: string;
+  line?: number;
+  column?: number;
+  hint?: string;
+  excerpt?: string;
+}
+
+interface ParsedSource {
+  tree: ReturnType<typeof parseMdx> | null;
+  failure: ParseFailure | null;
+}
+
+function parseMdxSafe(source: string): ParsedSource {
+  try {
+    return { tree: parseMdx(source), failure: null };
+  } catch (err) {
+    return { tree: null, failure: analyzeParseError(err, source) };
+  }
+}
+
+function analyzeParseError(err: unknown, source: string): ParseFailure {
+  // mdx-js's `VFileMessage` looks like an Error with a `place` (point or
+  // range). The thrown shape varies across versions, so be lenient.
+  const e = err as
+    | (Error & {
+        line?: number;
+        column?: number;
+        place?:
+          | { line?: number; column?: number }
+          | { start?: { line?: number; column?: number } };
+        reason?: string;
+      })
+    | undefined;
+  const rawMessage = e?.reason ?? e?.message ?? 'MDX parse error';
+  const stripped = rawMessage.replace(/^\d+:\d+(?:-\d+:\d+)?:\s*/, '');
+  let line = e?.line ?? extractLine(e?.place);
+  let column = e?.column ?? extractColumn(e?.place);
+  if (line == null) {
+    const m = (e?.message ?? '').match(/^(\d+):(\d+)/);
+    if (m) {
+      line = Number(m[1]);
+      column = Number(m[2]);
+    }
+  }
+
+  let hint: string | undefined;
+  if (/closing slash/i.test(stripped)) {
+    hint =
+      "Looks like a JSX closing tag (`</…>`) without a matching opener. A common cause is a 4-backtick fenced code block (```` ```` ````) containing JSX-like syntax — Mintlify uses this pattern to show 'code that demos JSX', but @mdx-js/mdx still parses the inner tags. Replace the 4-backticks with 3-backticks and indent inner code blocks, or escape the JSX with a backslash.";
+  } else if (/character|expression/i.test(stripped)) {
+    hint =
+      'A JSX expression has unbalanced braces (`{`/`}`) or unsupported syntax. Wrap literal `{` / `}` in `&#123;` / `&#125;` if intended as text.';
+  } else if (/Unexpected end/i.test(stripped)) {
+    hint = 'A JSX tag, expression, or fenced block was opened but never closed.';
+  }
+
+  let excerpt: string | undefined;
+  if (line != null) {
+    const lines = source.split('\n');
+    const start = Math.max(0, line - 3);
+    const end = Math.min(lines.length, line + 2);
+    excerpt = lines
+      .slice(start, end)
+      .map((text, i) => {
+        const ln = start + i + 1;
+        const marker = ln === line ? '>' : ' ';
+        return `${marker} ${ln.toString().padStart(4)} │ ${text}`;
+      })
+      .join('\n');
+  }
+
+  return { message: stripped, line, column, hint, excerpt };
+}
+
+function extractLine(
+  place: ParseFailure | { line?: number; start?: { line?: number } } | undefined,
+): number | undefined {
+  if (!place || typeof place !== 'object') return undefined;
+  if ('line' in place && typeof place.line === 'number') return place.line;
+  if ('start' in place && place.start && typeof place.start.line === 'number') {
+    return place.start.line;
+  }
+  return undefined;
+}
+
+function extractColumn(
+  place:
+    | ParseFailure
+    | { column?: number; start?: { column?: number } }
+    | undefined,
+): number | undefined {
+  if (!place || typeof place !== 'object') return undefined;
+  if ('column' in place && typeof place.column === 'number') return place.column;
+  if ('start' in place && place.start && typeof place.start.column === 'number') {
+    return place.start.column;
+  }
+  return undefined;
+}
+
+function renderParseFailure(
+  source: string,
+  failure: ParseFailure | null,
+): ReactNode {
+  if (!failure) {
+    return (
+      <pre
+        className="my-4 overflow-x-auto rounded-md border border-destructive/30 bg-destructive/5 p-4 font-mono text-xs leading-relaxed text-foreground/90"
+        data-component-part="parse-failure"
+      >
+        Could not parse this section as MDX. Edit the source below to fix.
+        {'\n\n'}
+        {source}
+      </pre>
+    );
+  }
+  return (
+    <div
+      className="my-4 rounded-md border border-destructive/30 bg-destructive/5 p-4 text-sm"
+      data-component-part="parse-failure"
+    >
+      <div className="font-semibold text-destructive">MDX parse error</div>
+      <div className="mt-1 font-mono text-xs text-foreground/80">
+        {failure.message}
+      </div>
+      {failure.line != null ? (
+        <div className="mt-1 font-mono text-xs text-muted-foreground">
+          Line {failure.line}
+          {failure.column != null ? `, column ${failure.column}` : null}
+        </div>
+      ) : null}
+      {failure.excerpt ? (
+        <pre className="mt-3 overflow-x-auto rounded border border-border/40 bg-background/60 p-3 font-mono text-xs leading-relaxed">
+          {failure.excerpt}
+        </pre>
+      ) : null}
+      {failure.hint ? (
+        <div className="mt-3 rounded border border-border/40 bg-background/60 p-3 text-xs leading-relaxed text-foreground/80">
+          <span className="font-semibold text-foreground">Hint: </span>
+          {failure.hint}
+        </div>
+      ) : null}
+      <details className="mt-3">
+        <summary className="cursor-pointer text-xs text-muted-foreground hover:text-foreground">
+          View full source
+        </summary>
+        <pre className="mt-2 overflow-x-auto rounded border border-border/40 bg-background/60 p-3 font-mono text-xs leading-relaxed">
+          {source}
+        </pre>
+      </details>
+    </div>
+  );
 }
 
 type AnyNode =

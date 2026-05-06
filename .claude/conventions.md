@@ -1,111 +1,125 @@
 # Conventions
 
-Rules for contributors (human and LLM) working in this repo.
+Repo-wide patterns for Nebula Docs work. These apply across `products/nebula/`, `packages/*`, `functions/`, and any new package added to the workspace.
+
+For Platform architecture, see [nebula.md](nebula.md). For SSG architecture, see [nebula-ssg.md](nebula-ssg.md). For the live workstream snapshot, see [status.md](status.md).
 
 ## Hard rules (non-negotiable)
 
 ### No component code in `index.tsx`
+
 Every component folder uses this shape:
+
 ```
 FolderName/
   ExportedName.tsx        ← component, styled parts, logic
-  *.module.css            (if applicable)
   index.ts                ← pure re-export barrel
 ```
+
 The barrel:
+
 ```ts
 export { default } from './ExportedName';
 export * from './ExportedName';
 ```
-**Folder name, `.tsx` filename, and exported component name must all match.** If the component is `export default function NavbarLogo()`, the folder is `NavbarLogo/`, the file is `NavbarLogo.tsx`, and the barrel re-exports `NavbarLogo`. Editor tabs, stack traces, and grep results all show the real component name.
 
-Applies to: `src/components/**`, `src/pages/**`.
+Folder name, `.tsx` filename, and exported component name must all match.
 
-**Exception — `src/theme/**` swizzles.** Docusaurus's swizzle resolver treats the folder path as the module identity (`@theme/Navbar/Logo` ↔ `src/theme/Navbar/Logo/`). Renaming the folder silently falls through to the default theme-classic component. In swizzles:
-- Folder name stays as Docusaurus dictates (`Logo/`, `Layout/`, `Content/`, etc.).
-- `.tsx` filename still matches the exported component name (`NavbarLogo.tsx`, `NavbarLayout.tsx`).
-- `index.ts` barrel still re-exports from the named file.
+Applies to: `products/nebula/src/components/**`, `packages/components/src/**`, future `packages/ssg/**`. The repo currently has zero `index.tsx` files; keep it that way.
 
-Never write `index.tsx`. The repo has zero today; keep it that way.
-
-**Swizzle type imports.** Docusaurus ships `Props` types as ambient `declare module '@theme/X'` augmentations, which get shadowed once you create a local swizzle at that path. Don't write `import type { Props } from '@theme/Navbar/Layout'` inside the swizzle itself — TypeScript can't resolve it. Instead, define and export `Props` locally:
-```ts
-export interface Props {
-  readonly children: ReactNode;
-}
-```
-Match the shape declared in `@docusaurus/theme-classic/src/theme-classic.d.ts`. `@theme-original/*` does not provide these type declarations, so it's not a substitute.
+**Exception — Docusaurus swizzles in `products/docs/src/theme/**`.** Docusaurus's swizzle resolver treats the folder path as the module identity, so the folder name is fixed by Docusaurus (`Logo/`, `Layout/`, etc.), but the `.tsx` filename still matches the exported component (`Logo/NavbarLogo.tsx`). This exception goes away when MCOE migrates onto the SSG.
 
 ### Tokens are frozen
-The data in [src/lib/tokens.ts](../src/lib/tokens.ts) — `mcoeDefaultTokens`, `uhcTokens`, `optumTokens`, and the `ThemeTokens` interface — is the approved design foundation. Do not change color values, add themes, or restructure interface fields. The consumer layer (CSS-var generation, theme switching plumbing, `resolveColor`) is fair game.
 
-### Behavior must be preserved
-Site works today exactly as the user wants. Every refactor is structural. After each change run `pnpm build && pnpm typecheck` and open the dev server. URL changes, visual changes, routing changes, and theme-switch behavior changes require explicit approval — they are not "cleanup."
+The data in `packages/theme/src/themes/{mcoeDefault,uhc,optum}.ts` is the approved foundation. Don't change color values, add themes, or restructure the `ThemeTokens` interface. The consumer layer (CSS-var generation, theme switching plumbing, `applyTokensToDOM()`) is fair game.
 
-## Styling
+### No "Mintlify" in shipped source
 
-Three systems exist — use them in their lane, don't cross streams.
+Shipped code, MDX, READMEs, JSDoc, identifiers, filenames, and commit messages must not contain "Mintlify" or variants ("mintl", "mint-style", "Mintlify-style"). Refer to components by their generic name (`Frame`, `Card`, `Tabs`) or use "Nebula Docs <X>" when disambiguation is needed.
 
-| System | Where | When |
-|---|---|---|
-| `@emotion/styled` via [src/lib/styled.ts](../src/lib/styled.ts) | `src/components/**`, `src/pages/**` | Component-scoped styles. Default choice. |
-| CSS Modules (`*.module.css`) | `src/theme/**` only | Docusaurus swizzle overrides. |
-| Global CSS | [src/css/custom.css](../src/css/custom.css), [src/css/tokens.css](../src/css/tokens.css) | Design tokens + Infima overrides only. No component rules. |
+`.claude/` design docs MAY name Mintlify when factually describing the actual reference being studied (e.g., "patterns drawn from `vendor/mint-docs-ref/`", "inspected the upstream dashboard editor"). What is NOT OK in design docs either: positioning language ("clone of X", "we're like X"). Describe what we're building on its own terms.
 
-Do not introduce Tailwind, vanilla-extract, or inline styles.
+The vendored references at `vendor/mintlify-components/`, `vendor/mint-docs-ref/`, `vendor/mint-starter-docs-template/` keep their original directory names because they're MIT-licensed verbatim copies — renaming would be wrong. Delete them when we no longer need to reference them.
 
-## Imports
-- Use folder-level barrel imports: `from '@components/ui'`, not `from '@components/ui/Card'`.
-- Components live under `src/components/{landing,home,ui,mdx}/`. Pick the right bucket:
-  - `landing/` — full-page landing compositions
-  - `home/` — homepage sections
-  - `ui/` — generic reusable primitives (Card, Badge)
-  - `mdx/` — components rendered inside MDX content
+### Brand: "Nebula Docs"
 
-## Landing pages
-When adding a new landing, **do not copy** an existing `*Landing.tsx`. Compose from [src/components/landing/primitives.ts](../src/components/landing/primitives.ts):
-```tsx
-import {
-  HeroWrapper, HeroInner, HeroTitle, HeroSubtitle,
-  PageBody, Content, SectionTitle, SectionSubtitle,
-} from '../primitives';
+- The editor SPA → "Nebula Docs Platform" (default) or "Nebula Docs Studio" (alternative).
+- The renderer → "Nebula Docs SSG".
+- The product family → "Nebula Docs".
+- Never "Nebula CMS".
 
-export function MyLanding() {
-  return (
-    <>
-      <HeroWrapper>
-        <HeroInner>
-          <HeroTitle>…</HeroTitle>
-          <HeroSubtitle>…</HeroSubtitle>
-        </HeroInner>
-      </HeroWrapper>
-      <PageBody><Content>{/* sections */}</Content></PageBody>
-    </>
-  );
-}
+Generic technical terms ("runtime CMS" describing an architectural pattern) are fine — the rule targets brand naming, not category nouns.
+
+### No `.env.example` files
+
+Use gitignored `.env` files only. The unified root `.env` is the single source for shared values (`FIREBASE_*`, `NEBULA_*`, `FIRESTORE_*`). Don't commit env-file templates.
+
+If you need to document env vars, do it in the gitignored `.env` itself or in inline source comments at the consumer.
+
+### Behavior preservation on `products/docs/`
+
+The legacy MCOE Docusaurus site at `products/docs/` functions exactly as the user wants today. Refactors there must be behavior-preserving. After non-trivial changes, run `pnpm --filter @mcoe/docs typecheck && pnpm --filter @mcoe/docs build` and treat broken-link warnings as errors.
+
+The same standard applies to the upcoming SSG migration: visual fidelity with the existing Docusaurus output is the cutover gate.
+
+### GitHub host is Enterprise Cloud
+
+UHG's GitHub is GitHub Enterprise Cloud at `github.com/<org>`, not GHES. Don't propose `baseUrl: 'https://<host>/api/v3'` overrides on Octokit. `api.github.com` is correct for all clients.
+
+### Firebase secrets via `--data-file`
+
+Set Firebase Functions secrets using `--data-file=/absolute/path`, never interactive paste. Matters most for the GitHub App PEM private keys.
+
+```bash
+firebase functions:secrets:set <NAME> --data-file=/absolute/path
 ```
-If your hero shape genuinely differs (centered, split layout, alternate bg), spread `heroPatternBackground` into a local variant — do not copy the gradient string. Put the landing in its own folder per the component convention: `MyLanding/MyLanding.tsx` + `index.ts`.
 
-## Sidebars
-All sidebar files live in [sidebars/](../sidebars/).
-- `developers.ts` — hand-curated (category grouping, nested structure, HTML quick-links block).
-- `about.ts`, `product.ts`, `resources.ts` — thin wrappers around `autoSidebar(name)` from `shared.ts`. Drop a doc in the corresponding `docs/<name>/` folder and it appears automatically.
-- Adding a new doc instance: create `docs/<new>/`, add `sidebars/<new>.ts` (use `autoSidebar("<new>")` if autogenerated, or hand-curate), and register the plugin in [src/config/doc-instances.ts](../src/config/doc-instances.ts).
+## Conventions
 
-## TypeScript
-- `strict: true` is on. No `any` anywhere in first-party code — use `unknown` and narrow, use `never` for "accepts anything" positions, or use proper generics.
+### Workspace deps
+
+- Workspace deps use `"@nebula-docs/<name>": "workspace:*"`. Never reach across `products/*` for code; share via `packages/*`.
+- The `@mcoe/docs` package is a special case (the legacy Docusaurus site that becomes tenant zero of the SSG). Everything else is `@nebula-docs/*`.
+- Adding a workspace dep: `pnpm --filter @nebula-docs/<consumer> add @nebula-docs/<dep>` (uses `workspace:*` automatically when target is local).
+
+### TypeScript
+
+- `strict: true` is on across the workspace.
+- No `any` in first-party code. Use `unknown` and narrow, use `never` for "accepts anything" positions, or use proper generics.
 - Type public component props explicitly; internal helpers can infer.
-- `pnpm typecheck` currently surfaces ~20 pre-existing errors in React 19 type shims and untouched `<Layout title>` usages. Keep that count from climbing; don't land new ones.
 
-## Commits / PRs
-- Run `pnpm typecheck && pnpm build` before pushing (CI does not run these yet).
-- `pnpm build` surfaces Docusaurus broken-link warnings — treat them as errors.
+### Styling
 
-## Firebase / Analytics
-- Config in [.env](../.env) (Firebase keys, GA measurement ID). Read via `customFields` in `docusaurus.config.ts`.
-- Only use for UX analytics. Do not add PII collection or other Firebase services (Auth, Firestore) without a scope discussion — this is a public docs site.
+Each package has one styling system; don't cross streams.
 
-## Docusaurus swizzles
-Every file under `src/theme/` shadows a default Docusaurus component and creates upgrade risk. Before adding a new swizzle:
-1. Check if themeConfig or CSS variables can achieve the same result.
-2. If swizzling is necessary, use `@docusaurus/theme-classic` as the reference and copy the latest version, not an older one.
+| Package | System |
+|---|---|
+| `products/nebula/` | Tailwind v4 only |
+| `packages/components/` | Tailwind v4 only |
+| `packages/ssg/` (planned) | Tailwind v4 + emotion (where existing components use it) + token CSS vars |
+| `products/docs/` (legacy) | emotion + CSS modules (swizzles) + global tokens — three systems scoped by location |
+
+### Imports
+
+- Path aliases over deep relative paths (`@/lib/utils`, not `../../lib/utils`).
+- Folder-level barrels (`from '@/components/dashboard'`, not `from '@/components/dashboard/DashboardHomePage'`).
+
+### MDX components
+
+Add new MDX block components to `packages/components/src/<name>/` and add a Zod schema to `packages/schemas/src/`. Both consumers (the Platform's `MdxEditor` and the SSG) read from the same package.
+
+For block types that need an editor NodeView (rich Tiptap UI) in addition to the renderer, add a `Mdx<Name>Node.tsx` under `products/nebula/src/components/mdx/` and register it in the Tiptap `extensions` list. Components without a NodeView round-trip via `MdxRaw` (preserves source verbatim, no editing UI).
+
+### Function deploys
+
+Manual via `pnpm --filter @nebula-docs/functions deploy:dev` or `deploy:prod` from a workstation. Never use the unfiltered `deploy` script — it touches both env sets and risks deploying local dev code into the prod function slots. CI deploy of functions is not yet wired (`deploy-functions.yml` is a stub).
+
+### Git, commits, PRs
+
+- Run `pnpm --filter <package> typecheck && pnpm --filter <package> build` before pushing. CI does not run these.
+- Don't commit changes you weren't asked to commit. If unclear, ask first.
+- Branches: `feat/<topic>`, `fix/<topic>`, `docs/<topic>`. PRs target `main`.
+
+### ScheduleWakeup
+
+Don't use `ScheduleWakeup` as a general "sleep". It's only for `/loop` dynamic-pacing mode and creates a `scheduled_tasks.lock` artifact. For waiting on background work, use `Bash` with `run_in_background`. For polling, use `Monitor` with an until-loop. For inline async, just keep working.

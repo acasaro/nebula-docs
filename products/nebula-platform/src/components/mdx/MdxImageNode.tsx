@@ -156,13 +156,16 @@ function MdxImageView({
           Image failed to load
         </div>
       ) : (
-        // `inline-flex` (not inline-block) so the wrapper sizes to the
-        // image without picking up baseline line-box space — the toolbar's
-        // `top-3` then anchors to the image's actual top edge whether or
-        // not the image is wrapped in a Frame.
+        // The wrap sizes exactly to the image so the toolbar's `top-3`
+        // anchors 12px below the image's top edge whether or not the
+        // image is wrapped in a Frame. `not-prose` escapes the editor's
+        // prose context (which would otherwise apply `margin: 1em 0` to
+        // the `<img>` and push the toolbar above the image's visible
+        // top edge); Frame uses the same trick. `leading-none` removes
+        // line-box slack from the flex container.
         <div
           className={cn(
-            'relative inline-flex max-w-full',
+            'not-prose relative inline-flex max-w-full leading-none',
             selected && 'rounded-lg outline outline-2 outline-primary/60',
           )}
         >
@@ -172,6 +175,13 @@ function MdxImageView({
             width={attrs.width ?? undefined}
             height={attrs.height ?? undefined}
             onError={() => setBroken(true)}
+            // Inline `margin: 0` beats `:where(.mdx-prose) img { my-4 }` in
+            // index.css. Tailwind's `m-0` class lost the specificity battle
+            // (mdx-prose lives in @layer base; utilities don't always win
+            // depending on layer order). Inline style is the bulletproof
+            // fix and keeps the toolbar's `top-3` anchored to the image's
+            // actual top edge whether or not the image is framed.
+            style={{ margin: 0 }}
             className="block h-auto max-w-full rounded-md"
             draggable={false}
           />

@@ -1,5 +1,38 @@
-import type { CSSProperties, ReactNode } from 'react';
+import { Fragment, type CSSProperties, type ReactNode } from 'react';
 import { cn } from '../utils/cn';
+
+/**
+ * Tiny inline-markdown parser for Frame captions. Recognises:
+ *   - `[text](url)`     → <a href>...</a>
+ *   - `**text**`        → <strong>...</strong>
+ *
+ * Mirrors Mintlify's caption behavior. Doesn't try to be a full markdown
+ * implementation — captions are short, single-line strings; if a tenant
+ * needs richer formatting they can drop the caption attr and write the
+ * content as a sibling element.
+ */
+function renderCaptionMarkdown(text: string): ReactNode[] {
+  const out: ReactNode[] = [];
+  const re = /\[([^\]]+)\]\(([^)]+)\)|\*\*([^*]+)\*\*/g;
+  let lastIdx = 0;
+  let m: RegExpExecArray | null;
+  let key = 0;
+  while ((m = re.exec(text)) !== null) {
+    if (m.index > lastIdx) out.push(text.slice(lastIdx, m.index));
+    if (m[1] !== undefined && m[2] !== undefined) {
+      out.push(
+        <a key={key++} href={m[2]}>
+          {m[1]}
+        </a>,
+      );
+    } else if (m[3] !== undefined) {
+      out.push(<strong key={key++}>{m[3]}</strong>);
+    }
+    lastIdx = m.index + m[0].length;
+  }
+  if (lastIdx < text.length) out.push(text.slice(lastIdx));
+  return out.map((part, i) => <Fragment key={i}>{part}</Fragment>);
+}
 
 export interface FrameProps {
   children?: ReactNode;
@@ -95,10 +128,10 @@ export function Frame({
 
         {finalCaption ? (
           <div
-            className="relative mt-2 flex min-h-[44px] items-center justify-center rounded-xl bg-white px-4 py-2 text-center text-sm text-stone-600 dark:bg-stone-900 dark:text-stone-400"
+            className="relative mt-3 flex min-h-[44px] items-center justify-center rounded-xl bg-white px-5 py-2 text-center text-sm text-stone-600 dark:bg-stone-900 dark:text-stone-400"
             data-component-part="frame-description"
           >
-            <p className="m-0">{finalCaption}</p>
+            <p className="m-0">{renderCaptionMarkdown(finalCaption)}</p>
           </div>
         ) : null}
 

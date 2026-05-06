@@ -686,9 +686,10 @@ export function RepoBrowser() {
 
   // Land on the first reachable page when the editor opens with no path.
   // Walks docs.json's nav (tabs → groups → pages, depth-first, skipping
-  // hidden/external) and resolves the slug to an actual file path. Fires
-  // once per branch — the user navigating back to `/editor/<branch>` after
-  // an explicit selection won't get bounced again.
+  // hidden/external) and picks the first entry whose resolved file is
+  // actually in the repo — the entry-path resolver returns a best-guess
+  // path when it can't find a real candidate, so without this gate we'd
+  // happily redirect to a 404. Fires once per branch.
   useEffect(() => {
     if (!currentBranch) return;
     if (selectedPath) return;
@@ -696,10 +697,15 @@ export function RepoBrowser() {
     if (treeLoading || allPaths.length === 0) return;
     if (docsConfigState.loading) return;
     if (!liveDocsConfig) return;
-    const entry = firstReachablePage(liveDocsConfig);
-    if (!entry) return;
-    const filePath = resolvePagePath(entry);
-    if (!filePath) return;
+    let filePath: string | null = null;
+    const entry = firstReachablePage(liveDocsConfig, (e) => {
+      const candidate = resolvePagePath(e);
+      if (!candidate) return false;
+      if (!repoPathSet.has(candidate)) return false;
+      filePath = candidate;
+      return true;
+    });
+    if (!entry || !filePath) return;
     autoRedirectedRef.current = currentBranch;
     navigate(`/editor/${currentBranch}/~/${filePath}`, { replace: true });
   }, [
@@ -709,6 +715,7 @@ export function RepoBrowser() {
     allPaths.length,
     docsConfigState.loading,
     liveDocsConfig,
+    repoPathSet,
     resolvePagePath,
     navigate,
   ]);

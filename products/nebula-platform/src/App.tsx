@@ -1,4 +1,4 @@
-import { BrowserRouter, Navigate, Route, Routes, useParams } from 'react-router';
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router';
 import { isFirebaseConfigured } from '@/lib/firebase';
 import { AppShell } from '@/components/AppShell';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
@@ -12,14 +12,6 @@ import { RepoBrowser } from '@/routes/RepoBrowser';
 import { SettingsGithubApp } from '@/routes/SettingsGithubApp';
 import { SettingsGitRepo } from '@/routes/SettingsGitRepo';
 import { SignIn } from '@/routes/SignIn';
-
-const DEFAULT_DOC_PATH = 'documentation/overview.mdx';
-
-function EditorIndex() {
-  const { branch } = useParams<{ branch: string }>();
-  if (!branch) return <Navigate to="/" replace />;
-  return <Navigate to={`/editor/${branch}/~/${DEFAULT_DOC_PATH}`} replace />;
-}
 
 function LegacyRepoRedirect() {
   const settings = useGitSettings();
@@ -43,7 +35,11 @@ export function App() {
         <Route element={<ProtectedRoute />}>
           <Route element={<AppShell />}>
             <Route index element={<Home />} />
-            <Route path="editor/:branch" element={<EditorIndex />} />
+            {/* Both shapes render RepoBrowser. The no-path form lets
+                RepoBrowser pick a landing page from docs.json's nav after
+                docs.json + the repo tree have loaded — see the
+                "Land on the first reachable page" effect there. */}
+            <Route path="editor/:branch" element={<RepoBrowser />} />
             <Route path="editor/:branch/~/*" element={<RepoBrowser />} />
             <Route path="assets" element={<Assets />} />
             <Route path="settings/github-app" element={<SettingsGithubApp />} />

@@ -204,43 +204,62 @@ export function defaultPageTitle(pagePath: string): string {
 }
 
 /**
- * First reachable, non-hidden, non-external page entry in the docs config —
- * walked depth-first across tabs, then groups (recursing into nested groups),
- * then per-tab direct pages. Used by the editor to land on a sensible default
- * file when the URL has no path component.
+ * Walk the docs.json navigation depth-first, yielding every non-hidden,
+ * non-external page entry in nav order. Order: tabs → tab.pages → tab.groups
+ * → group.pages → nested groups (recursive). Used by the editor to find a
+ * landing page for the no-path URL.
+ *
+ * Returns a generator so callers can short-circuit on the first entry whose
+ * resolved file path actually exists in the repo (avoiding the resolver's
+ * best-guess fallback for missing files).
  */
-export function firstReachablePage(config: DocsConfig | null): PageEntry | null {
-  if (!config) return null;
+export function* reachablePages(config: DocsConfig | null): Generator<PageEntry> {
+  if (!config) return;
   for (const tab of config.navigation?.tabs ?? []) {
     if (tab.hidden) continue;
     for (const entry of tab.pages ?? []) {
-      const found = firstReachableInEntry(entry);
-      if (found) return found;
+      yield* yieldReachableInEntry(entry);
     }
     for (const group of tab.groups ?? []) {
       if (group.hidden) continue;
-      const found = firstReachableInGroup(group);
-      if (found) return found;
+      yield* yieldReachableInGroup(group);
     }
   }
-  return null;
 }
 
-function firstReachableInGroup(group: Group): PageEntry | null {
+function* yieldReachableInGroup(group: Group): Generator<PageEntry> {
   for (const entry of group.pages ?? []) {
-    const found = firstReachableInEntry(entry);
-    if (found) return found;
+    yield* yieldReachableInEntry(entry);
   }
-  return null;
 }
 
-function firstReachableInEntry(entry: PageEntry): PageEntry | null {
-  if (typeof entry === 'string') return entry;
-  if (isGroup(entry)) {
-    if (entry.hidden) return null;
-    return firstReachableInGroup(entry);
+function* yieldReachableInEntry(entry: PageEntry): Generator<PageEntry> {
+  if (typeof entry === 'string') {
+    yield entry;
+    return;
   }
-  if (entry.hidden || entry.externalUrl) return null;
-  if (!entry.page && !entry.slug) return null;
-  return entry;
+  if (isGroup(entry)) {
+    if (entry.hidden) return;
+    yield* yieldReachableInGroup(entry);
+    return;
+  }
+  if (entry.hidden || entry.externalUrl) return;
+  if (!entry.page && !entry.slug) return;
+  yield entry;
+}
+
+/**
+ * First reachable page entry that satisfies an optional predicate. With no
+ * predicate this returns the first reachable entry (whether or not the file
+ * actually exists on disk); pass a predicate like `(e) => repoPaths.has(...)`
+ * to skip entries whose resolved file isn't in the repo.
+ */
+export function firstReachablePage(
+  config: DocsConfig | null,
+  predicate?: (entry: PageEntry) => boolean,
+): PageEntry | null {
+  for (const entry of reachablePages(config)) {
+    if (!predicate || predicate(entry)) return entry;
+  }
+  return null;
 }

@@ -420,6 +420,33 @@ unique selectors that don't collide with the MDX block components
 (checked the rest — `.nebula-tab` is navbar-only, `.nebula-tabs-list`
 and `.nebula-tabs-panels` are MDX-only, no other clashes today).
 
+### Round 18 — Frame: Mintlify-spec padding + markdown captions
+
+Two adjustments to the shared `@nebula-docs/components` Frame so the
+editor and CLI both inherit:
+
+- **Padding**: per the user's Mintlify spec — frame card has `p-2`
+  (8px) on all four sides (already correct). Caption row gets
+  `mt-3` (12px margin-top, was 8px) and `px-5` (20px L/R padding,
+  was 16px) so it doesn't crowd the side edges.
+- **Markdown in caption**: tiny inline parser added to
+  `packages/components/src/frame/Frame.tsx` (`renderCaptionMarkdown`).
+  Recognises `[text](url)` → `<a>` and `**text**` → `<strong>`.
+  Mirrors Mintlify behavior. Not a full markdown impl — captions are
+  short single-line strings; richer formatting belongs outside the
+  caption attr.
+
+Tenant fixture `tenants/nebula-docs-starter/content/components/frame.mdx`
+gained two new sections demonstrating link-only and bold-plus-link
+caption strings.
+
+Verified in the CLI: 5 frames on the page, padding measurements all
+match spec exactly, the link caption produces `<a href="/quickstart">`
+and the bold-plus-link caption produces both `<strong>Note:</strong>`
+and `<a href="https://example.com">` as expected. Editor uses the same
+shared Frame component (via the `MdxFrameView` NodeView) so it picks up
+the same behavior automatically.
+
 ### Round 16 — CodeBlock-inside-CodeGroup
 
 The CodeGroup NodeView's tab strip already exposes filename as the tab

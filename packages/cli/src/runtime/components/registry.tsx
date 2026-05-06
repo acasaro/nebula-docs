@@ -51,6 +51,23 @@ const CalloutShim = ({ type, variant, ...rest }: CalloutShimProps) => (
   <Callout variant={(variant ?? type) as never} {...rest} />
 );
 
+interface ImageShimProps extends Omit<React.ImgHTMLAttributes<HTMLImageElement>, 'src'> {
+  src?: string;
+  /** Mintlify-shaped opt-out from click-to-zoom. */
+  noZoom?: boolean;
+}
+
+/**
+ * Override for the bare `<img>` element used in MDX (both JSX `<img>` and
+ * markdown `![]()`). Tags every image with `data-zoomable` unless the author
+ * sets `noZoom`, so the global Lightbox script in the layout can attach a
+ * click-to-zoom handler. Pure-static — no React hydration cost per image.
+ */
+const ImageShim = ({ noZoom, ...rest }: ImageShimProps) => {
+  const dataZoomable = noZoom ? undefined : '';
+  return <img {...rest} data-zoomable={dataZoomable} />;
+};
+
 export const components: Record<string, ComponentType<any>> = {
   Accordion,
   AccordionGroup,
@@ -78,4 +95,7 @@ export const components: Record<string, ComponentType<any>> = {
   Check,
   Warning,
   Danger,
+  // HTML overrides — lowercase keys swap the tag's default rendering for
+  // both `<img>` JSX in MDX and markdown `![]()` syntax.
+  img: ImageShim,
 };

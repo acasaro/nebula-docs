@@ -118,6 +118,12 @@ export function parseMdxForEditor(source: string): MdxParseResult {
   const bindingMap = new Map<string, ImportSpec>();
   for (const spec of imports) bindingMap.set(spec.binding, spec);
 
+  // Pre-pass: merge adjacent light/dark `<img>` pairs (Mintlify convention)
+  // into a single node carrying both variants. Done on the mdast tree
+  // before conversion so every block-iterating converter sees the merged
+  // shape — no per-converter changes needed.
+  mergeAdjacentLightDarkImgs(tree);
+
   const ctx: ConvertCtx = { source, bindingMap };
   const content: TiptapNode[] = [];
   for (const node of tree.children) {
@@ -191,6 +197,11 @@ function convertBlock(node: RootContent, ctx: ConvertCtx): TiptapNode | null {
         // Wrap it in a paragraph so it round-trips through the inline node.
         const badge = convertStandaloneInlineBadge(jsx);
         return { type: 'paragraph', content: [badge] };
+      }
+      if (name === 'img') {
+        // JSX `<img>` (single, or the pre-merged light/dark pair from the
+        // mergeAdjacentLightDarkImgs pre-pass).
+        return convertJsxImg(jsx);
       }
       return rawBlock(node, source);
     }
@@ -516,6 +527,115 @@ function convertImage(node: Image): TiptapNode {
       title: node.title ?? null,
     },
   };
+}
+
+/**
+ * JSX `<img>` element — straight passthrough of standard attrs plus the
+ * Mintlify-style `noZoom`. The `srcDark` / `altDark` attrs only appear on
+ * the synthesized merged node from `mergeAdjacentLightDarkImgs` (real
+ * authored MDX has the variants split across two adjacent `<img>` tags;
+ * the pre-pass coalesces them before this runs).
+ */
+function convertJsxImg(node: MdxJsxFlowElement): TiptapNode {
+  const raw = extractAttrs(node);
+  const attrs: Record<string, unknown> = {
+    src: typeof raw.src === 'string' ? raw.src : '',
+    alt: typeof raw.alt === 'string' ? raw.alt : '',
+    srcDark: typeof raw.srcDark === 'string' ? raw.srcDark : null,
+    altDark: typeof raw.altDark === 'string' ? raw.altDark : null,
+    noZoom: raw.noZoom === true,
+    title: typeof raw.title === 'string' ? raw.title : null,
+    width: numericOrPassthrough(raw.width),
+    height: numericOrPassthrough(raw.height),
+  };
+  return { type: 'mdxImage', attrs };
+}
+
+function numericOrPassthrough(v: unknown): number | string | null {
+  if (typeof v === 'number') return v;
+  if (typeof v === 'string') {
+    const n = Number(v);
+    return Number.isFinite(n) ? n : v;
+  }
+  return null;
+}
+
+/**
+ * Walks every children-bearing node in the mdast tree and merges adjacent
+ * `<img>` pairs that follow Mintlify's light/dark visibility convention
+ * (className tokens including `dark:hidden` followed by `dark:block`) into
+ * a single synthesized `<img>` node carrying both `src` / `alt` and
+ * `srcDark` / `altDark` attributes. Mutates the tree in place.
+ */
+function mergeAdjacentLightDarkImgs(node: { children?: unknown }): void {
+  const childrenAny = (node as { children?: unknown[] }).children;
+  if (!Array.isArray(childrenAny)) return;
+  const children = childrenAny as Array<Record<string, unknown>>;
+
+  for (let i = 0; i < children.length - 1; i++) {
+    const a = children[i];
+    const b = children[i + 1];
+    if (!isImgFlow(a) || !isImgFlow(b)) continue;
+    const aClass = readClassName(a as MdxJsxFlowElement);
+    const bClass = readClassName(b as MdxJsxFlowElement);
+    if (!aClass.includes('dark:hidden') || !bClass.includes('dark:block')) continue;
+
+    const merged = mergeImgPair(a as MdxJsxFlowElement, b as MdxJsxFlowElement);
+    children.splice(i, 2, merged as unknown as Record<string, unknown>);
+    // Don't decrement i — the merged node at i is already an img we don't
+    // want to re-pair, so move past it.
+  }
+  // Recurse into surviving children.
+  for (const child of children) mergeAdjacentLightDarkImgs(child);
+}
+
+function isImgFlow(n: unknown): boolean {
+  if (!n || typeof n !== 'object') return false;
+  const obj = n as Record<string, unknown>;
+  return obj.type === 'mdxJsxFlowElement' && obj.name === 'img';
+}
+
+function readClassName(node: MdxJsxFlowElement): string {
+  for (const a of node.attributes ?? []) {
+    if (a.type !== 'mdxJsxAttribute') continue;
+    if (a.name !== 'className' && a.name !== 'class') continue;
+    const v = a.value;
+    if (typeof v === 'string') return v;
+    if (v && typeof v === 'object' && 'value' in v && typeof v.value === 'string') {
+      // Strip surrounding quotes from a JSX expression like {"hidden dark:block"}.
+      return v.value.replace(/^["']|["']$/g, '');
+    }
+  }
+  return '';
+}
+
+function mergeImgPair(
+  light: MdxJsxFlowElement,
+  dark: MdxJsxFlowElement,
+): MdxJsxFlowElement {
+  const lightAttrs = extractAttrs(light);
+  const darkAttrs = extractAttrs(dark);
+  const merged: MdxJsxFlowElement = {
+    type: 'mdxJsxFlowElement',
+    name: 'img',
+    attributes: [],
+    children: [],
+  };
+  const set = (name: string, value: string | boolean) => {
+    merged.attributes.push({
+      type: 'mdxJsxAttribute',
+      name,
+      value: typeof value === 'boolean' ? null : value,
+    });
+  };
+  if (typeof lightAttrs.src === 'string') set('src', lightAttrs.src);
+  if (typeof lightAttrs.alt === 'string') set('alt', lightAttrs.alt);
+  if (typeof darkAttrs.src === 'string') set('srcDark', darkAttrs.src);
+  if (typeof darkAttrs.alt === 'string') set('altDark', darkAttrs.alt);
+  if (lightAttrs.noZoom === true || darkAttrs.noZoom === true) set('noZoom', true);
+  if (typeof lightAttrs.width === 'string') set('width', lightAttrs.width);
+  if (typeof lightAttrs.height === 'string') set('height', lightAttrs.height);
+  return merged;
 }
 
 function convertHeading(node: Heading, source: string): TiptapNode {

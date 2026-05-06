@@ -154,17 +154,85 @@ function serializeBlock(node: TiptapNode): string {
 }
 
 function serializeImage(node: TiptapNode): string {
-  const src = String(node.attrs?.src ?? '');
-  const alt = String(node.attrs?.alt ?? '');
-  const title = node.attrs?.title;
-  // Escape ] and ) per CommonMark.
+  const a = (node.attrs ?? {}) as {
+    src?: string;
+    alt?: string;
+    srcDark?: string | null;
+    altDark?: string | null;
+    noZoom?: boolean;
+    title?: string | null;
+    width?: number | string | null;
+    height?: number | string | null;
+  };
+  const src = String(a.src ?? '');
+  const alt = String(a.alt ?? '');
+  const srcDark = a.srcDark ?? null;
+  const altDark = a.altDark ?? null;
+  const noZoom = a.noZoom === true;
+  const width = a.width ?? null;
+  const height = a.height ?? null;
+
+  // Two-tag Mintlify pattern when a dark variant is set. The light tag is
+  // visible by default and hidden in dark mode; the dark tag is the inverse.
+  if (srcDark) {
+    const lightAttrs: ImgAttrs = {
+      src,
+      alt,
+      className: 'block dark:hidden',
+      noZoom,
+      width,
+      height,
+    };
+    const darkAttrs: ImgAttrs = {
+      src: srcDark,
+      alt: altDark ?? alt,
+      className: 'hidden dark:block',
+      noZoom,
+      width,
+      height,
+    };
+    return `${jsxImg(lightAttrs)}\n${jsxImg(darkAttrs)}`;
+  }
+
+  // Single JSX tag when there's a non-default attribute that markdown
+  // shorthand can't carry (noZoom, explicit dimensions).
+  if (noZoom || width != null || height != null) {
+    return jsxImg({ src, alt, noZoom, width, height });
+  }
+
+  // Default: markdown shorthand. Escape `]` and `)` per CommonMark.
   const safeAlt = alt.replace(/[\\\]]/g, (m) => `\\${m}`);
   const safeUrl = src.replace(/[\\)]/g, (m) => `\\${m}`);
   const titlePart =
-    typeof title === 'string' && title.length > 0
-      ? ` "${title.replace(/"/g, '\\"')}"`
+    typeof a.title === 'string' && a.title.length > 0
+      ? ` "${a.title.replace(/"/g, '\\"')}"`
       : '';
   return `![${safeAlt}](${safeUrl}${titlePart})`;
+}
+
+interface ImgAttrs {
+  src: string;
+  alt: string;
+  className?: string;
+  noZoom?: boolean;
+  width?: number | string | null;
+  height?: number | string | null;
+}
+
+function jsxImg(a: ImgAttrs): string {
+  const parts: string[] = [];
+  parts.push(`src="${escapeJsxAttr(a.src)}"`);
+  parts.push(`alt="${escapeJsxAttr(a.alt)}"`);
+  if (a.className) parts.push(`className="${a.className}"`);
+  if (a.noZoom) parts.push('noZoom');
+  if (a.width != null) parts.push(`width="${escapeJsxAttr(String(a.width))}"`);
+  if (a.height != null) parts.push(`height="${escapeJsxAttr(String(a.height))}"`);
+  return `<img ${parts.join(' ')} />`;
+}
+
+function escapeJsxAttr(s: string): string {
+  // JSX double-quoted attribute values: encode embedded quotes as &quot;.
+  return s.replace(/"/g, '&quot;');
 }
 
 const PRESET_VARIANTS = new Set([

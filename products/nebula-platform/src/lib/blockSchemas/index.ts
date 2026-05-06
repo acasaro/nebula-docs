@@ -7,6 +7,7 @@ import { cardGroupSchema } from './cardGroup';
 import { columnsSchema } from './columns';
 import { expandableSchema } from './expandable';
 import { frameSchema } from './frame';
+import { imageSchema } from './image';
 import { paramFieldSchema } from './paramField';
 import { requestExampleSchema } from './requestExample';
 import { responseExampleSchema } from './responseExample';
@@ -25,6 +26,7 @@ const REGISTRY: Record<string, BlockAttrSchema> = {
   [columnsSchema.blockType]: columnsSchema,
   [expandableSchema.blockType]: expandableSchema,
   [frameSchema.blockType]: frameSchema,
+  [imageSchema.blockType]: imageSchema,
   [paramFieldSchema.blockType]: paramFieldSchema,
   [requestExampleSchema.blockType]: requestExampleSchema,
   [responseExampleSchema.blockType]: responseExampleSchema,

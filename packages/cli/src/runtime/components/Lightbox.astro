@@ -1,0 +1,210 @@
+---
+// Click-to-zoom overlay for `<img>` elements. Pure HTML + inline script —
+// no React hydration. Listens for clicks on `[data-zoomable]` images,
+// opens a fullscreen lightbox showing the same src at full resolution.
+//
+// Opt-out: any `<img>` rendered with `noZoom` skips the data attribute,
+// so the script's selector doesn't pick it up. Mintlify-shaped MDX that
+// passes `noZoom={true}` keeps working unchanged.
+//
+// Mount once per page from DocsLayout. The overlay is shared across every
+// image — single backdrop element, swap `src` on each click. Esc closes,
+// backdrop click closes, dedicated close button closes.
+---
+<div
+  class="nebula-lightbox"
+  data-state="closed"
+  role="dialog"
+  aria-modal="true"
+  aria-label="Image preview"
+  hidden
+>
+  <button
+    type="button"
+    class="nebula-lightbox-close"
+    aria-label="Close image preview"
+  >
+    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M18 6 6 18" />
+      <path d="m6 6 12 12" />
+    </svg>
+  </button>
+  <img class="nebula-lightbox-img" alt="" />
+</div>
+
+<style is:global>
+  /* Zoom cursor on every image we're going to handle. */
+  img[data-zoomable] {
+    cursor: zoom-in;
+  }
+
+  .nebula-lightbox {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4vh 4vw;
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    cursor: zoom-out;
+    opacity: 0;
+    transition: opacity 0.15s ease-out;
+  }
+  .nebula-lightbox[data-state='open'] {
+    opacity: 1;
+  }
+  .nebula-lightbox[hidden] {
+    display: none;
+  }
+  .nebula-lightbox-img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    border-radius: 0.5rem;
+    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5);
+    cursor: default;
+  }
+  .nebula-lightbox-close {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    border: 0;
+    border-radius: 9999px;
+    background: rgba(255, 255, 255, 0.12);
+    color: #fff;
+    cursor: pointer;
+    transition: background-color 0.1s;
+  }
+  .nebula-lightbox-close:hover,
+  .nebula-lightbox-close:focus-visible {
+    background: rgba(255, 255, 255, 0.24);
+    outline: none;
+  }
+</style>
+
+<script is:inline>
+  (function () {
+    // Tag every `<img>` on the page with `data-zoomable` unless the author
+    // opted out with a `noZoom` (or lowercase `nozoom`) attribute. We do
+    // this on a delegated tree-walk rather than via the MDX components map
+    // because lowercase JSX `<img>` inside React components like `<Frame>`
+    // is compiled to a React element BEFORE the MDX components map applies,
+    // so the map override never sees it. Walking the rendered DOM catches
+    // every image regardless of authoring shape.
+    function tagImages() {
+      var imgs = document.querySelectorAll('img');
+      for (var i = 0; i < imgs.length; i++) {
+        var img = imgs[i];
+        if (img.hasAttribute('data-zoomable') || img.hasAttribute('data-no-zoom')) continue;
+        if (img.hasAttribute('noZoom') || img.hasAttribute('nozoom')) {
+          img.setAttribute('data-no-zoom', '');
+          continue;
+        }
+        img.setAttribute('data-zoomable', '');
+      }
+    }
+
+    function init() {
+      var lightbox = document.querySelector('.nebula-lightbox');
+      if (!lightbox || lightbox.dataset.nebulaInit === '1') return;
+      lightbox.dataset.nebulaInit = '1';
+
+      var img = lightbox.querySelector('.nebula-lightbox-img');
+      var closeBtn = lightbox.querySelector('.nebula-lightbox-close');
+      if (!img || !closeBtn) return;
+
+      var prevOverflow = '';
+
+      tagImages();
+      // Re-tag whenever new content lands (e.g. lazy hydration of an island,
+      // or future client-side nav). Cheap MutationObserver scoped to the
+      // article surface where MDX content lives — falls back to the body
+      // when the article isn't found.
+      var watchRoot = document.querySelector('.nebula-main') || document.body;
+      var mo = new MutationObserver(function (records) {
+        for (var i = 0; i < records.length; i++) {
+          if (records[i].addedNodes && records[i].addedNodes.length) {
+            tagImages();
+            return;
+          }
+        }
+      });
+      mo.observe(watchRoot, { childList: true, subtree: true });
+
+      function open(src, alt) {
+        img.setAttribute('src', src);
+        img.setAttribute('alt', alt || '');
+        lightbox.hidden = false;
+        // Force a synchronous reflow before flipping data-state so the
+        // opacity transition has a frame to start from. `offsetWidth` is
+        // a cheap layout-flush trick that's reliable across browsers
+        // (including headless ones used in automated checks where rAF
+        // sometimes coalesces in unexpected ways).
+        // eslint-disable-next-line no-unused-expressions
+        lightbox.offsetWidth;
+        lightbox.setAttribute('data-state', 'open');
+        prevOverflow = document.body.style.overflow;
+        document.body.style.overflow = 'hidden';
+      }
+
+      function close() {
+        lightbox.setAttribute('data-state', 'closed');
+        document.body.style.overflow = prevOverflow;
+        // Wait for the fade-out before un-hiding so the cursor doesn't
+        // teleport. 180ms = transition + a frame.
+        setTimeout(function () {
+          lightbox.hidden = true;
+          img.removeAttribute('src');
+        }, 180);
+      }
+
+      // Stop image clicks from closing the overlay; clicks on the backdrop
+      // (anywhere else inside the lightbox) close it.
+      img.addEventListener('click', function (e) {
+        e.stopPropagation();
+      });
+      lightbox.addEventListener('click', function (e) {
+        // Image's own listener already stopped propagation; reaching here
+        // means the click was on the backdrop or the close button.
+        if (e.target === lightbox || e.target === closeBtn || closeBtn.contains(e.target)) {
+          close();
+        }
+      });
+      closeBtn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        close();
+      });
+
+      document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && lightbox.getAttribute('data-state') === 'open') {
+          close();
+        }
+      });
+
+      // Single delegated handler: any zoomable image, anywhere in the doc.
+      document.addEventListener('click', function (e) {
+        var target = e.target;
+        if (!target || !target.matches) return;
+        if (!target.matches('img[data-zoomable]')) return;
+        var src = target.getAttribute('src');
+        if (!src) return;
+        e.preventDefault();
+        open(src, target.getAttribute('alt'));
+      });
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', init);
+    } else {
+      init();
+    }
+  })();
+</script>

@@ -50,4 +50,4 @@ function decodeEntities(s: string): string {
 const slotRaw = await Astro.slots.render('default');
 const source = chart ?? (slotRaw ? decodeEntities(slotRaw) : '');
 ---
-<MermaidReact client:visible chart={source} {...rest} />
+<MermaidReact client:load chart={source} {...rest} />

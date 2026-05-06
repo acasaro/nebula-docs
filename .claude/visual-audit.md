@@ -485,6 +485,45 @@ and `<a href="https://example.com">` as expected. Editor uses the same
 shared Frame component (via the `MdxFrameView` NodeView) so it picks up
 the same behavior automatically.
 
+### Round 19 — Mermaid editor UX + CLI hydration fix
+
+Two-part round.
+
+**Editor:** the Mermaid NodeView previously toggled between preview-only
+and source-only modes. User wanted both visible at once: rendered diagram
+on top, editable source markdown below. New
+`products/nebula-platform/src/components/mdx/MdxMermaidNode.tsx`:
+
+- Two stacked panels inside one rounded card.
+- Top panel: rendered Mermaid via the shared `<Mermaid>` component, with
+  zoom controls (zoom-in / zoom-out / reset) anchored top-left. Zoom is
+  CSS `transform: scale()` on a wrapper around the SVG; range
+  `[0.3, 3]`, step `1.2`, transform-origin `center top` so the diagram
+  grows downward and stays anchored to the toolbar.
+- Bottom panel: monospace textarea on a dark background, framed with
+  visible `\`\`\`mermaid` / `\`\`\`` fences (orange chips) so the editor
+  reads as a fenced code block. Live-updates the node attr on every
+  keystroke.
+- The "Controls" / "Placement" config rows from Mintlify's reference
+  were intentionally dropped — user struck them out.
+
+**CLI hydration regression.** While verifying, Mermaid stopped rendering
+in the CLI: 5 islands queued, 0 SVGs. Root cause: Astro wraps the React
+component in an `<astro-island display:contents>` element, and elements
+with `display: contents` generate no CSS box — `IntersectionObserver`
+(used by `client:visible`) reports zero intersection ratio forever, so
+hydration never fires. Switched `Mermaid.astro` from `client:visible` to
+`client:load`. Trade-off: the ~600KB mermaid bundle now loads on every
+page even if no diagram is visible. Cost is acceptable because (a) only
+a handful of pages have diagrams, (b) tenants without any
+`<Mermaid>` calls don't hit this code path at all (the wrapper renders
+nothing), and (c) the alternative — building a manual visibility
+observer on the inner `<div>` — adds complexity for a marginal saving.
+
+Verified: 5 SVGs render on `/components/mermaid` in the CLI; editor
+shows preview + source stacked; zoom buttons increment / decrement /
+reset the scale.
+
 ### Round 16 — CodeBlock-inside-CodeGroup
 
 The CodeGroup NodeView's tab strip already exposes filename as the tab
@@ -556,18 +595,26 @@ Callout · Card · Tabs / Tab · Accordion · Mermaid (CLI side) · Snippets ·
 Tree / Tree.Folder / Tree.File · Columns / Column · Expandable ·
 Steps / Step · Update · ParamField · ResponseField · Icon ·
 RequestExample / ResponseExample (stray buttons removed) · CodeGroup
-(Astro slot variant) · CodeBlock (dual-theme Shiki).
+(Astro slot variant) · CodeBlock (dual-theme Shiki + filename / line-numbers /
+wrap flags) · Frame (Mintlify-spec padding, solid bg, balanced caption,
+markdown captions).
 
 ## Components NOT yet audited against editor
 
-Frame · Property · Mermaid (editor side — need repro).
+Property.
 
 ## Editor-side config UX follow-ups (Platform, not CLI)
 
-Per user's pass: Frame, CodeBlock, Mermaid, and Update need a small tweak
-to their attribute-popover / config UX in the editor. Out of scope for
-the CLI render-parity rounds; track these in the Platform editor
-workstream.
+Per user's pass — small tweaks to the attribute-popover / config UX in
+the editor:
+
+- **CodeBlock** — DONE (Round 15). Kebab with With filename / With line
+  numbers / Wrap code / Duplicate / Delete; filename header inline-editable.
+- **Frame** — DONE (Rounds 18 / 18b / 18c). Padding + solid bg + balanced
+  caption + markdown captions all landed.
+- **Mermaid** — pending. User reported broken in editor (Round 10) with
+  no repro path; still parked. Config UX tweak hasn't been scoped yet.
+- **Update** — pending. Small tweak hasn't been scoped yet.
 
 ## Durable follow-ups (defer until rounds settle)
 

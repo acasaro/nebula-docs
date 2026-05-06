@@ -17,6 +17,10 @@ export type AttrField =
       kind: 'text';
       placeholder?: string;
       type?: 'text' | 'url' | 'email';
+      /** When true, the field renders an Upload button that opens the
+       *  asset picker / uploader. The picked image's `downloadUrl` is
+       *  written into this field's key. */
+      upload?: boolean;
     })
   | (BaseField & {
       kind: 'toggle';

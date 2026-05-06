@@ -1,4 +1,4 @@
-import { useId } from 'react';
+import { useId, type ReactNode } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -12,6 +12,11 @@ interface TextFieldProps {
   placeholder?: string;
   type?: 'text' | 'url' | 'email';
   className?: string;
+  /** Optional element rendered to the right of the input — e.g. an Upload
+   *  button that opens an asset picker and writes the picked URL back via
+   *  onChange. Slotted at row level so the input still spans the available
+   *  width and the action sits flush to its right edge. */
+  trailing?: ReactNode;
 }
 
 export function TextField({
@@ -22,6 +27,7 @@ export function TextField({
   placeholder,
   type = 'text',
   className,
+  trailing,
 }: TextFieldProps) {
   const id = useId();
   return (
@@ -33,14 +39,17 @@ export function TextField({
         {Icon ? <Icon className="size-3.5" /> : null}
         {label}
       </Label>
-      <Input
-        id={id}
-        type={type}
-        value={value}
-        placeholder={placeholder}
-        onChange={(e) => onChange(e.target.value)}
-        className="h-9"
-      />
+      <div className="flex items-stretch gap-2">
+        <Input
+          id={id}
+          type={type}
+          value={value}
+          placeholder={placeholder}
+          onChange={(e) => onChange(e.target.value)}
+          className="h-9 flex-1 min-w-0"
+        />
+        {trailing}
+      </div>
     </div>
   );
 }

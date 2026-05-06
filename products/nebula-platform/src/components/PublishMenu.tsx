@@ -64,10 +64,12 @@ export function PublishMenu({
           <button
             type='button'
             className={cn(
-              "inline-flex shrink-0 items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium",
-              "bg-primary text-primary-foreground shadow-sm transition-colors",
-              "hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
+              "inline-flex shrink-0 items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium shadow-sm transition-colors",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
               "disabled:cursor-not-allowed disabled:opacity-60",
+              dirtyCount > 0
+                ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                : "border bg-background text-foreground hover:bg-accent",
             )}>
             Publish
             <ChevronDown className='size-3.5' />

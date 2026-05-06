@@ -12,61 +12,108 @@ const { docs, currentSlug } = Astro.props as Props;
 const tabs = docs.navigation?.tabs ?? [];
 ---
 <nav class="nebula-sidebar" aria-label="Documentation">
-  {tabs.map((tab) => {
-    const tabIcon = resolveIcon(tab.icon);
-    return (
-      <div class="nebula-sidebar-tab">
-        <h2 class="nebula-sidebar-tab-title">
-          {tabIcon && (
-            <NebulaIcon
-              name={tabIcon.name}
-              library={tabIcon.library}
-              type={tabIcon.type}
-              size={14}
-            />
-          )}
-          <span>{tab.tab}</span>
-        </h2>
+  {tabs.length > 1 && (
+    <div class="nebula-sidebar-tabs" role="tablist">
+      {tabs.map((tab, i) => {
+        const tabIcon = resolveIcon(tab.icon);
+        return (
+          <div class="nebula-sidebar-tab-pill" data-active={i === 0}>
+            {tabIcon && (
+              <NebulaIcon
+                name={tabIcon.name}
+                library={tabIcon.library}
+                type={tabIcon.type}
+                size={14}
+              />
+            )}
+            <span>{tab.tab}</span>
+          </div>
+        );
+      })}
+    </div>
+  )}
+  {tabs.length === 1 && tabs[0] && (
+    <div class="nebula-sidebar-tab-single">
+      {resolveIcon(tabs[0].icon) && (
+        <NebulaIcon
+          name={resolveIcon(tabs[0].icon)!.name}
+          library={resolveIcon(tabs[0].icon)!.library}
+          type={resolveIcon(tabs[0].icon)!.type}
+          size={14}
+        />
+      )}
+      <span>{tabs[0].tab}</span>
+    </div>
+  )}
+  <div class="nebula-sidebar-body">
+    {tabs.map((tab) => (
+      <div class="nebula-sidebar-tab-section">
         {(tab.groups ?? []).map((group: any) => (
           <SidebarGroup group={group} currentSlug={currentSlug} />
         ))}
       </div>
-    );
-  })}
+    ))}
+  </div>
 </nav>
 
 <style is:global>
   .nebula-sidebar {
-    font-size: var(--mcoe-font-size-sm);
+    font-size: 0.875rem;
+    line-height: 1.4;
   }
-  .nebula-sidebar-tab + .nebula-sidebar-tab {
-    margin-top: var(--mcoe-space-7);
-  }
-  .nebula-sidebar-tab-title {
+
+  /* Single-tab repos render the tab label as a small chip at the top with a
+     hairline separator. Multi-tab repos render a row of pill tabs (Phase 3
+     adds active-tab routing; for now the first tab is shown). */
+  .nebula-sidebar-tab-single,
+  .nebula-sidebar-tabs {
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    font-size: var(--mcoe-font-size-xs);
+    padding-bottom: 0.75rem;
+    margin-bottom: 1rem;
+    border-bottom: 1px solid var(--mcoe-border-muted);
+  }
+  .nebula-sidebar-tab-single {
+    color: var(--mcoe-text-heading);
+    font-weight: 500;
+    font-size: 0.875rem;
+  }
+  .nebula-sidebar-tab-pill {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.375rem 0.625rem;
+    border-radius: 0.5rem;
     color: var(--mcoe-text-secondary);
-    margin: 0 0 var(--mcoe-space-3);
-    font-weight: var(--mcoe-font-weight-bold);
+    font-weight: 500;
+    cursor: pointer;
   }
-  .nebula-sidebar-group + .nebula-sidebar-group {
-    margin-top: var(--mcoe-space-5);
+  .nebula-sidebar-tab-pill[data-active='true'] {
+    color: var(--mcoe-text-heading);
+    background: color-mix(in srgb, var(--mcoe-text-heading) 6%, transparent);
   }
+
+  .nebula-sidebar-body > * + * {
+    margin-top: 1.25rem;
+  }
+
+  /* Group title: pencil-icon style — same vertical rhythm as page links so
+     the icon column stays aligned, but with heading color + medium weight. */
   .nebula-sidebar-group-title {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
-    font-weight: var(--mcoe-font-weight-medium);
+    gap: 0.625rem;
+    margin: 0 0 0.25rem;
+    padding: 0.375rem 0.625rem;
+    font-weight: 500;
+    font-size: 0.8125rem;
     color: var(--mcoe-text-heading);
-    margin: var(--mcoe-space-3) 0 var(--mcoe-space-2);
-    font-size: var(--mcoe-font-size-xs);
-    text-transform: capitalize;
+    text-transform: none;
     letter-spacing: normal;
+    line-height: 1.3;
   }
+
   .nebula-sidebar-list {
     list-style: none;
     margin: 0;
@@ -78,44 +125,80 @@ const tabs = docs.navigation?.tabs ?? [];
   .nebula-sidebar-item a {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
-    padding: 0.375rem 0.75rem;
-    margin-left: -0.75rem;
+    gap: 0.625rem;
+    padding: 0.375rem 0.625rem;
+    /* Inset to align text under the group title (icon column = 14px + 0.625rem gap). */
+    padding-left: 1.875rem;
     border-radius: 0.5rem;
     color: var(--mcoe-text-secondary);
+    font-size: 0.8125rem;
     line-height: 1.4;
     transition: color 0.1s, background-color 0.1s;
   }
   .nebula-sidebar-item a:hover {
     color: var(--mcoe-text-heading);
     text-decoration: none;
-    background-color: color-mix(in srgb, var(--mcoe-text-heading) 4%, transparent);
+    background-color: color-mix(in srgb, var(--mcoe-text-heading) 5%, transparent);
   }
-  /* Active state matches Mintlify's pattern: brand-color text + a thin
-     text-shadow that fakes bolder weight without layout shift. */
+  /* Active item: brand-color pill. Hover keeps the neutral gray so a non-active
+     item temporarily-hovered doesn't read as the current page. */
   .nebula-sidebar-item a[aria-current='page'] {
     color: var(--mcoe-brand-primary);
-    text-shadow:
-      -0.2px 0 0 currentColor,
-      0.2px 0 0 currentColor;
-    background-color: color-mix(in srgb, var(--mcoe-brand-primary) 8%, transparent);
+    background-color: color-mix(in srgb, var(--mcoe-brand-primary) 10%, transparent);
+    font-weight: 500;
+  }
+  .nebula-sidebar-item a[aria-current='page']:hover {
+    background-color: color-mix(in srgb, var(--mcoe-brand-primary) 14%, transparent);
   }
   .nebula-sidebar-tag {
     margin-left: auto;
     padding: 0.05rem 0.4rem;
     border-radius: 0.375rem;
     font-size: 0.65rem;
-    font-weight: var(--mcoe-font-weight-bold);
+    font-weight: 700;
     color: var(--mcoe-brand-primary);
     background: color-mix(in srgb, var(--mcoe-brand-primary) 10%, transparent);
     line-height: 1.2;
   }
+
+  /* Nested sub-groups render as a collapsible button + indented list using
+     <details>. The chevron rotates 90deg when [open]. */
   .nebula-sidebar-nested {
-    margin-left: 0.75rem;
+    margin: 0;
   }
-  .nebula-sidebar-nested .nebula-sidebar-group-title {
-    text-transform: none;
-    color: var(--mcoe-text-primary);
-    font-size: var(--mcoe-font-size-sm);
+  .nebula-sidebar-nested-summary {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    padding: 0.375rem 0.625rem;
+    padding-left: 1.875rem;
+    border-radius: 0.5rem;
+    color: var(--mcoe-text-secondary);
+    font-size: 0.8125rem;
+    cursor: pointer;
+    list-style: none;
+    user-select: none;
+  }
+  .nebula-sidebar-nested-summary::-webkit-details-marker {
+    display: none;
+  }
+  .nebula-sidebar-nested-summary:hover {
+    color: var(--mcoe-text-heading);
+    background-color: color-mix(in srgb, var(--mcoe-text-heading) 4%, transparent);
+  }
+  .nebula-sidebar-nested-chevron {
+    margin-left: auto;
+    width: 0.75rem;
+    height: 0.75rem;
+    transition: transform 0.15s;
+  }
+  .nebula-sidebar-nested[open] > .nebula-sidebar-nested-summary .nebula-sidebar-nested-chevron {
+    transform: rotate(90deg);
+  }
+  .nebula-sidebar-nested .nebula-sidebar-list {
+    margin-left: 0.625rem;
+  }
+  .nebula-sidebar-nested .nebula-sidebar-item a {
+    padding-left: 2.5rem;
   }
 </style>

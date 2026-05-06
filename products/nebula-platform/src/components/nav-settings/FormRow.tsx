@@ -42,7 +42,7 @@ export function FormRow({ label, icon: Icon, htmlFor, className, children }: For
 }
 
 const UNDERLINE_INPUT_CLASSES =
-  'h-9 rounded-none border-0 border-b border-border/60 bg-transparent px-0 shadow-none transition-colors focus-visible:border-foreground focus-visible:ring-0';
+  'h-9 rounded-none border-0 border-b border-border/60 bg-transparent px-0 shadow-none transition-colors focus-visible:border-foreground focus-visible:ring-0 dark:bg-transparent';
 
 interface TextRowProps {
   label: string;

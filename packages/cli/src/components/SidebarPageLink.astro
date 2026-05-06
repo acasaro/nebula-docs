@@ -1,0 +1,37 @@
+---
+import NebulaIcon from './NebulaIcon.astro';
+import { isPageObject, pageHref, pageLabel, pageSlug, resolveIcon } from '../runtime/lib/nav.mjs';
+
+interface Props {
+  page: any;
+  currentSlug: string;
+}
+
+const { page, currentSlug } = Astro.props as Props;
+const href = pageHref(page);
+const label = pageLabel(page);
+const slug = pageSlug(page);
+const isCurrent = slug === currentSlug;
+const pageIcon = isPageObject(page) ? resolveIcon(page.icon) : null;
+const isExternal = isPageObject(page) && Boolean(page.externalUrl);
+const tag = isPageObject(page) ? page.tag : undefined;
+---
+<li class="nebula-sidebar-item">
+  <a
+    href={href}
+    aria-current={isCurrent ? 'page' : undefined}
+    target={isExternal ? '_blank' : undefined}
+    rel={isExternal ? 'noopener noreferrer' : undefined}
+  >
+    {pageIcon && (
+      <NebulaIcon
+        name={pageIcon.name}
+        library={pageIcon.library}
+        type={pageIcon.type}
+        size={14}
+      />
+    )}
+    <span>{label}</span>
+    {tag && <span class="nebula-sidebar-tag">{tag}</span>}
+  </a>
+</li>

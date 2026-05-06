@@ -48,22 +48,24 @@ const eyebrow = findGroupForSlug(docs, currentSlug);
     <style>
       .nebula-shell {
         display: grid;
-        grid-template-columns: 280px minmax(0, 1fr);
+        grid-template-columns: 16rem minmax(0, 1fr);
         max-width: 1280px;
         margin: 0 auto;
-        gap: var(--mcoe-space-7);
-        padding: var(--mcoe-space-6);
+        gap: 4rem;
+        padding: 1.5rem 2rem;
       }
       .nebula-aside {
         position: sticky;
-        top: var(--mcoe-space-6);
+        top: 1.5rem;
         align-self: start;
-        max-height: calc(100vh - var(--mcoe-space-7));
+        max-height: calc(100vh - 3rem);
         overflow-y: auto;
+        padding-right: 1rem;
       }
       .nebula-main {
         min-width: 0;
-        padding-bottom: var(--mcoe-space-9);
+        max-width: 48rem;
+        padding-bottom: 4rem;
       }
       @media (max-width: 900px) {
         .nebula-shell {

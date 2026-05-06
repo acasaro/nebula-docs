@@ -37,7 +37,7 @@ export function SettingsGithubApp() {
             <CardTitle>App not yet registered</CardTitle>
             <CardDescription>
               Set <code>NEBULA_APP_INSTALL_URL_DEV</code> /{" "}
-              <code>NEBULA_APP_INSTALL_URL_PROD</code> in <code>products/nebula/.env</code> after
+              <code>NEBULA_APP_INSTALL_URL_PROD</code> in the root <code>.env</code> after
               creating the GitHub App, and select the active env via <code>NEBULA_ENV</code>.
             </CardDescription>
           </CardHeader>

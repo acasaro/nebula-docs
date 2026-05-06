@@ -117,6 +117,40 @@ importers:
         specifier: ^5.9.3
         version: 5.9.3
 
+  packages/mdx:
+    dependencies:
+      mdast-util-mdx:
+        specifier: ^3.0.0
+        version: 3.0.0
+      remark-frontmatter:
+        specifier: ^5.0.0
+        version: 5.0.0
+      remark-gfm:
+        specifier: ^4.0.1
+        version: 4.0.1
+      remark-mdx:
+        specifier: ^3.1.0
+        version: 3.1.1
+      remark-parse:
+        specifier: ^11.0.0
+        version: 11.0.0
+      unified:
+        specifier: ^11.0.5
+        version: 11.0.5
+      unist-util-visit:
+        specifier: ^5.0.0
+        version: 5.1.0
+    devDependencies:
+      '@types/mdast':
+        specifier: ^4.0.4
+        version: 4.0.4
+      '@types/unist':
+        specifier: ^3.0.3
+        version: 3.0.3
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+
   packages/schemas:
     dependencies:
       zod:
@@ -215,7 +249,7 @@ importers:
         specifier: ~6.0.2
         version: 6.0.3
 
-  products/nebula:
+  products/nebula-platform:
     dependencies:
       '@dnd-kit/core':
         specifier: ^6.3.1
@@ -229,6 +263,9 @@ importers:
       '@nebula-docs/firebase':
         specifier: workspace:*
         version: link:../../packages/firebase
+      '@nebula-docs/mdx':
+        specifier: workspace:*
+        version: link:../../packages/mdx
       '@nebula-docs/schemas':
         specifier: workspace:*
         version: link:../../packages/schemas
@@ -359,6 +396,8 @@ importers:
       vite:
         specifier: ^7.0.0
         version: 7.3.2(@types/node@22.19.17)(jiti@2.7.0)(lightningcss@1.32.0)(terser@5.46.2)(tsx@4.21.0)
+
+  tenants/example-docs: {}
 
 packages:
 

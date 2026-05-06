@@ -15,6 +15,7 @@
     "@mdx-js/mdx": "^3.1.0",
     "@nebula-docs/components": "workspace:*",
     "@nebula-docs/firebase": "workspace:*",
+    "@nebula-docs/mdx": "workspace:*",
     "@nebula-docs/schemas": "workspace:*",
     "@nebula-docs/theme": "workspace:*",
     "@octokit/rest": "^21.1.1",

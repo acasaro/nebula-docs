@@ -15,7 +15,7 @@ import type {
   ThematicBreak,
 } from 'mdast';
 import type { MdxJsxFlowElement } from 'mdast-util-mdx';
-import { parseMdx } from './parse';
+import { parseMdx } from '@nebula-docs/mdx';
 
 const CALLOUT_NAMES = new Set([
   'Note',

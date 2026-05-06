@@ -1,8 +1,8 @@
 # Conventions
 
-Repo-wide patterns for Nebula Docs work. These apply across `products/nebula/`, `packages/*`, `functions/`, and any new package added to the workspace.
+Repo-wide patterns for Nebula Docs work. These apply across `products/nebula-platform/`, `packages/*`, `functions/`, and any new package added to the workspace.
 
-For Platform architecture, see [nebula.md](nebula.md). For SSG architecture, see [nebula-ssg.md](nebula-ssg.md). For the live workstream snapshot, see [status.md](status.md).
+For Platform architecture, see [nebula.md](nebula.md). For CLI architecture, see [nebula-cli.md](nebula-cli.md). For the live workstream snapshot, see [status.md](status.md).
 
 ## Hard rules (non-negotiable)
 
@@ -25,9 +25,9 @@ export * from './ExportedName';
 
 Folder name, `.tsx` filename, and exported component name must all match.
 
-Applies to: `products/nebula/src/components/**`, `packages/components/src/**`, future `packages/ssg/**`. The repo currently has zero `index.tsx` files; keep it that way.
+Applies to: `products/nebula-platform/src/components/**`, `packages/components/src/**`, future `packages/cli/**`. The repo currently has zero `index.tsx` files; keep it that way.
 
-**Exception — Docusaurus swizzles in `products/docs/src/theme/**`.** Docusaurus's swizzle resolver treats the folder path as the module identity, so the folder name is fixed by Docusaurus (`Logo/`, `Layout/`, etc.), but the `.tsx` filename still matches the exported component (`Logo/NavbarLogo.tsx`). This exception goes away when MCOE migrates onto the SSG.
+**Exception — Docusaurus swizzles in `products/docs/src/theme/**`.** Docusaurus's swizzle resolver treats the folder path as the module identity, so the folder name is fixed by Docusaurus (`Logo/`, `Layout/`, etc.), but the `.tsx` filename still matches the exported component (`Logo/NavbarLogo.tsx`). This exception goes away when MCOE migrates onto the CLI.
 
 ### Tokens are frozen
 
@@ -44,7 +44,7 @@ The vendored references at `vendor/mintlify-components/`, `vendor/mint-docs-ref/
 ### Brand: "Nebula Docs"
 
 - The editor SPA → "Nebula Docs Platform" (default) or "Nebula Docs Studio" (alternative).
-- The renderer → "Nebula Docs SSG".
+- The renderer + tooling → "Nebula Docs CLI". "SSG" stays as informal shorthand for what the CLI does at build time, never as a package name or doc title.
 - The product family → "Nebula Docs".
 - Never "Nebula CMS".
 
@@ -60,7 +60,7 @@ If you need to document env vars, do it in the gitignored `.env` itself or in in
 
 The legacy MCOE Docusaurus site at `products/docs/` functions exactly as the user wants today. Refactors there must be behavior-preserving. After non-trivial changes, run `pnpm --filter @mcoe/docs typecheck && pnpm --filter @mcoe/docs build` and treat broken-link warnings as errors.
 
-The same standard applies to the upcoming SSG migration: visual fidelity with the existing Docusaurus output is the cutover gate.
+The same standard applies to the upcoming CLI migration: visual fidelity with the existing Docusaurus output is the cutover gate.
 
 ### GitHub host is Enterprise Cloud
 
@@ -79,7 +79,7 @@ firebase functions:secrets:set <NAME> --data-file=/absolute/path
 ### Workspace deps
 
 - Workspace deps use `"@nebula-docs/<name>": "workspace:*"`. Never reach across `products/*` for code; share via `packages/*`.
-- The `@mcoe/docs` package is a special case (the legacy Docusaurus site that becomes tenant zero of the SSG). Everything else is `@nebula-docs/*`.
+- The `@mcoe/docs` package is a special case (the legacy Docusaurus site that becomes tenant zero of the CLI). Everything else is `@nebula-docs/*`.
 - Adding a workspace dep: `pnpm --filter @nebula-docs/<consumer> add @nebula-docs/<dep>` (uses `workspace:*` automatically when target is local).
 
 ### TypeScript
@@ -94,9 +94,9 @@ Each package has one styling system; don't cross streams.
 
 | Package | System |
 |---|---|
-| `products/nebula/` | Tailwind v4 only |
+| `products/nebula-platform/` | Tailwind v4 only |
 | `packages/components/` | Tailwind v4 only |
-| `packages/ssg/` (planned) | Tailwind v4 + emotion (where existing components use it) + token CSS vars |
+| `packages/cli/` (planned) | Tailwind v4 + emotion (where existing components use it) + token CSS vars |
 | `products/docs/` (legacy) | emotion + CSS modules (swizzles) + global tokens — three systems scoped by location |
 
 ### Imports
@@ -106,9 +106,9 @@ Each package has one styling system; don't cross streams.
 
 ### MDX components
 
-Add new MDX block components to `packages/components/src/<name>/` and add a Zod schema to `packages/schemas/src/`. Both consumers (the Platform's `MdxEditor` and the SSG) read from the same package.
+Add new MDX block components to `packages/components/src/<name>/` and add a Zod schema to `packages/schemas/src/`. Both consumers (the Platform's `MdxEditor` and the CLI) read from the same package.
 
-For block types that need an editor NodeView (rich Tiptap UI) in addition to the renderer, add a `Mdx<Name>Node.tsx` under `products/nebula/src/components/mdx/` and register it in the Tiptap `extensions` list. Components without a NodeView round-trip via `MdxRaw` (preserves source verbatim, no editing UI).
+For block types that need an editor NodeView (rich Tiptap UI) in addition to the renderer, add a `Mdx<Name>Node.tsx` under `products/nebula-platform/src/components/mdx/` and register it in the Tiptap `extensions` list. Components without a NodeView round-trip via `MdxRaw` (preserves source verbatim, no editing UI).
 
 ### Function deploys
 

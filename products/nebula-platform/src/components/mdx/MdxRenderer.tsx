@@ -22,7 +22,7 @@ import type {
 } from 'mdast';
 import type { MdxJsxFlowElement, MdxJsxTextElement } from 'mdast-util-mdx';
 import { CodeBlock, Mermaid } from '@nebula-docs/components';
-import { parseMdx } from '@/lib/mdx/parse';
+import { parseMdx } from '@nebula-docs/mdx';
 import { lookupComponent } from './registry';
 import { attributesToProps } from './jsxAttributes';
 import { cn } from '@/lib/utils';

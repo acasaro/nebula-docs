@@ -1,0 +1,70 @@
+{
+  "$schema": "https://nebula-docs.uhg.com/docs.schema.json",
+  "name": "Example Docs",
+  "description": "Synthetic tenant for Nebula Docs CLI development.",
+  "favicon": "/assets/favicon.svg",
+  "logo": {
+    "light": "/assets/logo-light.svg",
+    "dark": "/assets/logo-dark.svg",
+    "href": "/"
+  },
+  "theme": {
+    "base": "mcoe-default",
+    "extends": "./theme.json",
+    "switcherEnabled": false
+  },
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "icon": "book",
+        "groups": [
+          {
+            "group": "Getting Started",
+            "pages": [
+              "getting-started/installation"
+            ]
+          },
+          {
+            "group": "Components",
+            "pages": [
+              "components/cards",
+              "components/tabs"
+            ]
+          },
+          {
+            "group": "API Reference",
+            "pages": [
+              "api/users"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "navbar": {
+    "primary": {
+      "type": "button",
+      "label": "Get Started",
+      "href": "/getting-started/installation"
+    },
+    "links": []
+  },
+  "footer": {
+    "columns": [
+      {
+        "label": "Documentation",
+        "links": [
+          { "label": "Getting Started", "href": "/getting-started/installation" },
+          { "label": "Components", "href": "/components/cards" },
+          { "label": "API Reference", "href": "/api/users" }
+        ]
+      }
+    ],
+    "copyright": "Synthetic tenant — not a real product."
+  },
+  "search": {
+    "provider": "pagefind",
+    "scopeBy": "tab"
+  }
+}

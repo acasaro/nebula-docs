@@ -13,8 +13,7 @@ export function NotConfigured() {
         <CardHeader>
           <CardTitle>Nebula isn't configured</CardTitle>
           <CardDescription>
-            Set Firebase web SDK env vars in <code>products/nebula/.env.local</code> to
-            run the app.
+            Set Firebase web SDK env vars in the root <code>.env</code> to run the app.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -24,7 +23,7 @@ export function NotConfigured() {
               FIREBASE_API_KEY, FIREBASE_AUTH_DOMAIN, FIREBASE_PROJECT_ID,
               FIREBASE_APP_ID
             </code>
-            . See <code>.env.example</code> for the full list.
+            .
           </p>
         </CardContent>
       </Card>

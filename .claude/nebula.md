@@ -1,6 +1,6 @@
 # Nebula Docs Platform — Architecture
 
-The Platform is the editor side of Nebula Docs. It pairs with the SSG documented in [nebula-ssg.md](nebula-ssg.md). Together they form a multi-tenant documentation platform: tenants edit content in the Platform, the SSG renders it.
+The Platform is the editor side of Nebula Docs. It pairs with the CLI documented in [nebula-cli.md](nebula-cli.md). Together they form a multi-tenant documentation platform: tenants edit content in the Platform, the CLI renders it.
 
 For the live "what's done / what's open" snapshot per workstream, see [status.md](status.md).
 
@@ -73,7 +73,7 @@ The Next.js Server Actions ergonomic win becomes `httpsCallable()` — same magi
 |---|---|---|
 | **Framework** | Vite + React 19 + React Router 7 | Static SPA → OOSS bucket. Fast dev. No Node-host requirement. |
 | **TypeScript** | Strict, project-wide | Workspace standard |
-| **Styling** | Tailwind CSS v4 + shadcn/ui (Radix primitives) | Tailwind is the one styling system inside `products/nebula/`. shadcn primitives are copy-into-codebase. |
+| **Styling** | Tailwind CSS v4 + shadcn/ui (Radix primitives) | Tailwind is the one styling system inside `products/nebula-platform/`. shadcn primitives are copy-into-codebase. |
 | **User auth** | Firebase Auth client SDK directly (via `@nebula-docs/firebase`) | Already wired up; swap to OIDC later when SSO arrives |
 | **GitHub auth** | `@octokit/auth-app` in a Cloud Function | Private key server-side; SPA gets short-lived installation tokens via `httpsCallable` |
 | **GitHub API** | `@octokit/rest` (client-side) | Uses the installation token from the function |
@@ -86,7 +86,7 @@ The Next.js Server Actions ergonomic win becomes `httpsCallable()` — same magi
 Explicit non-choices:
 
 - **Not Next.js** — the only Next.js feature that mattered (Server Actions) is replaced by `httpsCallable()`. Vite deploys to OOSS like the docs already do.
-- **Not Astro for the Platform** — Astro shines for content-heavy sites with islands. The Platform is an interactive editor; that fights the framework's strengths. (The SSG IS Astro — see [nebula-ssg.md](nebula-ssg.md).)
+- **Not Astro for the Platform** — Astro shines for content-heavy sites with islands. The Platform is an interactive editor; that fights the framework's strengths. (The CLI's render pipeline IS Astro — see [nebula-cli.md](nebula-cli.md).)
 - **Not MDXEditor** — wraps Lexical with MDX-specific opinions; the opinionation fought us. Tiptap-direct is one layer lower (ProseMirror engine + our own schema/NodeViews).
 - **Not a runtime CMS** (no Firestore-as-content). Content lives as MDX in git.
 - **Not MUI** — Tailwind + shadcn fits.
@@ -128,7 +128,7 @@ Deploy is scoped:
 Every package below has working code and is load-bearing.
 
 - **`packages/theme`** — TS-first tokens. Frozen-data hard rule applies: data in `mcoeDefaultTokens` / `uhcTokens` / `optumTokens` is approved and unchanging. Generates `dist/tokens.css` consumed by Docusaurus and the Platform.
-- **`packages/components`** — React components for MDX block types (currently 18 component groups: callout, card, code-block, columns, frame, icon, mermaid, property, step, steps, tabs, tree, update, accordion, badge, expandable, example, video). Single source of truth — both the Platform's MdxEditor and the SSG render from this package.
+- **`packages/components`** — React components for MDX block types (currently 18 component groups: callout, card, code-block, columns, frame, icon, mermaid, property, step, steps, tabs, tree, update, accordion, badge, expandable, example, video). Single source of truth — both the Platform's MdxEditor and the CLI render from this package.
 - **`packages/schemas`** — Zod schemas, one per block type. Used editor-side for prop validation when serializing back to MDX.
 - **`packages/firebase`** — Slim init + auth helpers. The Platform imports from here directly. Now accepts an optional `firestoreDbId` so it can target either Firestore database.
 

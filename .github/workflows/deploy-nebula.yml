@@ -6,7 +6,7 @@ on:
     branches:
       - main
     paths:
-      - 'products/nebula/**'
+      - 'products/nebula-platform/**'
       - 'packages/**'
       - 'pnpm-workspace.yaml'
       - 'pnpm-lock.yaml'

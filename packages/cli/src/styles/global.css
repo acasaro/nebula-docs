@@ -100,6 +100,27 @@
   --radius-xl: calc(var(--radius) + 4px);
 }
 
+/* Shiki dual-theme: with `markdown.shikiConfig.themes: { light, dark }`
+ * and `defaultColor: false` (see astro.config.mjs), Shiki emits each
+ * highlighted token with `--shiki-light`/`--shiki-dark` CSS vars and
+ * `--shiki-light-bg`/`--shiki-dark-bg` on the <pre>. We resolve those
+ * vars per-theme so fenced code blocks pick up the page theme instead
+ * of being locked to a single hardcoded background.
+ *
+ * Astro classes the <pre> as `astro-code astro-code-themes`; the
+ * `:where()` keeps specificity 0 so the inline `style` Shiki emits on
+ * each <span> still wins on the per-token foreground side via these
+ * CSS variables.
+ */
+:where(.astro-code, .astro-code span) {
+  color: var(--shiki-light);
+  background-color: var(--shiki-light-bg);
+}
+:where(.dark, [data-theme='dark']) :where(.astro-code, .astro-code span) {
+  color: var(--shiki-dark);
+  background-color: var(--shiki-dark-bg);
+}
+
 /* Base reset — mirrors the Platform's @layer base. The default `border`
  * utility resolves to `var(--color-border)` (i.e. CLI's
  * `--mcoe-border-default`), and the body inherits `bg-background` +

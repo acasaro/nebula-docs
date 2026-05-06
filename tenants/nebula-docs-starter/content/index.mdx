@@ -1,12 +1,12 @@
 ---
-title: 'AcmeCloud SDK'
-description: 'Edge-first APIs for shipping multi-tenant applications without owning servers.'
-icon: 'home'
-keywords: ['acmecloud', 'sdk', 'getting started']
-mode: 'wide'
+title: "AcmeCloud SDK"
+description: "Edge-first APIs for shipping multi-tenant applications without owning servers."
+icon: "home"
+keywords: ["acmecloud", "sdk", "getting started"]
+mode: "wide"
 ---
 
-AcmeCloud is a fictional placeholder product used to populate this kitchen-sink Nebula Docs starter. The SDK lets you provision *projects*, manage *users*, publish *posts*, and stream telemetry from any runtime that can speak HTTPS.
+AcmeCloud is a fictional placeholder product used to populate this kitchen-sink Nebula Docs starter. The SDK lets you provision _projects_, manage _users_, publish _posts_, and stream telemetry from any runtime that can speak HTTPS.
 
 The AcmeCloud SDK is published for three runtimes. Examples on this page assume the latest minor version of each:
 
@@ -17,16 +17,16 @@ The AcmeCloud SDK is published for three runtimes. Examples on this page assume 
 ## Pick a path
 
 <CardGroup cols={2}>
-  <Card title="Quickstart" icon="rocket" href="/quickstart" cta="Mint a key">
+  <Card title='Quickstart' icon='rocket' href='/quickstart' cta='Mint a key'>
     Five-minute walkthrough — install, authenticate, send your first request.
   </Card>
-  <Card title="Concepts" icon="lightbulb" href="/concepts/data-model" cta="Read the model">
+  <Card title='Concepts' icon='lightbulb' href='/concepts/data-model' cta='Read the model'>
     How projects, users, and posts relate; what the request lifecycle looks like.
   </Card>
-  <Card title="Tutorials" icon="graduation-cap" href="/tutorial/01-setup" cta="Build something">
+  <Card title='Tutorials' icon='graduation-cap' href='/tutorial/01-setup' cta='Build something'>
     End-to-end walkthroughs that take a fresh project from `init` to `deploy`.
   </Card>
-  <Card title="API Reference" icon="code" href="/api">
+  <Card title='API Reference' icon='code' href='/api'>
     Every endpoint, every field, every status code. Auto-generated from the OpenAPI spec.
   </Card>
 </CardGroup>
@@ -34,56 +34,55 @@ The AcmeCloud SDK is published for three runtimes. Examples on this page assume 
 ## What you can do today
 
 <Columns cols={3}>
-  <Card title="Projects" icon="folder">
-    Multi-tenant scoping for everything else in the platform. One project per environment is typical.
+  <Card title='Projects' icon='folder'>
+    Multi-tenant scoping for everything else in the platform. One project per environment is
+    typical.
   </Card>
-  <Card title="Users" icon="user">
-    Identities, sessions, and role assignments. Bring your own SSO via OIDC, or use AcmeCloud's hosted auth.
+  <Card title='Users' icon='user'>
+    Identities, sessions, and role assignments. Bring your own SSO via OIDC, or use AcmeCloud's
+    hosted auth.
   </Card>
-  <Card title="Posts" icon="file-text">
-    Versioned content records with structured metadata, file attachments, and per-field access controls.
+  <Card title='Posts' icon='file-text'>
+    Versioned content records with structured metadata, file attachments, and per-field access
+    controls.
   </Card>
 </Columns>
 
 ## A 30-second taste
 
-<Tabs>
-  <Tab title="TypeScript">
-    ```ts
-    import { AcmeCloud } from '@acmecloud/sdk';
-
+<CodeGroup>
+  ```ts
+  import { AcmeCloud } from '@acmecloud/sdk';
     const client = new AcmeCloud({ apiKey: process.env.ACME_KEY });
-
     const user = await client.users.create({
       email: 'ada@example.com',
       name: 'Ada Lovelace',
     });
-    ```
-  </Tab>
-  <Tab title="Python">
-    ```python
-    from acmecloud import AcmeCloud
+  ```
 
-    client = AcmeCloud(api_key=os.environ['ACME_KEY'])
+```python
+from acmecloud import AcmeCloud
 
-    user = client.users.create(
-        email='ada@example.com',
-        name='Ada Lovelace',
-    )
-    ```
-  </Tab>
-  <Tab title="Go">
-    ```go
-    client := acmecloud.New(os.Getenv("ACME_KEY"))
+  client = AcmeCloud(api_key=os.environ['ACME_KEY'])
 
-    user, err := client.Users.Create(ctx, &acmecloud.UserCreate{
-        Email: "ada@example.com",
-        Name:  "Ada Lovelace",
-    })
-    ```
-  </Tab>
-</Tabs>
+  user = client.users.create(
+      email='ada@example.com',
+      name='Ada Lovelace',
+  )
+```
 
-<Callout type="tip">
-  This starter is the dev fixture for the Nebula Docs CLI. Every component block on the [Components](/components) tab renders the same way the editor will render it on the Platform side.
+```go
+client := acmecloud.New(os.Getenv("ACME_KEY"))
+
+  user, err := client.Users.Create(ctx, &acmecloud.UserCreate{
+      Email: "ada@example.com",
+      Name:  "Ada Lovelace",
+  })
+```
+
+</CodeGroup>
+
+<Callout type='tip'>
+  This starter is the dev fixture for the Nebula Docs CLI. Every component block on the
+  [Components](/components) tab renders the same way the editor will render it on the Platform side.
 </Callout>

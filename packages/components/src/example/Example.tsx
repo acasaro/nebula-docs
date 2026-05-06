@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { ArrowDownLeft, ArrowUpRight, Plus, Trash, X } from 'lucide-react';
+import { ArrowDownLeft, ArrowUpRight } from 'lucide-react';
 import { cn } from '../utils/cn';
 
 type ExampleVariant = 'request' | 'response';
@@ -56,9 +56,9 @@ const variantConfig: Record<
  *        right (visual placeholders — Phase 4+ wires them up)
  *      - a nested code-block area with its own light/dark surface
  *
- * MDX usage stays simple: pass a fenced code block as children. Multi-tab
- * support (Mintlify renders multiple language tabs) lands when we add edit
- * affordances.
+ * MDX usage stays simple: pass a fenced code block as children. The editor
+ * has its own NodeView (`MdxRequestExample` / `MdxResponseExample`) that
+ * adds editing affordances; this production component stays presentational.
  */
 function Example({ title, className, children, variant }: ExampleProps) {
   const cfg = variantConfig[variant];
@@ -83,55 +83,21 @@ function Example({ title, className, children, variant }: ExampleProps) {
       </div>
 
       <div className="relative flex flex-col overflow-hidden rounded-2xl rounded-tl-none border border-stone-950/10 bg-stone-50 p-0.5 dark:border-white/10 dark:bg-white/5">
-        <div className="relative flex items-center justify-between gap-2 pr-2.5">
+        <div className="relative flex items-center gap-2 px-2.5">
           <div
-            role="tablist"
-            aria-orientation="horizontal"
-            className="flex flex-1 gap-1 overflow-x-auto px-2.5 text-xs leading-6"
+            className={cn(
+              'relative my-1 mb-1.5 flex items-center gap-1.5 whitespace-nowrap px-1.5 text-xs leading-6 font-medium',
+              cfg.tabText,
+            )}
           >
-            <div
-              role="tab"
-              aria-selected="true"
-              tabIndex={0}
+            <span>{tabLabel}</span>
+            <span
+              aria-hidden="true"
               className={cn(
-                'group relative my-1 mb-1.5 flex items-center gap-1.5 whitespace-nowrap font-medium outline-none',
-                cfg.tabText,
+                'absolute -bottom-[1px] left-0 right-0 h-0.5 rounded-full',
+                cfg.tabUnderline,
               )}
-            >
-              <div className="z-10 flex cursor-text items-center gap-1.5 rounded-lg px-1.5">
-                <span className="text-xs font-medium">{tabLabel}</span>
-                <button
-                  type="button"
-                  className="p-0 opacity-60 transition-opacity hover:opacity-100"
-                  aria-label={`Remove ${tabLabel}`}
-                >
-                  <X className="size-3" />
-                </button>
-              </div>
-              <div
-                className={cn(
-                  'absolute -bottom-1.5 left-0 right-0 h-0.5 rounded-full',
-                  cfg.tabUnderline,
-                )}
-              />
-            </div>
-          </div>
-
-          <div className="flex shrink-0 items-center justify-end">
-            <button
-              type="button"
-              aria-label={`Add ${cfg.tabLabel.toLowerCase()}`}
-              className="flex size-8 items-center justify-center rounded-[10px] text-stone-500 transition-colors hover:bg-stone-950/5 dark:text-stone-400 dark:hover:bg-white/5"
-            >
-              <Plus className="size-3.5" aria-hidden="true" />
-            </button>
-            <button
-              type="button"
-              aria-label={`Delete ${cfg.tabLabel.toLowerCase()}`}
-              className="flex size-8 items-center justify-center rounded-[10px] text-stone-500 transition-colors hover:bg-stone-950/5 dark:text-stone-400 dark:hover:bg-white/5"
-            >
-              <Trash className="size-3.5" aria-hidden="true" />
-            </button>
+            />
           </div>
         </div>
 

@@ -46,6 +46,18 @@ export interface SlashItem {
   command: (props: { editor: Editor; range: { from: number; to: number } }) => void;
 }
 
+/**
+ * Asks the host (MdxEditor) to open the image picker. The host's onPick
+ * callback is responsible for inserting the resulting node at `range`.
+ */
+export interface ImagePickerRequest {
+  mode: 'image' | 'figure';
+  editor: Editor;
+  range: { from: number; to: number };
+}
+
+export type OpenImagePicker = (req: ImagePickerRequest) => void;
+
 export const SLASH_ITEMS: SlashItem[] = [
   {
     id: 'paragraph',
@@ -268,21 +280,14 @@ export const SLASH_ITEMS: SlashItem[] = [
   },
   {
     id: 'frame',
-    label: 'Frame',
-    description: 'Image with optional caption',
-    Icon: Image,
-    keywords: ['frame', 'image', 'figure'],
-    command: ({ editor, range }) => {
-      editor
-        .chain()
-        .focus()
-        .deleteRange(range)
-        .insertContent({
-          type: 'mdxFrame',
-          attrs: {},
-          content: [{ type: 'paragraph' }],
-        })
-        .run();
+    label: 'Figure',
+    description: 'Framed image with optional caption',
+    Icon: Frame,
+    keywords: ['frame', 'figure', 'image', 'caption'],
+    command: () => {
+      // Replaced at build-time by buildSlashItems when an image-picker is
+      // wired. Without one, this no-ops — the editor host is responsible
+      // for surfacing media UI.
     },
   },
   {
@@ -335,22 +340,14 @@ export const SLASH_ITEMS: SlashItem[] = [
     },
   },
   {
-    id: 'frame-image',
+    id: 'image',
     label: 'Image',
-    description: 'Just an image (alias of Frame)',
-    Icon: Frame,
-    keywords: ['image', 'img', 'picture'],
-    command: ({ editor, range }) => {
-      editor
-        .chain()
-        .focus()
-        .deleteRange(range)
-        .insertContent({
-          type: 'mdxFrame',
-          attrs: {},
-          content: [{ type: 'paragraph' }],
-        })
-        .run();
+    description: 'Insert an image from your library or upload',
+    Icon: Image,
+    keywords: ['image', 'img', 'picture', 'media', 'photo', 'screenshot'],
+    command: () => {
+      // Same story as Figure — replaced by buildSlashItems when an image
+      // picker is wired.
     },
   },
   {
@@ -663,6 +660,7 @@ export const SLASH_ITEMS: SlashItem[] = [
  */
 export function buildSlashItems(
   catalog: readonly SnippetCatalogEntry[],
+  openImagePicker?: OpenImagePicker,
 ): SlashItem[] {
   const snippetItems: SlashItem[] = catalog.map((entry) => ({
     id: `snippet:${entry.importPath}`,
@@ -685,7 +683,26 @@ export function buildSlashItems(
         .run();
     },
   }));
-  return [...SLASH_ITEMS, ...snippetItems];
+  const items: SlashItem[] = openImagePicker
+    ? SLASH_ITEMS.map((item) => {
+        if (item.id === 'image') {
+          return {
+            ...item,
+            command: ({ editor, range }: { editor: Editor; range: { from: number; to: number } }) =>
+              openImagePicker({ mode: 'image', editor, range }),
+          };
+        }
+        if (item.id === 'frame') {
+          return {
+            ...item,
+            command: ({ editor, range }: { editor: Editor; range: { from: number; to: number } }) =>
+              openImagePicker({ mode: 'figure', editor, range }),
+          };
+        }
+        return item;
+      })
+    : SLASH_ITEMS;
+  return [...items, ...snippetItems];
 }
 
 export function filterSlashItems(

@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router';
-import { GitBranch, Github, Home, PenLine } from 'lucide-react';
+import { GitBranch, Github, Home, Image as ImageIcon, PenLine } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useGitSettings } from '@/lib/gitSettings';
 
@@ -18,6 +18,7 @@ export function Sidebar() {
       // /editor/:branch/~/<path> should keep "Editor" highlighted
       activePrefix: '/editor/',
     },
+    { to: '/assets', label: 'Assets', icon: ImageIcon, end: false },
     { to: '/settings/git', label: 'Git settings', icon: GitBranch, end: false },
     { to: '/settings/github-app', label: 'GitHub app', icon: Github, end: false },
   ];

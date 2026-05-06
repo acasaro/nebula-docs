@@ -1,4 +1,5 @@
 import { BranchPicker } from "@/components/BranchPicker";
+import { ConfigurationsPanel } from "@/components/ConfigurationsPanel";
 import { FileTypeIcon, isBinaryFile } from "@/components/FileTypeIcon";
 import { useHeaderLeading, useHeaderSlot } from "@/components/HeaderSlot";
 import { MdxEditor, normalizeMdx } from "@/components/mdx/MdxEditor";
@@ -21,6 +22,7 @@ import {
   type Group,
   type Tab,
 } from "@/lib/docsConfig";
+import { useThemeConfig, type ThemeConfig } from "@/lib/themeConfig";
 import {
   appendTab,
   appendToGroup,
@@ -51,7 +53,7 @@ import {
 import { useGitSettings } from "@/lib/gitSettings";
 import { buildTree, type TreeNode } from "@/lib/repoTree";
 import { cn } from "@/lib/utils";
-import { ChevronDown, ChevronRight, Code2, Eye, Files, Folder, Map } from "lucide-react";
+import { ChevronDown, ChevronRight, Code2, Eye, Files, Folder, Map, Settings } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Navigate, useNavigate, useParams } from "react-router";
 
@@ -350,6 +352,7 @@ export function RepoBrowser() {
   const [fileError, setFileError] = useState<string | null>(null);
   const [mode, setMode] = useState<ViewMode>("visual");
   const [settingsOpen, setSettingsOpen] = useState<OpenNavSettings | null>(null);
+  const [configurationsOpen, setConfigurationsOpen] = useState(false);
   const [deletions, setDeletions] = useState<Set<string>>(new Set());
 
   const currentBranch = branchParam;
@@ -376,6 +379,7 @@ export function RepoBrowser() {
       if (!currentBranch) return;
       // Close any open settings panel — choosing a page is a fresh context.
       setSettingsOpen(null);
+      setConfigurationsOpen(false);
       navigate(`/editor/${currentBranch}/~/${path}`);
     },
     [currentBranch, navigate],
@@ -395,6 +399,12 @@ export function RepoBrowser() {
   const matchesActive = !!active;
 
   const docsConfigState = useDocsConfig({
+    installationId: active?.installationId ?? null,
+    owner: active?.owner ?? null,
+    repo: active?.repo ?? null,
+    ref: currentBranch,
+  });
+  const themeConfigState = useThemeConfig({
     installationId: active?.installationId ?? null,
     owner: active?.owner ?? null,
     repo: active?.repo ?? null,
@@ -529,6 +539,49 @@ export function RepoBrowser() {
       });
     },
     [docsConfigState.config],
+  );
+
+  const liveThemeConfig = useMemo<ThemeConfig | null>(() => {
+    const entry = files["theme.json"];
+    if (entry?.draft) {
+      try {
+        return JSON.parse(entry.draft) as ThemeConfig;
+      } catch {
+        // Fall through to the fetched copy.
+      }
+    }
+    return themeConfigState.config;
+  }, [files, themeConfigState.config]);
+
+  const handleThemeChange = useCallback(
+    (updater: (config: ThemeConfig) => ThemeConfig) => {
+      setFiles((prev) => {
+        const current = prev["theme.json"];
+        const baseConfig = current?.draft
+          ? (JSON.parse(current.draft) as ThemeConfig)
+          : (themeConfigState.config ?? { tokens: {} });
+        const nextConfig = updater(baseConfig);
+        const nextDraft = `${JSON.stringify(nextConfig, null, 2)}\n`;
+        if (current && current.draft === nextDraft) return prev;
+        if (!current) {
+          const original = `${JSON.stringify(themeConfigState.config ?? baseConfig, null, 2)}\n`;
+          return {
+            ...prev,
+            "theme.json": {
+              original,
+              draft: nextDraft,
+              sha: "",
+              revertNonce: 0,
+            },
+          };
+        }
+        return {
+          ...prev,
+          "theme.json": { ...current, draft: nextDraft },
+        };
+      });
+    },
+    [themeConfigState.config],
   );
 
   const handleFrontmatterChange = useCallback(
@@ -871,7 +924,8 @@ export function RepoBrowser() {
   );
 
   const headerSlot = useMemo(() => {
-    const showModeToggle = selectedPath && isMdxFile(selectedPath);
+    const showModeToggle =
+      !configurationsOpen && selectedPath && isMdxFile(selectedPath);
     return (
       <>
         {showModeToggle ? (
@@ -902,7 +956,11 @@ export function RepoBrowser() {
           />
         ) : null}
         <div className='flex flex-1 items-center min-w-0 text-xs font-mono text-muted-foreground'>
-          {selectedPath ? (
+          {configurationsOpen ? (
+            <span className='truncate font-sans text-sm font-semibold not-italic text-foreground'>
+              Configurations
+            </span>
+          ) : selectedPath ? (
             <span className='truncate'>
               {selectedPath}
               {isCurrentDirty ? (
@@ -947,6 +1005,7 @@ export function RepoBrowser() {
     saving,
     creatingPr,
     saveMessage,
+    configurationsOpen,
   ]);
   useHeaderSlot(headerSlot);
 
@@ -1045,11 +1104,27 @@ export function RepoBrowser() {
           </TabsContent>
         </Tabs>
 
-        <div className='border-t px-4 py-2 text-xs text-muted-foreground'>
+        <div className='border-t border-border/40 px-4 py-2 text-xs text-muted-foreground'>
           {navCount} doc{navCount === 1 ? "" : "s"} · {filesCount} file
           {filesCount === 1 ? "" : "s"}
           {truncated ? " · tree truncated" : ""}
         </div>
+        <button
+          type='button'
+          onClick={() => {
+            setSettingsOpen(null);
+            setConfigurationsOpen((open) => !open);
+          }}
+          aria-pressed={configurationsOpen}
+          className={cn(
+            "flex h-11 shrink-0 items-center gap-2 border-t border-border/40 px-4 text-sm font-semibold transition-colors",
+            configurationsOpen
+              ? "bg-accent text-brand-text"
+              : "text-foreground/80 hover:bg-accent/60 hover:text-foreground",
+          )}>
+          <Settings className='size-4' />
+          Configurations
+        </button>
       </aside>
       {settingsOpen ? (
         <NavSettingsPanel
@@ -1064,21 +1139,30 @@ export function RepoBrowser() {
         />
       ) : null}
       <main className='flex flex-1 flex-col overflow-hidden bg-background'>
-        <SnippetResolverProvider
-          resolveContent={resolveSnippetContent}
-          resolveRepoPath={resolveSnippetRepoPath}
-          catalog={snippetCatalog}
-        >
-          <FileViewer
-            path={selectedPath}
-            content={currentEntry?.draft ?? null}
-            revertNonce={currentEntry?.revertNonce ?? 0}
-            loading={fileLoading}
-            error={fileError}
-            mode={mode}
-            onContentChange={handleContentChange}
+        {configurationsOpen ? (
+          <ConfigurationsPanel
+            config={liveDocsConfig}
+            onConfigChange={handleConfigChange}
+            themeConfig={liveThemeConfig}
+            onThemeChange={handleThemeChange}
           />
-        </SnippetResolverProvider>
+        ) : (
+          <SnippetResolverProvider
+            resolveContent={resolveSnippetContent}
+            resolveRepoPath={resolveSnippetRepoPath}
+            catalog={snippetCatalog}
+          >
+            <FileViewer
+              path={selectedPath}
+              content={currentEntry?.draft ?? null}
+              revertNonce={currentEntry?.revertNonce ?? 0}
+              loading={fileLoading}
+              error={fileError}
+              mode={mode}
+              onContentChange={handleContentChange}
+            />
+          </SnippetResolverProvider>
+        )}
       </main>
     </div>
   );

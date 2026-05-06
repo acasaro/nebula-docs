@@ -3,6 +3,7 @@ import { isFirebaseConfigured } from '@/lib/firebase';
 import { AppShell } from '@/components/AppShell';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { useGitSettings } from '@/lib/gitSettings';
+import { Assets } from '@/routes/Assets';
 import { DevIconPicker } from '@/routes/DevIconPicker';
 import { Home } from '@/routes/Home';
 import { InstallCallback } from '@/routes/InstallCallback';
@@ -44,6 +45,7 @@ export function App() {
             <Route index element={<Home />} />
             <Route path="editor/:branch" element={<EditorIndex />} />
             <Route path="editor/:branch/~/*" element={<RepoBrowser />} />
+            <Route path="assets" element={<Assets />} />
             <Route path="settings/github-app" element={<SettingsGithubApp />} />
             <Route path="settings/git" element={<SettingsGitRepo />} />
             <Route path="install/callback" element={<InstallCallback />} />

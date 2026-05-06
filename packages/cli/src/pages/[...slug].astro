@@ -7,6 +7,16 @@ import Step from '../runtime/components/Step.astro';
 import Tabs from '../runtime/components/Tabs.astro';
 import Tab from '../runtime/components/Tab.astro';
 import Mermaid from '../runtime/components/Mermaid.astro';
+import TreeRoot from '../runtime/components/Tree.astro';
+import TreeFolder from '../runtime/components/TreeFolder.astro';
+import TreeFile from '../runtime/components/TreeFile.astro';
+import CodeGroup from '../runtime/components/CodeGroup.astro';
+
+// Namespace shape for MDX dotted-name resolution: <Tree.Folder> resolves to
+// `components.Tree.Folder`, so the `Tree` entry must be a function-like
+// object with `.Folder` and `.File` properties (mirrors the React variant's
+// `Object.assign(TreeRoot, { Folder, File })` shape).
+const Tree = Object.assign(TreeRoot, { Folder: TreeFolder, File: TreeFile });
 
 export async function getStaticPaths() {
   const entries = await getCollection('docs');
@@ -33,6 +43,10 @@ const currentSlug = entry.id;
 //     boundary (children come through as pre-rendered HTML strings).
 //   - Mermaid — needs a `client:visible` directive that the components-map
 //     prop can't carry; the Astro wrapper attaches it.
+//   - Tree — uses a React Context to propagate depth to nested
+//     Tree.Folder/Tree.File children; the Context provider in the parent
+//     never connects to descendants because each MDX-rendered component
+//     becomes its own React tree on the server.
 // Add new entries to BOTH this map AND the auto-import skip list in
 // `astro.config.mjs` — otherwise the auto-import plugin shadows this map
 // with a raw `import { X } from "@nebula-docs/components"` and the React
@@ -44,6 +58,8 @@ const components = {
   Tabs,
   Tab,
   Mermaid,
+  Tree,
+  CodeGroup,
 };
 ---
 <DocsLayout

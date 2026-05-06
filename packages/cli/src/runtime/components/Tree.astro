@@ -1,0 +1,116 @@
+---
+// Astro implementation of <Tree>. The React variant in @nebula-docs/components
+// uses a TreeLevelContext to propagate the current depth to nested
+// Tree.Folder / Tree.File children — but the Astro+React+MDX SSR boundary
+// pre-renders nested children to HTML strings before they reach the parent,
+// so the Context provider in <Tree> never connects to its descendants and
+// every item ends up at level=1.
+//
+// Astro slots preserve hierarchy across the boundary, and CSS handles
+// indentation: each tree-folder-children container adds 22px of padding-left,
+// so the depth accumulates naturally without needing a level prop or context.
+//
+// Same pattern as Tabs/Steps (Round 7) and Mermaid (Round 9). Add new entries
+// to BOTH the page route map AND the auto-import skip list in
+// `astro.config.mjs` — otherwise the auto-import plugin shadows the map and
+// forces the broken React variant.
+
+interface Props {
+  class?: string;
+}
+const { class: className } = Astro.props as Props;
+---
+<div
+  role="tree"
+  aria-label="File tree"
+  data-component-part="tree-root"
+  class:list={['nebula-tree my-4', className]}
+>
+  <slot />
+</div>
+
+<style is:global>
+  /* Each level of nesting pushes children 22px further right; the padding
+     accumulates through the child elements naturally. The header inside a
+     folder gets its own 6px padding-left so the level-1 root is at 6px
+     (matches the React component's calculatePaddingLeft(1) = 6). */
+  .nebula-tree [data-component-part='tree-folder-children'] {
+    padding-left: 22px;
+    position: relative;
+  }
+  /* Vertical guide line: positioned at left:14px relative to the children
+     wrapper's outer edge so it passes through the parent folder icon's
+     vertical center column at every depth (header pl:6 + icon size/2 ≈ 14). */
+  .nebula-tree [data-component-part='tree-folder-children-line'] {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 14px;
+    width: 1px;
+    z-index: 10;
+    pointer-events: none;
+    background-color: var(--color-stone-200, oklch(0.923 0.003 48.717));
+  }
+  :where(.dark, [data-theme='dark']) .nebula-tree [data-component-part='tree-folder-children-line'] {
+    background-color: var(--color-stone-800, oklch(0.268 0.007 34.298));
+  }
+  /* Hide closed folders' children. */
+  .nebula-tree [data-component-part='tree-folder'][data-open='false']
+    > [data-component-part='tree-folder-children'] {
+    display: none;
+  }
+  /* Toggle which folder icon is shown based on open state. */
+  .nebula-tree [data-component-part='tree-folder'][data-open='true']
+    > [data-component-part='tree-folder-header']
+    > [data-tree-icon='folder-closed'],
+  .nebula-tree [data-component-part='tree-folder'][data-open='false']
+    > [data-component-part='tree-folder-header']
+    > [data-tree-icon='folder-open'] {
+    display: none;
+  }
+  /* Non-openable folders never show the open icon. */
+  .nebula-tree [data-component-part='tree-folder'][data-openable='false']
+    > [data-component-part='tree-folder-header']
+    > [data-tree-icon='folder-open'] {
+    display: none;
+  }
+  .nebula-tree [data-component-part='tree-folder'][data-openable='false']
+    > [data-component-part='tree-folder-header'] {
+    cursor: default;
+  }
+</style>
+
+<script is:inline>
+  (function () {
+    function init(root) {
+      if (root.dataset.nebulaInit === '1') return;
+      root.dataset.nebulaInit = '1';
+      root.querySelectorAll('[data-component-part="tree-folder"][data-openable="true"]').forEach(
+        function (folder) {
+          const header = folder.querySelector(':scope > [data-component-part="tree-folder-header"]');
+          if (!header) return;
+          function toggle() {
+            const isOpen = folder.getAttribute('data-open') === 'true';
+            folder.setAttribute('data-open', isOpen ? 'false' : 'true');
+            header.setAttribute('aria-expanded', isOpen ? 'false' : 'true');
+          }
+          header.addEventListener('click', toggle);
+          header.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              toggle();
+            }
+          });
+        },
+      );
+    }
+    function run() {
+      document.querySelectorAll('[data-component-part="tree-root"]').forEach(init);
+    }
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', run);
+    } else {
+      run();
+    }
+  })();
+</script>

@@ -19,6 +19,25 @@ const tenantRoot = process.env.NEBULA_TENANT_ROOT;
 const outDir = process.env.NEBULA_OUT_DIR;
 const base = process.env.NEBULA_BASE;
 
+/**
+ * Shiki transformer: lift the filename out of the fence's meta string
+ * (e.g. ```ts add.ts ` → first non-`key=value` token after the language)
+ * and stamp it on the rendered <pre> as `data-filename`. CodeGroup.astro
+ * reads that attribute to label its tabs; without it, tabs fall back to
+ * the language code.
+ */
+const shikiFilenameTransformer = {
+  name: 'nebula-filename',
+  pre(node) {
+    const meta = this?.options?.meta?.__raw;
+    if (!meta || typeof meta !== 'string') return;
+    const tokens = meta.split(/\s+/).filter(Boolean);
+    const filename = tokens.find((t) => !t.includes('='));
+    if (!filename) return;
+    node.properties = { ...node.properties, 'data-filename': filename };
+  },
+};
+
 if (!tenantRoot) {
   throw new Error(
     'NEBULA_TENANT_ROOT is not set. Run via `nebula <command> <tenant-path>` instead of invoking astro directly.',
@@ -74,7 +93,7 @@ const autoImportComponents = {
   CardGroup: NEBULA_COMPONENTS,
   Check: NEBULA_COMPONENTS,
   CodeBlock: NEBULA_COMPONENTS,
-  CodeGroup: NEBULA_COMPONENTS,
+  // CodeGroup intentionally skipped — Astro variant in src/runtime/components.
   Column: NEBULA_COMPONENTS,
   Columns: NEBULA_COMPONENTS,
   Danger: NEBULA_COMPONENTS,
@@ -88,9 +107,8 @@ const autoImportComponents = {
   RequestExample: NEBULA_COMPONENTS,
   ResponseExample: NEBULA_COMPONENTS,
   ResponseField: NEBULA_COMPONENTS,
-  // Steps/Step/Tabs/Tab intentionally skipped — see comment above.
+  // Steps/Step/Tabs/Tab/Tree intentionally skipped — see comment above.
   Tip: NEBULA_COMPONENTS,
-  Tree: NEBULA_COMPONENTS,
   Update: NEBULA_COMPONENTS,
   Warning: NEBULA_COMPONENTS,
 };
@@ -100,6 +118,21 @@ export default defineConfig({
   outDir: outDir ?? resolve(tenantRoot, 'dist'),
   base: base ?? '/',
   trailingSlash: 'never',
+  markdown: {
+    shikiConfig: {
+      // Dual-theme: emit one set of styles per theme; CSS toggles which
+      // resolves based on `.dark` / `[data-theme="dark"]` on the document
+      // root. Without this, fenced code blocks ship with a single theme's
+      // hardcoded background color and look out of place when the page
+      // is in the opposite theme.
+      themes: {
+        light: 'github-light',
+        dark: 'github-dark',
+      },
+      defaultColor: false,
+      transformers: [shikiFilenameTransformer],
+    },
+  },
   integrations: [
     mdx({
       remarkPlugins: [

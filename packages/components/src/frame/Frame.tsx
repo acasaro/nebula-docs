@@ -2,29 +2,40 @@ import type { CSSProperties, ReactNode } from 'react';
 import { cn } from '../utils/cn';
 
 export interface FrameProps {
-  children: ReactNode;
+  children?: ReactNode;
   caption?: string;
   /** Alias kept for MDX compatibility — `title` is also supported. */
   title?: string;
   /** Alias kept for MDX compatibility — `description` maps to `caption`. */
   description?: string;
+  /** When set, Frame renders an `<img>` with this URL. */
+  src?: string;
+  /** Alt text for the image. Falls back to caption/title if omitted. */
+  alt?: string;
+  width?: number | string;
+  height?: number | string;
   className?: string;
   style?: CSSProperties;
 }
 
 /**
- * Mintlify-style Frame: rounded card with a subtle dot grid and an optional
- * caption beneath. Ported from `vendor/mintlify-components`.
+ * Rounded card with a subtle dot grid and an optional caption beneath.
+ * When `src` is provided, renders an image inside the frame.
  */
 export function Frame({
   children,
   caption,
   description,
   title,
+  src,
+  alt,
+  width,
+  height,
   className,
   style,
 }: FrameProps) {
   const finalCaption = caption ?? description;
+  const finalAlt = alt ?? caption ?? description ?? title ?? '';
 
   return (
     <div className="my-6" data-component-part="frame-container">
@@ -69,6 +80,16 @@ export function Frame({
           className="relative flex w-full justify-center overflow-hidden rounded-xl bg-white dark:bg-stone-900"
           data-component-part="frame-content"
         >
+          {src ? (
+            <img
+              src={src}
+              alt={finalAlt}
+              width={width}
+              height={height}
+              className="block h-auto max-w-full"
+              data-component-part="frame-image"
+            />
+          ) : null}
           {children}
         </div>
 

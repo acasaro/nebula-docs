@@ -1,0 +1,68 @@
+---
+interface Props {
+  name: string;
+  defaultOpen?: boolean;
+  openable?: boolean;
+}
+const {
+  name,
+  defaultOpen = false,
+  openable = true,
+} = Astro.props as Props;
+const open = openable && defaultOpen;
+---
+<div
+  data-component-part="tree-folder"
+  data-openable={openable ? 'true' : 'false'}
+  data-open={open ? 'true' : 'false'}
+>
+  <div
+    role="treeitem"
+    data-component-part="tree-folder-header"
+    aria-expanded={openable ? (open ? 'true' : 'false') : undefined}
+    aria-selected="false"
+    tabindex="-1"
+    class="flex cursor-pointer items-center gap-1.5 rounded-lg py-1 pl-1.5 pr-1.5 -outline-offset-1 text-stone-700 hover:bg-stone-100 dark:text-stone-400 dark:hover:bg-stone-900"
+  >
+    <svg
+      data-tree-icon="folder-closed"
+      class="size-4 shrink-0 select-none"
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z" />
+    </svg>
+    <svg
+      data-tree-icon="folder-open"
+      class="size-4 shrink-0 select-none"
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      aria-hidden="true"
+    >
+      <path d="m6 14 1.45-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.55 6a2 2 0 0 1-1.94 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.93a2 2 0 0 1 1.66.9l.82 1.2a2 2 0 0 0 1.66.9H18a2 2 0 0 1 2 2v2" />
+    </svg>
+    <span
+      class="truncate font-medium text-sm leading-5 -tracking-[0.1px]"
+      title={name}
+    >{name}</span>
+  </div>
+  <div role="group" data-component-part="tree-folder-children">
+    <div aria-hidden="true" data-component-part="tree-folder-children-line"></div>
+    <slot />
+  </div>
+</div>

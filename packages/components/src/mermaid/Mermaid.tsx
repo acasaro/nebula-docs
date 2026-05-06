@@ -33,9 +33,13 @@ export function Mermaid({ chart, children, className, ariaLabel = 'Mermaid diagr
     (async () => {
       try {
         const m = (await import('mermaid')).default;
+        // Platform uses `.dark` on <html>; CLI uses `[data-theme="dark"]`.
+        // Match either so the diagram theme tracks the page theme regardless
+        // of which consumer is rendering.
         const isDark =
           typeof document !== 'undefined' &&
-          document.documentElement.classList.contains('dark');
+          (document.documentElement.classList.contains('dark') ||
+            document.documentElement.getAttribute('data-theme') === 'dark');
         m.initialize({
           startOnLoad: false,
           theme: isDark ? 'dark' : 'default',

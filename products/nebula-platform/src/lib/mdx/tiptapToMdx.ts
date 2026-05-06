@@ -82,8 +82,14 @@ function serializeBlock(node: TiptapNode): string {
     case 'codeBlock': {
       const lang = (node.attrs?.language as string | null | undefined) ?? '';
       const filename = (node.attrs?.filename as string | null | undefined) ?? '';
+      const showLineNumbers = !!node.attrs?.showLineNumbers;
+      const wrapCode = !!node.attrs?.wrapCode;
       const text = (node.content ?? []).map((c) => c.text ?? '').join('');
-      const meta = filename ? ` ${filename}` : '';
+      const tokens: string[] = [];
+      if (filename) tokens.push(filename);
+      if (showLineNumbers) tokens.push('lines');
+      if (wrapCode) tokens.push('wrap');
+      const meta = tokens.length ? ' ' + tokens.join(' ') : '';
       return '```' + lang + meta + '\n' + text + '\n```';
     }
     case 'horizontalRule':
@@ -136,6 +142,8 @@ function serializeBlock(node: TiptapNode): string {
       return serializeMermaid(node);
     case 'mdxCodeGroup':
       return serializeCodeGroup(node);
+    case 'mdxImage':
+      return serializeImage(node);
     case 'mdxImportedSnippet':
       return serializeImportedSnippet(node);
     case 'hardBreak':
@@ -143,6 +151,20 @@ function serializeBlock(node: TiptapNode): string {
     default:
       return '';
   }
+}
+
+function serializeImage(node: TiptapNode): string {
+  const src = String(node.attrs?.src ?? '');
+  const alt = String(node.attrs?.alt ?? '');
+  const title = node.attrs?.title;
+  // Escape ] and ) per CommonMark.
+  const safeAlt = alt.replace(/[\\\]]/g, (m) => `\\${m}`);
+  const safeUrl = src.replace(/[\\)]/g, (m) => `\\${m}`);
+  const titlePart =
+    typeof title === 'string' && title.length > 0
+      ? ` "${title.replace(/"/g, '\\"')}"`
+      : '';
+  return `![${safeAlt}](${safeUrl}${titlePart})`;
 }
 
 const PRESET_VARIANTS = new Set([

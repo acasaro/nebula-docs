@@ -1,34 +1,48 @@
 ---
 title: 'CodeGroup'
-description: 'Tabbed multi-language code panels — currently broken in the renderer.'
+description: 'Tabbed multi-language code panels.'
 icon: 'layout-grid'
-tag: 'Beta'
 ---
 
-<Callout type="warning" title="Expected broken">
-  `<CodeGroup>` is a known-broken block in the CLI renderer. It's intentionally referenced on this page so the fix has a regression target. Two issues stack:
+`<CodeGroup>` wraps two or more fenced code blocks and renders them as a tabbed switcher — one tab per language or filename. The first non-`key=value` token after the language becomes the tab label; the language code is the fallback.
 
-  1. `CodeGroup` is exported from `@nebula-docs/components` but not registered in the CLI's MDX components map, so MDX referencing the tag throws "expected component to be defined".
-  2. Even if registered, the React implementation hits the Astro+MDX SSR boundary where a parent React component can't introspect nested React children's props — same issue Tabs and Steps had before they were rewritten as Astro slot wrappers.
+## Basic usage
 
-  See `.claude/status.md` for the full notes and the planned fix.
-</Callout>
+<CodeGroup>
+  ```ts
+  const client = new AcmeCloud({ apiKey: process.env.ACME_KEY });
+  await client.users.create({ email: 'ada@example.com' });
+  ```
 
-## Intended shape
+  ```python
+  client = AcmeCloud(api_key=os.environ['ACME_KEY'])
+  client.users.create(email='ada@example.com')
+  ```
 
-When this block ships, the MDX shape will be a `CodeGroup` element wrapping fenced code blocks. Each fence's first non-`key=value` token (after the language) becomes the tab label. Falls back to the language name when no filename is set.
+  ```go
+  client := acmecloud.New(os.Getenv("ACME_KEY"))
+  client.Users.Create(ctx, &acmecloud.UserCreate{Email: "ada@example.com"})
+  ```
+</CodeGroup>
 
-The relevant pieces:
+## With filenames
+
+When the fence has a filename token, the tab uses it instead of the language:
+
+<CodeGroup>
+  ```ts client.ts
+  import { AcmeCloud } from '@acmecloud/sdk';
+  export const client = new AcmeCloud({ apiKey: process.env.ACME_KEY });
+  ```
+
+  ```ts users.ts
+  import { client } from './client';
+  export const listUsers = () => client.users.list({ limit: 100 });
+  ```
+</CodeGroup>
+
+## Notes
 
 - The wrapper element name is `CodeGroup` (capital C, capital G).
 - Children are zero or more fenced code blocks. Plain ` ```lang ` works; ` ```lang filename ` sets the tab label.
 - The active tab is determined by `defaultIndex` (zero-based, defaults to `0`).
-- An optional `dropdown` prop renders the switcher as a `<select>` instead of a tab strip.
-
-## Workaround until the fix lands
-
-Use a plain `<Tabs>` with one `<Tab>` per language, putting the code block inside each tab. See [Tabs](/components/tabs) for the live pattern; [Quickstart](/quickstart) shows the same workaround applied to an `npm` / `pnpm` / `pip` / `go` install matrix. It's a few more characters of MDX but it renders correctly today and converts to `<CodeGroup>` mechanically once the block is fixed.
-
-## Regression target
-
-Until the fix lands this page intentionally does not mount a live `<CodeGroup>` element. Adding one back is the regression check — the page should render, the tabs should switch, and the Astro slot wrapper (planned at `packages/cli/src/runtime/components/CodeGroup.astro`) should pick up `data-codeblock-tab` attrs from each panel.

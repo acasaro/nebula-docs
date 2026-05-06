@@ -1,8 +1,14 @@
-import { useEffect, useMemo, useRef } from 'react';
-import { EditorContent, useEditor } from '@tiptap/react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { EditorContent, useEditor, type Editor } from '@tiptap/react';
 import { StarterKit } from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
 import type { ImportSpec } from '@nebula-docs/mdx';
+import {
+  AssetUploadProgress,
+  ImagePickerDialog,
+  type PickedImage,
+} from '@/components/assets';
+import { useAssetUpload } from '@/lib/assets';
 import { parseMdxForEditor } from '@/lib/mdx/mdastToTiptap';
 import { tiptapDocToMdx } from '@/lib/mdx/tiptapToMdx';
 import { splitFrontmatter } from '@/lib/frontmatter';
@@ -13,6 +19,7 @@ import { MdxCallout } from './MdxCalloutNode';
 import { MdxCard } from './MdxCardNode';
 import { MdxCodeBlock } from './MdxCodeBlockNode';
 import { MdxFrame } from './MdxFrameNode';
+import { MdxImage } from './MdxImageNode';
 import { MdxAccordion, MdxAccordionGroup } from './MdxAccordionNode';
 import {
   MdxParamField,
@@ -70,6 +77,101 @@ export function MdxEditor({
     snippetCatalogRef.current = snippetCatalog;
   }, [snippetCatalog]);
 
+  // Image picker state. The slash menu, drag/drop, and paste handlers all
+  // funnel through `pickerState` so a single dialog instance owns the flow.
+  type PickerState =
+    | { open: false }
+    | {
+        open: true;
+        mode: 'image' | 'figure';
+        editor: Editor;
+        range: { from: number; to: number };
+      };
+  const [pickerState, setPickerState] = useState<PickerState>({ open: false });
+  const pickerStateRef = useRef(pickerState);
+  useEffect(() => {
+    pickerStateRef.current = pickerState;
+  }, [pickerState]);
+
+  const upload = useAssetUpload();
+  const uploadRef = useRef(upload);
+  useEffect(() => {
+    uploadRef.current = upload;
+  }, [upload]);
+
+  // Editor ref used by the drop/paste handlers. handleDrop is captured at
+  // editor-creation time, so it can't reference `editor` directly. We read
+  // from the ref, which is populated in the useEffect below.
+  const editorRef = useRef<Editor | null>(null);
+
+  const uploadDroppedFiles = useCallback(
+    async (files: File[], pos: number) => {
+      for (const file of files) {
+        if (!file.type.startsWith('image/')) continue;
+        const result = await uploadRef.current.upload(file);
+        if (!result.asset) continue;
+        const ed = editorRef.current;
+        if (!ed) continue;
+        ed.chain()
+          .focus()
+          .insertContentAt(pos, {
+            type: 'mdxImage',
+            attrs: {
+              src: result.asset.downloadUrl,
+              alt: result.asset.alt || result.asset.displayName,
+              width: result.asset.width,
+              height: result.asset.height,
+            },
+          })
+          .run();
+      }
+    },
+    [],
+  );
+
+  const insertImage = useCallback(
+    (
+      editor: Editor,
+      range: { from: number; to: number },
+      image: { src: string; alt: string; width: number | null; height: number | null },
+      mode: 'image' | 'figure',
+    ) => {
+      if (mode === 'figure') {
+        editor
+          .chain()
+          .focus()
+          .deleteRange(range)
+          .insertContent({
+            type: 'mdxFrame',
+            attrs: {
+              src: image.src,
+              alt: image.alt,
+              width: image.width,
+              height: image.height,
+            },
+            content: [{ type: 'paragraph' }],
+          })
+          .run();
+      } else {
+        editor
+          .chain()
+          .focus()
+          .deleteRange(range)
+          .insertContent({
+            type: 'mdxImage',
+            attrs: {
+              src: image.src,
+              alt: image.alt,
+              width: image.width,
+              height: image.height,
+            },
+          })
+          .run();
+      }
+    },
+    [],
+  );
+
   const editor = useEditor({
     extensions: [
       StarterKit.configure({ codeBlock: false }),
@@ -98,6 +200,7 @@ export function MdxEditor({
       MdxResponseExample,
       MdxMermaid,
       MdxBadge,
+      MdxImage,
       MdxSnippet.configure({
         onInsert: (spec) => {
           // Register the import for this binding/path if not already there.
@@ -120,6 +223,9 @@ export function MdxEditor({
       MdxRaw,
       SlashCommand.configure({
         getSnippetCatalog: () => snippetCatalogRef.current,
+        openImagePicker: ({ mode, editor, range }) => {
+          setPickerState({ open: true, mode, editor, range });
+        },
       }),
       Placeholder.configure({
         placeholder: ({ editor, node, pos }) => {
@@ -153,6 +259,39 @@ export function MdxEditor({
       attributes: {
         class: 'outline-none focus:outline-none min-h-full',
       },
+      handleDrop(view, event, _slice, moved) {
+        if (moved) return false;
+        const dt = event.dataTransfer;
+        if (!dt) return false;
+        const files = Array.from(dt.files).filter((f) =>
+          f.type.startsWith('image/'),
+        );
+        if (files.length === 0) return false;
+        event.preventDefault();
+        const coords = view.posAtCoords({
+          left: event.clientX,
+          top: event.clientY,
+        });
+        const pos = coords?.pos ?? view.state.selection.from;
+        void uploadDroppedFiles(files, pos);
+        return true;
+      },
+      handlePaste(view, event) {
+        const items = event.clipboardData?.items;
+        if (!items) return false;
+        const files: File[] = [];
+        for (const item of Array.from(items)) {
+          if (item.kind !== 'file') continue;
+          if (!item.type.startsWith('image/')) continue;
+          const file = item.getAsFile();
+          if (file) files.push(file);
+        }
+        if (files.length === 0) return false;
+        event.preventDefault();
+        const pos = view.state.selection.from;
+        void uploadDroppedFiles(files, pos);
+        return true;
+      },
     },
     onUpdate: ({ editor }) => {
       const doc = editor.getJSON() as Parameters<typeof tiptapDocToMdx>[0];
@@ -166,6 +305,10 @@ export function MdxEditor({
       (window as unknown as { __nebulaEditor?: typeof editor }).__nebulaEditor =
         editor;
     }
+  }, [editor]);
+
+  useEffect(() => {
+    editorRef.current = editor ?? null;
   }, [editor]);
 
   const { frontmatter } = splitFrontmatter(source);
@@ -207,6 +350,28 @@ export function MdxEditor({
           <EditorContent editor={editor} />
         </div>
       </EditorWithBlockHandle>
+
+      <ImagePickerDialog
+        open={pickerState.open}
+        onOpenChange={(open) => {
+          if (!open) setPickerState({ open: false });
+        }}
+        onPick={(image: PickedImage) => {
+          if (!pickerState.open) return;
+          insertImage(
+            pickerState.editor,
+            pickerState.range,
+            image,
+            pickerState.mode,
+          );
+          setPickerState({ open: false });
+        }}
+      />
+      <AssetUploadProgress
+        handles={upload.handles}
+        onDismiss={upload.dismiss}
+        onClear={upload.dismissCompleted}
+      />
     </div>
   );
 }

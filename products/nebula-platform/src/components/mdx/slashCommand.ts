@@ -2,7 +2,12 @@ import { Extension } from '@tiptap/core';
 import Suggestion from '@tiptap/suggestion';
 import { ReactRenderer } from '@tiptap/react';
 import { SlashMenu, type SlashMenuRef } from './SlashMenu';
-import { buildSlashItems, filterSlashItems, type SlashItem } from './slashItems';
+import {
+  buildSlashItems,
+  filterSlashItems,
+  type OpenImagePicker,
+  type SlashItem,
+} from './slashItems';
 import type { SnippetCatalogEntry } from '@/lib/mdx/snippetResolver';
 
 import type { Editor } from '@tiptap/react';
@@ -11,6 +16,9 @@ interface SlashCommandOptions {
   /** Snapshot getter for the snippet catalog. Read fresh each time the
    *  menu opens so newly-fetched snippets show up without a remount. */
   getSnippetCatalog?: () => readonly SnippetCatalogEntry[];
+  /** Asks the host to open the image picker. When omitted, the Image and
+   *  Figure entries no-op (host is responsible for rendering the dialog). */
+  openImagePicker?: OpenImagePicker;
 }
 
 interface SuggestionProps {
@@ -26,7 +34,7 @@ export const SlashCommand = Extension.create<SlashCommandOptions>({
   name: 'slashCommand',
 
   addOptions() {
-    return { getSnippetCatalog: undefined };
+    return { getSnippetCatalog: undefined, openImagePicker: undefined };
   },
 
   addProseMirrorPlugins() {
@@ -42,7 +50,10 @@ export const SlashCommand = Extension.create<SlashCommandOptions>({
         },
         items: ({ query }) => {
           const catalog = this.options.getSnippetCatalog?.() ?? [];
-          return filterSlashItems(query, buildSlashItems(catalog));
+          return filterSlashItems(
+            query,
+            buildSlashItems(catalog, this.options.openImagePicker),
+          );
         },
         render: () => {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any

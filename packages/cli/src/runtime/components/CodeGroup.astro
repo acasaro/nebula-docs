@@ -1,0 +1,162 @@
+---
+// Astro implementation of <CodeGroup>. The React variant in
+// @nebula-docs/components uses `Children.toArray(children).filter(isValidElement)`
+// to introspect each fenced code-block child for a `filename` / `language`
+// prop — but on the Astro+React+MDX SSR boundary, fenced code blocks become
+// pre-rendered <pre> HTML before they reach the parent React component, so
+// the introspection sees zero valid elements and the wrapper renders empty.
+//
+// Slots preserve the children intact. The script below walks each direct
+// <pre> child, reads `data-filename` (set by the shikiFilenameTransformer in
+// astro.config.mjs from the fence's meta string) or falls back to
+// `data-language`, builds the tab strip, hides all but the active panel,
+// and wires click handlers.
+
+interface Props {
+  defaultIndex?: number;
+  class?: string;
+}
+const { defaultIndex = 0, class: className } = Astro.props as Props;
+---
+<div
+  class:list={['nebula-code-group not-prose relative my-5 overflow-hidden rounded-2xl border border-stone-950/10 dark:border-white/10', className]}
+  data-component-part="code-group"
+  data-default-index={String(defaultIndex)}
+>
+  <div
+    class="nebula-code-group-tabs flex items-center gap-2 border-b border-stone-200/70 bg-stone-50 pr-2.5 dark:border-white/10 dark:bg-stone-900/40"
+    role="tablist"
+  ></div>
+  <div class="nebula-code-group-panels"><slot /></div>
+</div>
+
+<style is:global>
+  .nebula-code-group-tabs:empty { display: none; }
+  .nebula-code-group-tabs button {
+    appearance: none;
+    background: transparent;
+    border: 0;
+    cursor: pointer;
+    font: inherit;
+    font-size: 0.75rem;
+    line-height: 1.5rem;
+    font-weight: 500;
+    padding: 4px 6px;
+    margin: 4px 0 6px;
+    border-radius: 0.5rem;
+    color: var(--color-stone-500, oklch(0.553 0.013 58.071));
+    white-space: nowrap;
+    position: relative;
+    outline: 0;
+  }
+  .nebula-code-group-tabs button:first-child { margin-left: 10px; }
+  .nebula-code-group-tabs button:hover {
+    background: rgba(120, 113, 108, 0.12);
+    color: var(--color-stone-900, oklch(0.216 0.006 56.043));
+  }
+  :where(.dark, [data-theme='dark']) .nebula-code-group-tabs button {
+    color: var(--color-stone-400, oklch(0.709 0.01 56.259));
+  }
+  :where(.dark, [data-theme='dark']) .nebula-code-group-tabs button:hover {
+    background: rgba(168, 162, 158, 0.18);
+    color: var(--color-stone-200, oklch(0.923 0.003 48.717));
+  }
+  .nebula-code-group-tabs button[aria-selected='true'] {
+    color: var(--mcoe-brand-primary, var(--color-stone-900));
+  }
+  .nebula-code-group-tabs button[aria-selected='true']::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -6px;
+    height: 2px;
+    border-radius: 9999px;
+    background: var(--mcoe-brand-primary, currentColor);
+  }
+  /* Hidden panels */
+  .nebula-code-group-panels > [data-codegroup-panel][hidden] {
+    display: none !important;
+  }
+  /* Strip nested <pre>'s default chrome so panels merge cleanly into the card. */
+  .nebula-code-group-panels > [data-codegroup-panel] > pre {
+    margin: 0 !important;
+    border-radius: 0 !important;
+    border: 0 !important;
+  }
+</style>
+
+<script is:inline>
+  (function () {
+    function init(root) {
+      if (root.dataset.nebulaInit === '1') return;
+      root.dataset.nebulaInit = '1';
+      const tablist = root.querySelector(':scope > .nebula-code-group-tabs');
+      const panelsHost = root.querySelector(':scope > .nebula-code-group-panels');
+      if (!tablist || !panelsHost) return;
+
+      // Find the <pre> elements among the immediate children. They may be
+      // wrapped in a single text/whitespace node, so flatten one level.
+      const candidates = [];
+      Array.from(panelsHost.children).forEach(function (child) {
+        if (child.tagName === 'PRE') candidates.push(child);
+      });
+      if (candidates.length === 0) return;
+
+      const defaultIndex = Math.max(0, Math.min(parseInt(root.dataset.defaultIndex || '0', 10) || 0, candidates.length - 1));
+
+      const buttons = [];
+      const panels = [];
+      candidates.forEach(function (pre, i) {
+        // Wrap each <pre> in a panel div so we can hide/show them.
+        const panel = document.createElement('div');
+        panel.setAttribute('data-codegroup-panel', '');
+        panel.setAttribute('role', 'tabpanel');
+        panel.hidden = i !== defaultIndex;
+        pre.parentNode.insertBefore(panel, pre);
+        panel.appendChild(pre);
+        panels.push(panel);
+
+        const filename = pre.getAttribute('data-filename');
+        const lang = pre.getAttribute('data-language');
+        const label = filename || lang || ('Tab ' + (i + 1));
+
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.setAttribute('role', 'tab');
+        btn.setAttribute('aria-selected', i === defaultIndex ? 'true' : 'false');
+        btn.setAttribute('tabindex', i === defaultIndex ? '0' : '-1');
+        btn.textContent = label;
+        btn.addEventListener('click', function () { activate(i); });
+        btn.addEventListener('keydown', function (e) {
+          if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+            e.preventDefault();
+            const dir = e.key === 'ArrowLeft' ? -1 : 1;
+            activate((i + dir + buttons.length) % buttons.length, true);
+          }
+        });
+        tablist.appendChild(btn);
+        buttons.push(btn);
+      });
+
+      function activate(idx, focus) {
+        buttons.forEach(function (b, j) {
+          b.setAttribute('aria-selected', j === idx ? 'true' : 'false');
+          b.setAttribute('tabindex', j === idx ? '0' : '-1');
+        });
+        panels.forEach(function (p, j) { p.hidden = j !== idx; });
+        if (focus && buttons[idx]) buttons[idx].focus();
+      }
+    }
+
+    function run() {
+      document.querySelectorAll('[data-component-part="code-group"]').forEach(init);
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', run);
+    } else {
+      run();
+    }
+  })();
+</script>

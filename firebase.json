@@ -4,9 +4,20 @@
     "predeploy": ["pnpm --filter @nebula-docs/functions build"],
     "ignore": ["node_modules", ".git", "*.local", "src", "tsconfig.json"]
   },
-  "firestore": {
-    "rules": "firestore.rules",
-    "indexes": "firestore.indexes.json"
+  "firestore": [
+    {
+      "database": "(default)",
+      "rules": "firestore.rules",
+      "indexes": "firestore.indexes.json"
+    },
+    {
+      "database": "nebula-docs-plat-dev",
+      "rules": "firestore.rules",
+      "indexes": "firestore.indexes.json"
+    }
+  ],
+  "storage": {
+    "rules": "storage.rules"
   },
   "hosting": [
     {
@@ -29,6 +40,7 @@
     "auth": { "port": 9099 },
     "functions": { "port": 5001 },
     "firestore": { "port": 8080 },
+    "storage": { "port": 9199 },
     "ui": { "enabled": true, "port": 4000 }
   }
 }

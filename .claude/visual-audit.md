@@ -1,65 +1,363 @@
 # Visual fidelity audit — CLI renderer
 
-The user's actual ask, after I misread it as "make CLI prettier from
-scratch": **make the CLI's rendering of components, spacing, and prose
-style match what the editor already shows.** The chrome (sidebar, navbar,
-page header, TOC) is fine. The drift is in the prose layer that wraps
-shared `@nebula-docs/components` blocks.
+The user's actual ask: **make the CLI's rendering of components, spacing,
+and prose style match what the editor already shows.** The chrome
+(sidebar, navbar, page header, TOC) is fine — leave it alone. The drift
+is in the component layer that wraps shared `@nebula-docs/components` blocks.
 
-Reference target: the Platform's editor preview (`products/nebula-platform/src/index.css`'s `.mdx-prose` block).
+Reference target: the Platform's editor preview
+(`products/nebula-platform/src/index.css`'s `.mdx-prose` block + the
+shared component library at `packages/components/`).
 
-Scope: `tenants/nebula-docs-starter` until every page renders identically
-to its editor preview. No new components. No editor changes.
+Scope: `tenants/nebula-docs-starter` (the populated tenant — per
+[`feedback_cli_test_tenant.md`](~/.claude/projects/-Users-anthonyasaro-Desktop-mcoe-docs/memory/feedback_cli_test_tenant.md))
+until every page renders identically to its editor preview. No new
+components. No editor changes unless they're a bug fix that benefits
+both consumers.
 
-Iteration model: a small batch of changes per round, then user reviews
-in the browser. Each round captured below — what changed, why, where.
-
----
-
-## Round 1 — port `.mdx-prose` from Platform to CLI (LANDED)
-
-The CLI had its own `.nebula-prose` block in `packages/cli/src/styles/global.css`
-that diverged from the Platform's `.mdx-prose` rules in
-`products/nebula-platform/src/index.css`. Same MDX file, two different
-typographic treatments.
-
-**Changes:**
-
-1. Renamed the CLI wrapper class `.nebula-prose` → `.mdx-prose` (in
-   `packages/cli/src/layouts/DocsLayout.astro`). Both consumers now use
-   the same class name on the prose container.
-2. Replaced the CLI's prose CSS with a copy of the Platform's `.mdx-prose`
-   block, mapping shadcn-style tokens (`--foreground`, `--muted`,
-   `--border`) to the CLI's `--mcoe-*` equivalents. EFFECTIVE values
-   match — heading sizes, line-heights, margins, list indentation,
-   `<pre>` background, inline-code padding, blockquote border, table
-   chrome, `<hr>`, link underline-offset.
-3. Added the same component-margin reset rules:
-   - `[data-callout-type] [data-component-part="callout-content"]` strips
-     default `<p>` margins so callouts render tight around their body.
-   - `.mdx-prose [data-component-part="step-content"]` does the same for
-     Steps so the step number and content align without extra slack.
-4. Reverted body line-height to `1.6` (briefly bumped to `1.7` in an
-   abandoned redesign attempt — kept the existing chrome behavior).
-
-**Where:**
-- `packages/cli/src/styles/global.css` — replaced the `.nebula-prose`
-  block (~80 lines) with the new `.mdx-prose` block. Page header
-  rules (`.nebula-page-header`, `.nebula-eyebrow`, `.nebula-page-title`,
-  `.nebula-page-description`) untouched — user likes those.
-- `packages/cli/src/layouts/DocsLayout.astro` — wrapper class rename.
-
-**Open follow-up (durable fix):** extract the `.mdx-prose` rules into a
-shared module in `@nebula-docs/styles` (or as a CSS file in
-`@nebula-docs/components`) so both consumers `@import` the same source.
-The current "keep two copies in sync" comment is a tax that visual
-parity will pay forever otherwise.
+Iteration model: one or two components per round, then user review.
+Each round captured below.
 
 ---
 
-## Round 2 (open)
+## What's landed (in order)
 
-Compare each page in `tenants/nebula-docs-starter` against its editor
-preview. Catalog any remaining drift per component (Tabs, Cards, Steps,
-ParamFields, etc.) and fix at the source (component file in
-`@nebula-docs/components` or per-element rule in `.mdx-prose`).
+### Round 1 — port `.mdx-prose` typography from Platform to CLI
+
+CLI had its own `.nebula-prose` block that diverged from Platform's
+`.mdx-prose`. Renamed CLI wrapper class to `.mdx-prose` (matches Platform),
+ported all heading sizes, paragraph spacing, list indentation, blockquote
+border, table chrome, etc. into `packages/cli/src/styles/global.css`.
+Added the same Callout / Step content-margin reset rules.
+
+### Round 2 — bring CLI's Tailwind context in line with Platform
+
+Components in `@nebula-docs/components` use Tailwind utilities like
+`text-foreground`, `bg-muted`, `border-border`, plus `dark:` variants.
+The CLI defined NONE of the underlying tokens, and Tailwind v4's default
+`dark:` is media-query-based (not class-based). Added to CLI's global.css:
+
+- `@custom-variant dark (&:where(.dark, .dark *, [data-theme="dark"], [data-theme="dark"] *))` — class/attr-based dark mode that matches BOTH the Platform's `.dark` convention and the CLI's existing `[data-theme="dark"]` toggle.
+- Shadcn-style root tokens (`--background`, `--foreground`, `--card`, `--muted`, `--border`, etc.) mapped to CLI's existing `--mcoe-*` palette.
+- `@theme inline` block exposing those tokens as Tailwind color names.
+- `@layer base` reset (`* { border-color }`, `body { bg-background text-foreground }`).
+
+### Round 3 — Callout
+
+`<Callout type="info">` was rendering as the gray "custom" variant with
+no icon and no color in CLI. Root cause: my auto-import plugin injects
+`import { Callout } from "@nebula-docs/components"` into MDX, which
+shadows the page's `components` map (where a `CalloutShim` translates
+`type` → `variant`). Fix: made `Callout` natively accept BOTH `type`
+(Mintlify-style alias) and `variant`. No shim needed in either consumer.
+
+### Round 4 — `_sharedDark` surfaces missing from generated tokens.css
+
+Dark mode was painting white body bg + light text → unreadable. The
+theme's `darkMode` block (where `bgPrimary`/`borderDefault`/etc. live)
+was generated into TS but never emitted into `tokens.css` —
+`generateTokensCss` only emitted `globals.darkOverrides` (text colors),
+assuming a runtime React provider would handle the rest. The CLI is
+static + has no provider. Fix in `packages/theme/src/cssGen.ts` to merge
+`theme.darkMode` into the static `[data-theme="dark"]` block alongside
+`globals.darkOverrides`.
+
+### Round 5 — dark-mode FOUC
+
+White flash on every navigation in dark mode. Root cause: the theme
+toggle script lived at the end of the navbar (`<body>`); the page
+painted with default light tokens, THEN the script ran and flipped
+`data-theme="dark"`, then the browser re-painted. Fix: moved the
+localStorage read + attribute-set into a blocking `<head>` script in
+`DocsLayout.astro` so the correct theme is set before any paint.
+
+### Round 6 — Card body underlining on hover
+
+Card-as-link inherited the prose `:where(.mdx-prose) a:hover { underline }`
+rule, underlining the title and body text on hover. Two fixes stacked:
+(a) added `text-inherit no-underline hover:no-underline focus:no-underline`
+to the Card wrapper so it manages its own link affordance; (b) wrapped
+the entire `.mdx-prose` block in `@layer base` so Tailwind utilities
+(in `@layer utilities`) win regardless of selector specificity. Without
+(b), unlayered prose rules beat ANY layered Tailwind utility regardless
+of specificity (CSS `@layer` ordering: unlayered > layered).
+
+### Round 7 — Tabs not rendering
+
+`<Tabs>` was rendering nothing in CLI; only the panels were emitted.
+Root cause: same auto-import shadowing as Callout. The auto-import
+plugin injects `import { Tabs, Tab } from "@nebula-docs/components"`,
+shadowing the page's `components` map (which routes those tags to the
+Astro variants in `runtime/components/`). The React Tabs has the
+Astro+React+MDX children-introspection issue and renders nothing useful.
+Fix: removed Tabs/Tab/Steps/Step from the auto-import map. Added a
+prominent comment block — any future component with an Astro variant
+must NOT be auto-imported.
+
+### Round 8 — Accordion
+
+(a) `icon="dollar-sign"` rendered the literal string "dollar-sign" as
+text. Card had the same prop shape but converts `typeof icon === 'string' ? <Icon icon={icon}/> : icon`. Ported the same logic to Accordion.
+(b) Icon + chevron were vertically centered with title + description,
+floating to the visual midpoint when there was a description. Switched
+the summary `flex` from `items-center` → `items-start` so the icon
+column pins to the top of the row, with a `mt-0.5` nudge so 16px
+glyphs sit on the title's cap-line.
+
+### Round 9 — Mermaid
+
+CLI rendered 5 empty `<div role="img">` containers with no SVG.
+Root cause: the React Mermaid component lazy-loads the mermaid library
+in `useEffect`, but Astro renders React components SSR-only by default.
+`useEffect` doesn't fire on the server.
+
+Fix: created `packages/cli/src/runtime/components/Mermaid.astro` that
+wraps `<MermaidReact client:visible>` so it hydrates as a client island.
+Also handled an HTML-entity bug — `Astro.slots.render()` returns HTML
+so `-->` became `&gt;` and broke Mermaid parsing; added an entity
+decoder in the wrapper. Registered Mermaid in [...slug].astro AND
+removed it from the auto-import map (Astro-variant pattern). Verified:
+5 hydrated islands, all 5 render real `<svg>` flowcharts on
+`client:visible`.
+
+Also updated the Mermaid component's dark-mode detection to check
+BOTH `.dark` class AND `[data-theme="dark"]` attribute so the diagram
+theme tracks the page theme in either consumer.
+
+### Round 10 — Editor Mermaid (PARKED — needs user repro)
+
+User reported Mermaid broken in the editor too. Couldn't reproduce —
+when I navigated to a Mermaid file the editor unmounted before I could
+inspect it. Need a specific repro path (which file / what state).
+
+### Round 11 — Tree
+
+CLI rendered every Tree.Folder/Tree.File at `aria-level="1"` with no
+visible nesting hierarchy. Root cause: the React `Tree` component uses
+`TreeLevelContext` to propagate depth to nested children, but the
+Astro+React+MDX SSR boundary makes each MDX-rendered component its own
+React tree on the server, so the parent's Context Provider never connects
+to descendants — every folder/file reads `level=1` and computes the same
+padding-left. Same shape as Tabs/Steps (Round 7) and Mermaid (Round 9):
+React component → Astro wrapper.
+
+Fix: Astro variants in `packages/cli/src/runtime/components/`:
+
+- `Tree.astro` — root + the global stylesheet that handles indentation,
+  vertical guide lines, open/closed visibility, and icon-swap. Inline
+  script wires click + Enter/Space to toggle `data-open` on each folder.
+- `TreeFolder.astro` — folder header with both Folder and FolderOpen SVGs
+  inlined (lucide paths), CSS hides the wrong one based on `data-open`.
+  Children rendered into `<slot />`, hidden when `data-open="false"`.
+- `TreeFile.astro` — file row with inlined File SVG.
+
+Indentation: each `[data-component-part="tree-folder-children"]` adds
+`padding-left: 22px`, so depth accumulates naturally through CSS without
+needing a level prop or context. Every header has `pl-1.5` (6px) so the
+visible indents land at 6, 28, 50, 72px per level — matches Mintlify's
+`calculatePaddingLeft(level) = 6 + (level-1)*22` intent. Vertical guide
+line is absolute-positioned at `left: 14px` of each children wrapper so it
+passes through the parent folder icon's vertical center column at every
+depth (header pl:6 + icon size/2 ≈ 14).
+
+Registered in `[...slug].astro` as `Tree = Object.assign(TreeRoot, { Folder, File })`
+so MDX dotted-name resolution (`<Tree.Folder>` → `components.Tree.Folder`)
+finds the Astro variants. Removed `Tree` from the auto-import skip list
+in `astro.config.mjs` (per Pattern 3 — auto-import would shadow the
+components map and force the broken React variant).
+
+Verified: 4 trees on the page render correct hierarchy, click-to-toggle
+works on closed folders, light + dark mode both match the editor's
+rendering.
+
+Side note: the React `Tree` in `@nebula-docs/components/src/tree/Tree.tsx`
+has a separate latent bug — it puts `padding-left: calculatePaddingLeft(level)`
+on the folder *wrapper* instead of on the header item, so nested folders
+accumulate padding (level 3 ends up at 84px instead of 50px). The Mintlify
+reference puts the padding on the header. Doesn't affect the CLI now (we
+use Astro variants); would affect the editor's preview-mode render if it
+ever exercises this component directly. Defer the React fix until a round
+audits the editor preview.
+
+### Round 12 — Request/ResponseExample stray buttons
+
+CLI render of `<RequestExample>` / `<ResponseExample>` showed three orphan
+
+CLI render of `<RequestExample>` / `<ResponseExample>` showed three orphan
+controls in the tab row: an `X` next to the title, a `+` "Add" button, and
+a `Trash` "Delete" button on the right. They didn't do anything — the
+component's docstring called them "Phase 4+ visual placeholders". The
+editor doesn't use this shared component at all (it has its own
+`MdxRequestExample` / `MdxResponseExample` Tiptap NodeViews under
+`products/nebula-platform/src/components/mdx/MdxApiNodes.tsx` that
+render their own UI with input fields + kebab popover for editing).
+
+Fix: deleted the three buttons from the production component at
+`packages/components/src/example/Example.tsx`. Both consumers benefit —
+CLI is cleaner, editor was unaffected (different code path).
+
+### Round 13 — CodeGroup
+
+CodeGroup was documented as expected-broken. Same root cause as Round 7
+(Tabs) and Round 9 (Mermaid): the React `CodeGroup` uses
+`Children.toArray(children).filter(isValidElement)` to introspect each
+fenced code-block child for `filename` / `language` props, but Astro+MDX
+pre-renders nested code blocks to `<pre>` HTML strings before they
+reach the parent React component, so the introspection sees zero valid
+elements and the wrapper renders empty.
+
+Fix:
+- `packages/cli/src/runtime/components/CodeGroup.astro` — slot wrapper
+  with the rounded-card chrome + tab strip placeholder. A small inline
+  script walks each direct `<pre>` child at hydration, reads
+  `data-filename` (filename if set) or `data-language` (fallback) for
+  the tab label, builds the tab strip dynamically, hides all but the
+  active panel, and wires click + arrow-key handling.
+- `packages/cli/astro.config.mjs` — added a Shiki transformer
+  `shikiFilenameTransformer` that lifts the filename token out of the
+  fence's `meta` (e.g. ` ```ts add.ts ` → `add.ts`) and stamps it on
+  the rendered `<pre>` as `data-filename` so CodeGroup can label the
+  tab. Same transformer is registered globally; benefits any future
+  consumer that wants the filename.
+- Registered `CodeGroup` in `[...slug].astro`'s components map and
+  removed it from the auto-import skip list (Pattern 3).
+
+Live regression target on the CodeGroup docs page now mounts two real
+`<CodeGroup>` blocks — one with bare languages, one with filenames.
+Both render, switch, and label correctly in light + dark.
+
+### Round 14 — Fenced code blocks: dual-theme Shiki
+
+Astro's MDX integration ships a single Shiki theme by default
+(`github-dark`); every `<pre class="astro-code">` rendered with
+hardcoded `background-color:#24292e;color:#e1e4e8`, so light-mode pages
+showed a jarring dark island wherever a fenced block appeared. The
+user's "codeblocks inside tabs example on index not rendering correctly"
+note traced to this — codeblocks looked off in any light-mode page,
+not specifically inside Tabs.
+
+Fix in `packages/cli/astro.config.mjs`:
+
+```js
+markdown: {
+  shikiConfig: {
+    themes: { light: 'github-light', dark: 'github-dark' },
+    defaultColor: false,
+    transformers: [shikiFilenameTransformer],
+  },
+}
+```
+
+`defaultColor: false` makes Shiki emit dual CSS variables
+(`--shiki-light` / `--shiki-dark` per token + `-bg` on the wrapper)
+instead of inlining a single theme's hex values. CSS in `global.css`
+resolves those vars per-theme via the same `:where(.dark, [data-theme='dark'])`
+toggle the rest of the runtime uses:
+
+```css
+:where(.astro-code, .astro-code span) {
+  color: var(--shiki-light);
+  background-color: var(--shiki-light-bg);
+}
+:where(.dark, [data-theme='dark']) :where(.astro-code, .astro-code span) {
+  color: var(--shiki-dark);
+  background-color: var(--shiki-dark-bg);
+}
+```
+
+Verified: code-block backgrounds switch white ↔ dark with the page theme;
+syntax-highlight token colors swap accordingly.
+
+---
+
+## Patterns established (read before touching any component)
+
+These are the recurring shapes — every component fix has been one of these:
+
+1. **Mintlify prop alias on the component.** When MDX uses a Mintlify-style
+   prop name (`type`, `icon` as a string) but the React component prop is
+   different, add the alias on the component itself (per Round 3 + Round 8a).
+   Beats a per-consumer shim because both editor and CLI benefit.
+2. **Astro wrapper for React-with-useEffect.** Any React component that
+   needs browser-side execution (lazy import, hover state derived from
+   document, scroll observers) needs an Astro wrapper with `client:visible`
+   (or `client:load`). Wrapper lives in `packages/cli/src/runtime/components/`.
+   Per Round 9.
+3. **Auto-import skip list for Astro-variant components.** Anything with
+   an Astro variant in `runtime/components/` MUST be removed from the
+   auto-import map in `astro.config.mjs`. Otherwise the auto-injected
+   `import { X } from "@nebula-docs/components"` shadows the components
+   map and forces the React variant. Per Rounds 7 + 9.
+4. **Block-level link components manage their own link styling.** Any
+   component whose root is `<a>` (Card, Tile, etc.) must add
+   `text-inherit no-underline hover:no-underline focus:no-underline` to
+   the wrapper to suppress the prose link-style cascade. Per Round 6.
+5. **`@layer base` for prose rules.** Anything CSS-styling MDX block
+   elements via `:where(.mdx-prose) X` belongs in `@layer base` so
+   Tailwind utilities (which live in `@layer utilities`) can override.
+   Already done globally in Round 6.
+
+---
+
+## Components verified rendering = editor
+
+Callout · Card · Tabs / Tab · Accordion · Mermaid (CLI side) · Snippets ·
+Tree / Tree.Folder / Tree.File · Columns / Column · Expandable ·
+Steps / Step · Update · ParamField · ResponseField · Icon ·
+RequestExample / ResponseExample (stray buttons removed) · CodeGroup
+(Astro slot variant) · CodeBlock (dual-theme Shiki).
+
+## Components NOT yet audited against editor
+
+Frame · Property · Mermaid (editor side — need repro).
+
+## Editor-side config UX follow-ups (Platform, not CLI)
+
+Per user's pass: Frame, CodeBlock, Mermaid, and Update need a small tweak
+to their attribute-popover / config UX in the editor. Out of scope for
+the CLI render-parity rounds; track these in the Platform editor
+workstream.
+
+## Durable follow-ups (defer until rounds settle)
+
+- **Extract `.mdx-prose` rules into `@nebula-docs/styles`** so both
+  consumers `@import` the same source. Right now Platform's
+  `index.css` and CLI's `global.css` have parallel copies that need to
+  stay in sync manually. Inevitable bit-rot otherwise.
+- **Tenant-local component auto-import.** Auto-import map is hard-coded
+  to `@nebula-docs/components` only. Tenants with custom components
+  in `tenants/*/components/*.tsx` still need explicit `import` lines.
+- **Mermaid editor repro** — Round 10 above.
+- **Tree padding-left bug in `@nebula-docs/components`** — see Round 11
+  side note. Padding belongs on the header, not the wrapper.
+
+---
+
+## Kickoff prompt for the next chat
+
+Paste verbatim:
+
+> Read `CLAUDE.md`, `.claude/architecture.md`, `.claude/nebula-cli.md`,
+> `.claude/status.md`, and `.claude/visual-audit.md`. The CLI render
+> visual-parity work is mid-flight — most chrome and several core
+> components are aligned with the editor; a list of un-audited
+> components is at the bottom of `visual-audit.md`. Default the CLI
+> dev server to `tenants/nebula-docs-starter` (launch config name
+> `nebula-cli-starter`) per the user's preference.
+>
+> Pick the next un-audited component (Badge is a good first because
+> it's small and self-contained). For each component:
+> 1. Open the corresponding page in the CLI (`/components/<x>`) and
+>    the same MDX in the editor side-by-side.
+> 2. Catalog every visible difference.
+> 3. Fix at the source — usually one of the five patterns at the top
+>    of `visual-audit.md`'s "Patterns established" section.
+> 4. Verify in the browser; only mark complete when light + dark mode
+>    both match the editor.
+>
+> Don't add features. Don't relitigate any of Rounds 1-9. Don't touch
+> the editor unless the change benefits both consumers (e.g. a Mintlify
+> prop alias on a shared component).
+>
+> Open question to resolve early: ask the user where they saw Mermaid
+> broken in the editor (Round 10 is parked on missing repro).

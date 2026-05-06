@@ -226,6 +226,40 @@
   margin-top: 0.5rem;
 }
 
+/* Code-block configurable options driven by node attrs:
+ *   data-show-line-numbers="true" → counter-based line gutter
+ *   data-wrap-code="true"          → soft-wrap long lines
+ * The same modifier classes (`mdx-code-block--lines/--wrap`) are also
+ * applied directly to the inner <pre> when the preview's surrounding
+ * wrapper rewrites them via Tailwind arbitrary variants. */
+.mdx-code-block--lines {
+  counter-reset: code-line;
+}
+.mdx-code-block--lines code,
+.mdx-code-block--lines .line {
+  counter-increment: code-line;
+}
+.mdx-code-block--lines code > span::before,
+.mdx-code-block--lines .line::before {
+  content: counter(code-line);
+  display: inline-block;
+  width: 2.25em;
+  margin-right: 1em;
+  text-align: right;
+  color: var(--muted-foreground);
+  opacity: 0.55;
+  user-select: none;
+}
+[data-show-line-numbers='true'] .ProseMirror > pre.is-empty::before {
+  /* Don't double-prefix an empty editor surface. */
+  content: none;
+}
+.mdx-code-block--wrap,
+.mdx-code-block--wrap code {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
 /* Tiptap editor surface — keep the focus ring off the contenteditable. */
 .mdx-prose .ProseMirror {
   outline: none;

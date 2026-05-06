@@ -1,0 +1,32 @@
+rules_version = '2';
+
+// Storage layout (single bucket):
+//   {env}/{tenantId}/{category}/{contentHash}.{ext}
+// where:
+//   env ∈ {dev, prod}
+//   tenantId = numeric GitHub installationId, as a string
+//   category ∈ {images, videos, files}
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /{env}/{tenantId}/{category}/{filename=**} {
+      allow read: if request.auth != null
+        && env in ['dev', 'prod'];
+
+      allow create: if request.auth != null
+        && env in ['dev', 'prod']
+        && category in ['images', 'videos', 'files']
+        && request.resource.size < 25 * 1024 * 1024
+        && request.resource.metadata.uploadedBy == request.auth.uid;
+
+      // Updates are not part of the v1 flow (content-hashed paths). Delete is
+      // the uploader's prerogative.
+      allow update: if false;
+      allow delete: if request.auth != null
+        && resource.metadata.uploadedBy == request.auth.uid;
+    }
+
+    match /{path=**} {
+      allow read, write: if false;
+    }
+  }
+}

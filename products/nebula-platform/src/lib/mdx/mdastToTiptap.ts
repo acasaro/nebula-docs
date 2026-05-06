@@ -4,6 +4,7 @@ import type {
   Delete,
   Emphasis,
   Heading,
+  Image,
   List,
   ListItem,
   Paragraph,
@@ -479,9 +480,42 @@ function convertCallout(node: MdxJsxFlowElement, ctx: ConvertCtx): TiptapNode {
 }
 
 function convertParagraph(node: Paragraph, ctx: ConvertCtx): TiptapNode {
+  // Standard markdown image — `![alt](src)` — parses as a paragraph
+  // containing a single `image` node. Lift it out of the paragraph and
+  // emit a block-level `mdxImage` so it round-trips with the editor's
+  // first-class image node. Whitespace-only text siblings are tolerated.
+  const imageOnly = paragraphSoleImage(node);
+  if (imageOnly) return convertImage(imageOnly);
+
   const inline = convertInline(node.children);
   if (!inline) return rawBlock(node, ctx.source);
   return { type: 'paragraph', ...(inline.length ? { content: inline } : {}) };
+}
+
+function paragraphSoleImage(node: Paragraph): Image | null {
+  let image: Image | null = null;
+  for (const child of node.children) {
+    if (child.type === 'image') {
+      if (image) return null;
+      image = child;
+    } else if (child.type === 'text' && child.value.trim() === '') {
+      // ignore whitespace
+    } else {
+      return null;
+    }
+  }
+  return image;
+}
+
+function convertImage(node: Image): TiptapNode {
+  return {
+    type: 'mdxImage',
+    attrs: {
+      src: node.url ?? '',
+      alt: node.alt ?? '',
+      title: node.title ?? null,
+    },
+  };
 }
 
 function convertHeading(node: Heading, source: string): TiptapNode {
@@ -530,25 +564,47 @@ function convertBlockquote(node: Blockquote, ctx: ConvertCtx): TiptapNode {
 
 function convertCode(node: Code): TiptapNode {
   const text = node.value ?? '';
-  const filename = parseFilenameFromMeta(node.meta);
+  const meta = parseCodeMeta(node.meta);
   return {
     type: 'codeBlock',
     attrs: {
       language: node.lang ?? null,
-      filename: filename ?? null,
+      filename: meta.filename ?? null,
+      showLineNumbers: meta.showLineNumbers,
+      wrapCode: meta.wrapCode,
     },
     ...(text ? { content: [{ type: 'text', text }] } : {}),
   };
 }
 
-function parseFilenameFromMeta(meta: string | null | undefined): string | undefined {
-  if (!meta) return undefined;
+interface CodeMeta {
+  filename?: string;
+  showLineNumbers: boolean;
+  wrapCode: boolean;
+}
+
+/**
+ * Fence-meta tokens we recognise (after the language):
+ *   - First non-`key=value` token that isn't a reserved flag → filename
+ *   - `lines`  → show line-number gutter
+ *   - `wrap`   → soft-wrap long lines
+ *
+ * Other `key=value` tokens (Mintlify-style highlights, tooling hints) pass
+ * through unread; they round-trip via the underlying meta string only when
+ * we re-emit them, which we don't yet — flag-only support is enough for the
+ * editor's configurable controls.
+ */
+function parseCodeMeta(meta: string | null | undefined): CodeMeta {
+  const result: CodeMeta = { showLineNumbers: false, wrapCode: false };
+  if (!meta) return result;
   for (const token of meta.trim().split(/\s+/)) {
     if (!token) continue;
     if (/^[A-Za-z_][A-Za-z0-9_-]*=/.test(token)) continue;
-    return token;
+    if (token === 'lines') { result.showLineNumbers = true; continue; }
+    if (token === 'wrap') { result.wrapCode = true; continue; }
+    if (!result.filename) result.filename = token;
   }
-  return undefined;
+  return result;
 }
 
 function convertImportedSnippet(

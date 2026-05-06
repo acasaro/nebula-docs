@@ -268,6 +268,12 @@ body {
   font-size: var(--mcoe-font-size-base);
   line-height: 1.6;
   letter-spacing: -0.0125rem;
+  /* Sticky-footer pattern. Body is a flex column with the footer's
+     `margin-top: auto` (set in Footer.astro) absorbing all leftover
+     vertical space — short pages push the footer to the viewport
+     bottom, long pages let it follow content. */
+  display: flex;
+  flex-direction: column;
 }
 
 /* Link styling is intentionally scoped to `.mdx-prose` (further down) so

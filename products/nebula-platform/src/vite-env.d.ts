@@ -13,6 +13,8 @@ interface ImportMetaEnv {
   readonly NEBULA_APP_INSTALL_URL_PROD?: string;
   readonly FIRESTORE_DB_ID_DEV?: string;
   readonly FIRESTORE_DB_ID_PROD?: string;
+  readonly NEBULA_BACKEND?: 'github' | 'local';
+  readonly NEBULA_LOCAL_TENANT?: string;
 }
 
 interface ImportMeta {

@@ -27,7 +27,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import * as Popover from '@radix-ui/react-popover';
-import { useState } from 'react';
+import { useEffect, useLayoutEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
 
 /**
@@ -99,9 +99,6 @@ export const MdxTableCell = withAlignAttr(TableCell).configure({
 // ── NodeView ─────────────────────────────────────────────────────────────
 
 function MdxTableView({ editor, getPos, node }: NodeViewProps) {
-  const [hoverCol, setHoverCol] = useState<number | null>(null);
-  const [hoverRow, setHoverRow] = useState<number | null>(null);
-
   const colCount = node.firstChild?.childCount ?? 0;
   const rowCount = node.childCount;
   const alignments = readColumnAlignments(node);
@@ -109,22 +106,7 @@ function MdxTableView({ editor, getPos, node }: NodeViewProps) {
   return (
     <NodeViewWrapper data-mdx-table="" className="group/table relative my-4">
       <div className="overflow-x-auto rounded-lg border border-border/50">
-        <NodeViewContent
-          as="table"
-          className="mdx-table w-full border-collapse"
-          onMouseOver={(e) => {
-            const cell = (e.target as HTMLElement | null)?.closest('td, th');
-            if (!cell) return;
-            const ci = indexOf(cell, cell.parentElement);
-            const ri = indexOf(cell.closest('tr'), cell.closest('tr')?.parentElement ?? null);
-            setHoverCol(ci);
-            setHoverRow(ri);
-          }}
-          onMouseLeave={() => {
-            setHoverCol(null);
-            setHoverRow(null);
-          }}
-        />
+        <NodeViewContent as="table" className="mdx-table w-full border-collapse" />
       </div>
 
       <BumperButton
@@ -141,16 +123,10 @@ function MdxTableView({ editor, getPos, node }: NodeViewProps) {
       <ColumnHandles
         editor={editor}
         getPos={getPos}
-        hoverCol={hoverCol}
         colCount={colCount}
         alignments={alignments}
       />
-      <RowHandles
-        editor={editor}
-        getPos={getPos}
-        hoverRow={hoverRow}
-        rowCount={rowCount}
-      />
+      <RowHandles editor={editor} getPos={getPos} rowCount={rowCount} />
     </NodeViewWrapper>
   );
 }
@@ -189,7 +165,6 @@ function BumperButton({
 interface ColumnHandlesProps {
   editor: NodeViewProps['editor'];
   getPos: NodeViewProps['getPos'];
-  hoverCol: number | null;
   colCount: number;
   alignments: Array<ColumnAlign | null>;
 }
@@ -197,7 +172,6 @@ interface ColumnHandlesProps {
 function ColumnHandles({
   editor,
   getPos,
-  hoverCol,
   colCount,
   alignments,
 }: ColumnHandlesProps) {
@@ -216,7 +190,6 @@ function ColumnHandles({
             editor={editor}
             getPos={getPos}
             index={i}
-            visible={activeCol === i || hoverCol === i}
             menuOpen={activeCol === i}
             onMenuOpenChange={(open) => setActiveCol(open ? i : null)}
             currentAlign={alignments[i] ?? null}
@@ -231,7 +204,6 @@ interface ColumnHandleProps {
   editor: NodeViewProps['editor'];
   getPos: NodeViewProps['getPos'];
   index: number;
-  visible: boolean;
   menuOpen: boolean;
   onMenuOpenChange: (open: boolean) => void;
   currentAlign: ColumnAlign | null;
@@ -241,13 +213,12 @@ function ColumnHandle({
   editor,
   getPos,
   index,
-  visible,
   menuOpen,
   onMenuOpenChange,
   currentAlign,
 }: ColumnHandleProps) {
   const rect = useColumnRect(editor, getPos, index);
-  if (!visible || !rect) return null;
+  if (!rect) return null;
 
   const focusColumn = () => focusCellAt(editor, getPos, 0, index);
   const close = () => onMenuOpenChange(false);
@@ -270,9 +241,11 @@ function ColumnHandle({
             onMenuOpenChange(true);
           }}
           className={cn(
-            'pointer-events-auto absolute flex h-3 items-center justify-center rounded-t-md border border-b-0 border-border/60 bg-background text-muted-foreground shadow-sm transition-colors',
-            'hover:bg-accent hover:text-foreground',
-            menuOpen && 'bg-accent text-foreground',
+            'pointer-events-auto absolute flex h-3 items-center justify-center rounded-t-md border border-b-0 border-border/60 bg-background text-muted-foreground shadow-sm transition-opacity',
+            // Reveal on table hover (matches the bumper bumpers' opacity
+            // gating); pinned visible while the menu for THIS column is open.
+            'opacity-0 group-hover/table:opacity-100 hover:bg-accent hover:text-foreground',
+            menuOpen && 'bg-accent text-foreground opacity-100',
           )}
           style={rect}
         >
@@ -341,11 +314,10 @@ function ColumnHandle({
 interface RowHandlesProps {
   editor: NodeViewProps['editor'];
   getPos: NodeViewProps['getPos'];
-  hoverRow: number | null;
   rowCount: number;
 }
 
-function RowHandles({ editor, getPos, hoverRow, rowCount }: RowHandlesProps) {
+function RowHandles({ editor, getPos, rowCount }: RowHandlesProps) {
   const [activeRow, setActiveRow] = useState<number | null>(null);
   if (rowCount === 0) return null;
 
@@ -362,7 +334,6 @@ function RowHandles({ editor, getPos, hoverRow, rowCount }: RowHandlesProps) {
             getPos={getPos}
             index={i}
             isHeader={i === 0}
-            visible={activeRow === i || hoverRow === i}
             menuOpen={activeRow === i}
             onMenuOpenChange={(open) => setActiveRow(open ? i : null)}
           />
@@ -377,7 +348,6 @@ interface RowHandleProps {
   getPos: NodeViewProps['getPos'];
   index: number;
   isHeader: boolean;
-  visible: boolean;
   menuOpen: boolean;
   onMenuOpenChange: (open: boolean) => void;
 }
@@ -387,12 +357,11 @@ function RowHandle({
   getPos,
   index,
   isHeader,
-  visible,
   menuOpen,
   onMenuOpenChange,
 }: RowHandleProps) {
   const rect = useRowRect(editor, getPos, index);
-  if (!visible || !rect || isHeader) return null;
+  if (!rect || isHeader) return null;
 
   const focusRow = () => focusCellAt(editor, getPos, index, 0);
   const close = () => onMenuOpenChange(false);
@@ -415,9 +384,9 @@ function RowHandle({
             onMenuOpenChange(true);
           }}
           className={cn(
-            'pointer-events-auto absolute flex w-3 items-center justify-center rounded-l-md border border-r-0 border-border/60 bg-background text-muted-foreground shadow-sm transition-colors',
-            'hover:bg-accent hover:text-foreground',
-            menuOpen && 'bg-accent text-foreground',
+            'pointer-events-auto absolute flex w-3 items-center justify-center rounded-l-md border border-r-0 border-border/60 bg-background text-muted-foreground shadow-sm transition-opacity',
+            'opacity-0 group-hover/table:opacity-100 hover:bg-accent hover:text-foreground',
+            menuOpen && 'bg-accent text-foreground opacity-100',
           )}
           style={rect}
         >
@@ -526,10 +495,12 @@ interface RectStyle {
   height?: string;
 }
 
-/** Resolves to the `<div data-mdx-table>` wrapping the specific NodeView
- *  whose pos is `getPos()`. Walks up from the `<table>` DOM (returned by
- *  view.nodeDOM) — there's exactly one wrapper per NodeView instance. */
-function useTableWrapper(
+/** Resolves to the `<div data-mdx-table>` for this specific NodeView.
+ *  ReactNodeViewRenderer wraps the React tree in a `.react-renderer`
+ *  outer div which is what `view.nodeDOM(pos)` returns; our NodeViewWrapper
+ *  with `data-mdx-table` is a child. Plain function (not a hook) — called
+ *  from effects, not from render. */
+function lookupTableWrapper(
   editor: AnyEditor,
   getPos: NodeViewProps['getPos'],
 ): HTMLElement | null {
@@ -538,26 +509,81 @@ function useTableWrapper(
   if (typeof pos !== 'number') return null;
   const tableDOM = editor.view.nodeDOM(pos);
   if (!(tableDOM instanceof HTMLElement)) return null;
-  return tableDOM.closest<HTMLElement>('[data-mdx-table]');
+  if (tableDOM.matches('[data-mdx-table]')) return tableDOM;
+  return tableDOM.querySelector<HTMLElement>('[data-mdx-table]');
 }
 
+/**
+ * Measures the column / row at `index` post-layout. Returns null on first
+ * render (the wrapper or its cells aren't in the DOM yet) and again on
+ * each layout change so the handle re-anchors when columns are added /
+ * removed / resized. Uses `useLayoutEffect` so the measurement happens
+ * before the browser paints — no flash of mispositioned handles.
+ */
 function useColumnRect(
   editor: AnyEditor,
   getPos: NodeViewProps['getPos'],
   index: number,
 ): RectStyle | null {
-  const wrapper = useTableWrapper(editor, getPos);
-  if (!wrapper) return null;
-  const cell = wrapper.querySelector<HTMLElement>(
-    `tr:first-child > :nth-child(${index + 1})`,
-  );
-  if (!cell) return null;
-  const cellRect = cell.getBoundingClientRect();
-  const wrapRect = wrapper.getBoundingClientRect();
-  return {
-    left: `${cellRect.left - wrapRect.left}px`,
-    width: `${cellRect.width}px`,
-  };
+  const [rect, setRect] = useState<RectStyle | null>(null);
+  useLayoutEffect(() => {
+    const update = () => {
+      const wrapper = lookupTableWrapper(editor, getPos);
+      if (!wrapper) {
+        setRect(null);
+        return;
+      }
+      const cell = wrapper.querySelector<HTMLElement>(
+        `tr:first-child > :nth-child(${index + 1})`,
+      );
+      if (!cell) {
+        setRect(null);
+        return;
+      }
+      const cellRect = cell.getBoundingClientRect();
+      const wrapRect = wrapper.getBoundingClientRect();
+      setRect({
+        left: `${cellRect.left - wrapRect.left}px`,
+        width: `${cellRect.width}px`,
+      });
+    };
+    update();
+    // Re-measure on viewport changes — the table can reflow when the
+    // sidebar widens / narrows or the window resizes.
+    const ro = new ResizeObserver(update);
+    const wrapper = lookupTableWrapper(editor, getPos);
+    if (wrapper) ro.observe(wrapper);
+    window.addEventListener('resize', update);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener('resize', update);
+    };
+    // editor + getPos are stable refs across renders for a given NodeView;
+    // index is the only thing that varies per handle instance.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [index]);
+  // Re-measure once more after a microtask in case the table content
+  // landed asynchronously (Tiptap's contentDOM mounts after our React
+  // render). useEffect runs after paint; useLayoutEffect already fired,
+  // but a second pass catches the case where the cells weren't there yet.
+  useEffect(() => {
+    const id = requestAnimationFrame(() => {
+      const wrapper = lookupTableWrapper(editor, getPos);
+      const cell = wrapper?.querySelector<HTMLElement>(
+        `tr:first-child > :nth-child(${index + 1})`,
+      );
+      if (!wrapper || !cell) return;
+      const cellRect = cell.getBoundingClientRect();
+      const wrapRect = wrapper.getBoundingClientRect();
+      setRect({
+        left: `${cellRect.left - wrapRect.left}px`,
+        width: `${cellRect.width}px`,
+      });
+    });
+    return () => cancelAnimationFrame(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [index]);
+  return rect;
 }
 
 function useRowRect(
@@ -565,22 +591,57 @@ function useRowRect(
   getPos: NodeViewProps['getPos'],
   index: number,
 ): RectStyle | null {
-  const wrapper = useTableWrapper(editor, getPos);
-  if (!wrapper) return null;
-  const row = wrapper.querySelector<HTMLElement>(`tr:nth-child(${index + 1})`);
-  if (!row) return null;
-  const rowRect = row.getBoundingClientRect();
-  const wrapRect = wrapper.getBoundingClientRect();
-  return {
-    top: `${rowRect.top - wrapRect.top}px`,
-    height: `${rowRect.height}px`,
-  };
-}
-
-function indexOf(node: Element | null, parent: Element | null): number | null {
-  if (!node || !parent) return null;
-  const i = Array.from(parent.children).indexOf(node);
-  return i >= 0 ? i : null;
+  const [rect, setRect] = useState<RectStyle | null>(null);
+  useLayoutEffect(() => {
+    const update = () => {
+      const wrapper = lookupTableWrapper(editor, getPos);
+      if (!wrapper) {
+        setRect(null);
+        return;
+      }
+      const row = wrapper.querySelector<HTMLElement>(
+        `tr:nth-child(${index + 1})`,
+      );
+      if (!row) {
+        setRect(null);
+        return;
+      }
+      const rowRect = row.getBoundingClientRect();
+      const wrapRect = wrapper.getBoundingClientRect();
+      setRect({
+        top: `${rowRect.top - wrapRect.top}px`,
+        height: `${rowRect.height}px`,
+      });
+    };
+    update();
+    const ro = new ResizeObserver(update);
+    const wrapper = lookupTableWrapper(editor, getPos);
+    if (wrapper) ro.observe(wrapper);
+    window.addEventListener('resize', update);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener('resize', update);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [index]);
+  useEffect(() => {
+    const id = requestAnimationFrame(() => {
+      const wrapper = lookupTableWrapper(editor, getPos);
+      const row = wrapper?.querySelector<HTMLElement>(
+        `tr:nth-child(${index + 1})`,
+      );
+      if (!wrapper || !row) return;
+      const rowRect = row.getBoundingClientRect();
+      const wrapRect = wrapper.getBoundingClientRect();
+      setRect({
+        top: `${rowRect.top - wrapRect.top}px`,
+        height: `${rowRect.height}px`,
+      });
+    });
+    return () => cancelAnimationFrame(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [index]);
+  return rect;
 }
 
 // ── Tiptap command shims ─────────────────────────────────────────────────

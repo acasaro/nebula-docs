@@ -47,7 +47,10 @@ if (!footer) return null;
      distributed via `space-between`. */
   .nebula-footer {
     width: 100%;
-    margin-top: var(--mcoe-space-9);
+    /* Sticky-footer: paired with `display: flex; flex-direction: column`
+       on body. `auto` absorbs leftover vertical space when page content
+       is shorter than the viewport, pinning the footer to the bottom. */
+    margin-top: auto;
     border-top: 1px solid var(--mcoe-border-default);
     font-size: var(--mcoe-font-size-sm);
     color: var(--mcoe-text-secondary);
@@ -55,7 +58,11 @@ if (!footer) return null;
   .nebula-footer-inner {
     max-width: 64rem;
     margin: 0 auto;
-    padding: var(--mcoe-space-6) 1.5rem var(--mcoe-space-7);
+    /* Top padding doubles as the visual breathing room between the
+       footer's border-top and its content (the previous outer
+       `margin-top` got replaced by `margin-top: auto` for the sticky
+       behavior). */
+    padding: var(--mcoe-space-8) 1.5rem var(--mcoe-space-7);
   }
   .nebula-footer-columns {
     display: flex;

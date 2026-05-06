@@ -53,6 +53,16 @@ const snippetAliases = [
  * prepends `import { ... } from "@nebula-docs/components"` with a
  * properly populated `data.estree` (so the MDX→JS compiler emits the
  * import — `value` alone gets dropped).
+ *
+ * IMPORTANT: components with an Astro variant in `src/runtime/components/`
+ * (Tabs, Tab, Steps, Step) are deliberately omitted. Those tags MUST
+ * resolve via the page's `components={...}` map (set in `[...slug].astro`)
+ * which routes them to the Astro versions — the React versions break on
+ * the Astro+React+MDX children-introspection boundary (children come
+ * through as pre-rendered HTML strings, not React elements). An
+ * auto-injected `import { Tabs } from "@nebula-docs/components"` shadows
+ * the components map and forces the broken React variant. Add new
+ * Astro-variant components to BOTH the page route map AND this skip list.
  */
 const NEBULA_COMPONENTS = '@nebula-docs/components';
 const autoImportComponents = {
@@ -72,16 +82,13 @@ const autoImportComponents = {
   Frame: NEBULA_COMPONENTS,
   Icon: NEBULA_COMPONENTS,
   Info: NEBULA_COMPONENTS,
-  Mermaid: NEBULA_COMPONENTS,
+  // Mermaid intentionally omitted — see comment above (Astro wrapper attaches `client:visible`).
   Note: NEBULA_COMPONENTS,
   ParamField: NEBULA_COMPONENTS,
   RequestExample: NEBULA_COMPONENTS,
   ResponseExample: NEBULA_COMPONENTS,
   ResponseField: NEBULA_COMPONENTS,
-  Step: NEBULA_COMPONENTS,
-  Steps: NEBULA_COMPONENTS,
-  Tab: NEBULA_COMPONENTS,
-  Tabs: NEBULA_COMPONENTS,
+  // Steps/Step/Tabs/Tab intentionally skipped — see comment above.
   Tip: NEBULA_COMPONENTS,
   Tree: NEBULA_COMPONENTS,
   Update: NEBULA_COMPONENTS,

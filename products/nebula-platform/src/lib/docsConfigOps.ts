@@ -1,4 +1,5 @@
 import {
+  buildPageEntryResolver,
   isGroup,
   isPageObject,
   pageEntryToFilePath,
@@ -8,6 +9,21 @@ import {
   type PageObject,
   type Tab,
 } from '@/lib/docsConfig';
+
+/**
+ * Repo path set + docs subdirectory needed to translate a docs.json entry
+ * to its real MDX file path. Pass-through for any helper that has to
+ * compare a settings key's `filePath` against an entry — the comparison
+ * has to happen in the same namespace the key was minted in (NavTree
+ * builds keys with `buildPageEntryResolver`, so we must too). Optional so
+ * legacy callers that don't have the context still work; without it the
+ * comparison falls back to the raw, content-relative path which only
+ * matches root-shaped repos with no docs subdirectory.
+ */
+export interface ResolveContext {
+  repoPaths: ReadonlySet<string>;
+  docsSubdirectory: string;
+}
 
 /**
  * NavTree encodes settings keys as `<kind>:<key>`:
@@ -90,6 +106,7 @@ export type ResolvedEntry = ResolvedTab | ResolvedGroup | ResolvedPage;
 export function findEntry(
   config: DocsConfig,
   key: string,
+  resolveCtx?: ResolveContext,
 ): ResolvedEntry | null {
   const parsed = parseSettingsKey(key);
   if (!parsed) return null;
@@ -119,6 +136,10 @@ export function findEntry(
     };
   }
 
+  const resolveEntryPath = resolveCtx
+    ? buildPageEntryResolver(resolveCtx.repoPaths, resolveCtx.docsSubdirectory)
+    : pageEntryToFilePath;
+
   // page — check direct-under-tab pages first, then walk every group's pages.
   for (let ti = 0; ti < tabs.length; ti++) {
     const tab = tabs[ti]!;
@@ -126,7 +147,7 @@ export function findEntry(
     for (let pi = 0; pi < directPages.length; pi++) {
       const entry = directPages[pi]!;
       if (isGroup(entry)) continue; // tab.pages should hold pages only
-      const fp = pageEntryToFilePath(entry);
+      const fp = resolveEntryPath(entry);
       if (fp === parsed.filePath) {
         return {
           kind: 'page',
@@ -142,7 +163,7 @@ export function findEntry(
     const groups = tab.groups ?? [];
     for (let gi = 0; gi < groups.length; gi++) {
       const path: number[] = [gi];
-      const found = walkPages(groups[gi]!, path, parsed.filePath);
+      const found = walkPages(groups[gi]!, path, parsed.filePath, resolveEntryPath);
       if (found) {
         return {
           kind: 'page',
@@ -163,16 +184,17 @@ function walkPages(
   group: Group,
   groupPath: number[],
   targetFilePath: string,
+  resolveEntryPath: (entry: PageEntry) => string | null,
 ): { entry: PageEntry; path: number[] } | null {
   const pages = group.pages ?? [];
   for (let i = 0; i < pages.length; i++) {
     const entry = pages[i]!;
     if (isGroup(entry)) {
-      const found = walkPages(entry, [...groupPath, i], targetFilePath);
+      const found = walkPages(entry, [...groupPath, i], targetFilePath, resolveEntryPath);
       if (found) return found;
       continue;
     }
-    const fp = pageEntryToFilePath(entry);
+    const fp = resolveEntryPath(entry);
     if (fp === targetFilePath) {
       return { entry, path: [...groupPath, i] };
     }
@@ -185,15 +207,20 @@ export function updateEntry(
   config: DocsConfig,
   key: string,
   replacer: (entry: ResolvedEntry) => unknown,
+  resolveCtx?: ResolveContext,
 ): DocsConfig {
-  const resolved = findEntry(config, key);
+  const resolved = findEntry(config, key, resolveCtx);
   if (!resolved) return config;
   return mutateAt(config, resolved, () => replacer(resolved));
 }
 
 /** Return a new config with the given key's entry removed. */
-export function deleteEntry(config: DocsConfig, key: string): DocsConfig {
-  const resolved = findEntry(config, key);
+export function deleteEntry(
+  config: DocsConfig,
+  key: string,
+  resolveCtx?: ResolveContext,
+): DocsConfig {
+  const resolved = findEntry(config, key, resolveCtx);
   if (!resolved) return config;
   return mutateAt(config, resolved, () => undefined, { remove: true });
 }

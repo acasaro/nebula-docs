@@ -14,13 +14,20 @@ import { PublishMenu, type PublishChange } from "@/components/PublishMenu";
 import { InlineSpinner } from "@/components/ui/NebulaLoader";
 import { PageLoader } from "@/components/ui/PageLoader";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useDocsConfig, type DocsConfig, type Group, type Tab } from "@/lib/docsConfig";
+import {
+  buildPageEntryResolver,
+  useDocsConfig,
+  type DocsConfig,
+  type Group,
+  type Tab,
+} from "@/lib/docsConfig";
 import {
   appendTab,
   appendToGroup,
   appendToTab,
   deleteEntry,
   findEntry,
+  type ResolveContext,
 } from "@/lib/docsConfigOps";
 import { applyFrontmatterPatch } from "@/lib/frontmatter";
 import { useFrontmatterCache } from "@/lib/frontmatterCache";
@@ -426,6 +433,23 @@ export function RepoBrowser() {
     [files],
   );
 
+  // The repo's full path set, used by `buildPageEntryResolver` to translate
+  // a docs.json page entry like `"index"` into the actual MDX path. The
+  // resolver prefers `<docsSubdirectory>/content/<page>.mdx` (CLI shape)
+  // and falls back to `<docsSubdirectory>/<page>.mdx` (root shape) — the
+  // same two-candidate pattern the snippet resolver uses. Threaded into
+  // NavTree, the settings panel, and `findEntry`/`deleteEntry` so every
+  // path comparison happens in the resolved-path namespace.
+  const repoPathSet = useMemo(() => new Set(allPaths), [allPaths]);
+  const resolveCtx = useMemo<ResolveContext>(
+    () => ({ repoPaths: repoPathSet, docsSubdirectory: docsSubdir }),
+    [repoPathSet, docsSubdir],
+  );
+  const resolvePagePath = useMemo(
+    () => buildPageEntryResolver(repoPathSet, docsSubdir),
+    [repoPathSet, docsSubdir],
+  );
+
   const handleSnippetLoad = useCallback(
     (path: string, entry: SnippetCacheEntry) => {
       setFiles((prev) => (prev[path] ? prev : { ...prev, [path]: entry }));
@@ -522,12 +546,12 @@ export function RepoBrowser() {
 
   const handleDeleteOpenEntry = useCallback(() => {
     if (!settingsOpen || !liveDocsConfig) return;
-    const resolved = findEntry(liveDocsConfig, settingsOpen.key);
+    const resolved = findEntry(liveDocsConfig, settingsOpen.key, resolveCtx);
     if (!resolved) {
       setSettingsOpen(null);
       return;
     }
-    handleConfigChange((cfg) => deleteEntry(cfg, settingsOpen.key));
+    handleConfigChange((cfg) => deleteEntry(cfg, settingsOpen.key, resolveCtx));
     if (resolved.kind === "page") {
       setDeletions((prev) => {
         const next = new Set(prev);
@@ -536,7 +560,7 @@ export function RepoBrowser() {
       });
     }
     setSettingsOpen(null);
-  }, [settingsOpen, liveDocsConfig, handleConfigChange]);
+  }, [settingsOpen, liveDocsConfig, handleConfigChange, resolveCtx]);
 
   const handleAddEntry = useCallback(
     (parentKey: string, kind: AddEntryKind, value: string) => {
@@ -555,8 +579,11 @@ export function RepoBrowser() {
       // kind === 'page' — append to docs.json AND seed a draft MDX file so the
       // next commit creates the file. The page navigates immediately when the
       // user clicks the new tree entry; the seeded body shows up in the editor.
+      // Run the slug through the same resolver NavTree uses so the seeded
+      // path matches what nav clicks will navigate to (CLI-shape repos seed
+      // under `content/`; root-shape repos seed at the docs root).
       const slug = value.replace(/\.mdx?$/i, "");
-      const filePath = `${slug}.mdx`;
+      const filePath = resolvePagePath(slug) ?? `${slug}.mdx`;
       handleConfigChange((cfg) => append(cfg, slug));
       const title =
         slug.split("/").pop()?.replace(/[-_]+/g, " ").replace(/^./, (c) => c.toUpperCase()) ?? slug;
@@ -579,7 +606,7 @@ export function RepoBrowser() {
       // seeded draft is the source of truth until then.
       fetchedPathsRef.current.add(filePath);
     },
-    [liveDocsConfig, handleConfigChange],
+    [liveDocsConfig, handleConfigChange, resolvePagePath],
   );
 
   const handleAddTab = useCallback(
@@ -989,7 +1016,8 @@ export function RepoBrowser() {
                 onOpenSettings={setSettingsOpen}
                 onAddEntry={handleAddEntry}
                 onAddTab={handleAddTab}
-                repoPaths={allPaths}
+                repoPaths={repoPathSet}
+                docsSubdirectory={docsSubdir}
                 frontmatterCache={frontmatterCacheState.cache}
                 frontmatterLoaded={frontmatterCacheState.loaded}
               />
@@ -1032,6 +1060,7 @@ export function RepoBrowser() {
           pageDraft={currentPageDraft}
           onFrontmatterChange={handleFrontmatterChange}
           onDelete={handleDeleteOpenEntry}
+          resolveCtx={resolveCtx}
         />
       ) : null}
       <main className='flex flex-1 flex-col overflow-hidden bg-background'>

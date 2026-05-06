@@ -122,23 +122,15 @@ const showSecondaryRow = tabs.length > 0 || navbarLinks.length > 0 || primary;
 </header>
 
 <script is:inline>
-  // Theme toggle (Phase 1 stub): flips data-theme="dark" on <html> and
-  // persists to localStorage. We default to "light" regardless of system
-  // preference because the generated tokens.css only includes global dark
-  // overrides — per-theme bg/surface dark overrides are applied by the
-  // theme-switcher island that lands in Phase 3 (port of McoeThemeProvider).
-  // Auto-applying dark from system pref would break colors until then.
+  // The initial theme is already set by the blocking `<head>` script in
+  // DocsLayout.astro (so we don't paint the wrong theme on first frame).
+  // This script only wires the toggle button's click → flip handler.
   (function () {
-    function applyTheme(theme) {
-      document.documentElement.setAttribute('data-theme', theme);
-    }
-    var stored = localStorage.getItem('nebula-theme');
-    applyTheme(stored === 'dark' ? 'dark' : 'light');
     document.querySelectorAll('[data-nebula-theme-toggle]').forEach(function (btn) {
       btn.addEventListener('click', function () {
         var current = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
-        applyTheme(current);
-        localStorage.setItem('nebula-theme', current);
+        document.documentElement.setAttribute('data-theme', current);
+        try { localStorage.setItem('nebula-theme', current); } catch (_) {}
       });
     });
   })();

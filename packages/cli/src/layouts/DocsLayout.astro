@@ -32,6 +32,28 @@ const hasToc = tocHeadings.length > 0;
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{title} — {docs.name}</title>
     {description && <meta name="description" content={description} />}
+    {/*
+      Sync theme read BEFORE first paint — without this, the page paints
+      with the default light tokens, then the Navbar's script (lower in
+      the body) reads localStorage and flips `data-theme="dark"`, causing
+      a white flash on every navigation. This blocking inline script in
+      `<head>` runs before the body renders, so the correct theme is set
+      before any paint. Also runs `color-scheme` so native form controls
+      and the browser's own scrollbars match.
+     */}
+    <script is:inline>
+      (function () {
+        try {
+          var stored = localStorage.getItem('nebula-theme');
+          var theme = stored === 'dark' ? 'dark' : 'light';
+          document.documentElement.setAttribute('data-theme', theme);
+        } catch (_) {
+          /* localStorage may be unavailable (e.g. embedded iframe) — fall
+             through to the default light theme already implied by the
+             absence of the data-theme attribute. */
+        }
+      })();
+    </script>
   </head>
   <body>
     <Navbar docs={docs} currentSlug={currentSlug} />
@@ -48,7 +70,7 @@ const hasToc = tocHeadings.length > 0;
               <p class="nebula-page-description">{description}</p>
             )}
           </header>
-          <div class="nebula-prose">
+          <div class="mdx-prose">
             <slot />
           </div>
         </article>

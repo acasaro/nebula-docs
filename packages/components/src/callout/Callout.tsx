@@ -22,7 +22,15 @@ export type CalloutVariant =
 export interface CalloutProps {
   children?: ReactNode;
   title?: string;
+  /** The callout variant. `type` is accepted as a Mintlify-style alias —
+   *  `<Callout type="info">` is equivalent to `<Callout variant="info">`.
+   *  When both are provided, `variant` wins. */
   variant?: CalloutVariant;
+  /** Mintlify-style alias for {@link CalloutProps.variant}. Tenants writing
+   *  MDX directly (auto-imported `<Callout>`) typically use `type`; editor
+   *  output and code that imports the component explicitly typically uses
+   *  `variant`. Both must work without a shim. */
+  type?: CalloutVariant;
   icon?: ReactNode;
   className?: string;
   ariaLabel?: string;
@@ -90,13 +98,15 @@ const customClasses = {
 export function Callout({
   children,
   title,
-  variant = 'custom',
+  variant,
+  type,
   icon,
   className,
   ariaLabel,
 }: CalloutProps) {
-  const isPreset = variant !== 'custom';
-  const config = isPreset ? variantConfig[variant] : null;
+  const resolved = variant ?? type ?? 'custom';
+  const isPreset = resolved !== 'custom';
+  const config = isPreset ? variantConfig[resolved] : null;
 
   const resolvedIcon =
     typeof icon === 'string' ? <McoeIcon icon={icon} size={16} /> : icon;
@@ -115,7 +125,7 @@ export function Callout({
         containerClasses,
         className,
       )}
-      data-callout-type={variant}
+      data-callout-type={resolved}
     >
       {renderedIcon ? (
         <div

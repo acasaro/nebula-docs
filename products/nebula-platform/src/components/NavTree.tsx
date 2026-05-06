@@ -1,6 +1,7 @@
 import {
   forwardRef,
   useEffect,
+  useMemo,
   useRef,
   useState,
   type MouseEvent as ReactMouseEvent,
@@ -20,11 +21,11 @@ import * as Popover from '@radix-ui/react-popover';
 import { Icon } from '@nebula-docs/components';
 import { cn } from '@/lib/utils';
 import {
+  buildPageEntryResolver,
   defaultPageTitle,
   iconNameOf,
   isGroup,
   isPageObject,
-  pageEntryToFilePath,
   type DocsConfig,
   type Group,
   type IconValue,
@@ -66,10 +67,12 @@ interface NavTreeProps {
   onAddEntry?: (parentKey: NavSettingsKey, kind: AddEntryKind, value: string) => void;
   /** Append a top-level tab to `navigation.tabs`. */
   onAddTab?: (name: string) => void;
-  /** All file paths in the repo — currently unused after the existing-file
-   *  picker was dropped; kept on the prop bag for future "move into group"
-   *  affordances. */
-  repoPaths?: string[];
+  /** All file paths in the repo — used to resolve docs.json page entries to
+   *  actual MDX paths via `buildPageEntryResolver`. */
+  repoPaths?: ReadonlySet<string>;
+  /** Subdirectory of the repo where the docs live. Empty string for the
+   *  common case where docs.json is at the repo root. */
+  docsSubdirectory?: string;
   /** Per-page frontmatter values keyed by file path. NavTree uses
    *  `sidebarTitle`, `icon`, `tag`, `hidden` from each entry as overrides
    *  on top of the docs.json defaults. */
@@ -78,6 +81,10 @@ interface NavTreeProps {
    *  success). Used to gate skeleton loaders. */
   frontmatterLoaded?: ReadonlySet<string>;
 }
+
+// Stable reference so the resolver memo doesn't churn when no repoPaths
+// were passed in (early-render case).
+const EMPTY_PATH_SET: ReadonlySet<string> = new Set<string>();
 
 // Pixel widths used to compute the cascading text-indent. The pattern:
 //   group_text_x = row_indent + chevron + gap + icon + gap
@@ -99,11 +106,17 @@ export function NavTree({
   onAddEntry,
   onAddTab,
   repoPaths,
+  docsSubdirectory,
   frontmatterCache,
   frontmatterLoaded,
 }: NavTreeProps) {
   const tabs = (config.navigation?.tabs ?? []).filter((t) => !t.hidden);
   const [addingTab, setAddingTab] = useState(false);
+
+  const resolveEntryPath = useMemo(
+    () => buildPageEntryResolver(repoPaths ?? EMPTY_PATH_SET, docsSubdirectory ?? ''),
+    [repoPaths, docsSubdirectory],
+  );
 
   return (
     <div className="flex flex-col gap-1 py-2 pr-2">
@@ -123,7 +136,7 @@ export function NavTree({
             settingsOpenKey={settingsOpenKey}
             onOpenSettings={onOpenSettings}
             onAddEntry={onAddEntry}
-            repoPaths={repoPaths}
+            resolveEntryPath={resolveEntryPath}
             frontmatterCache={frontmatterCache}
             frontmatterLoaded={frontmatterLoaded}
           />
@@ -210,7 +223,11 @@ interface SectionCommon {
   settingsOpenKey: NavSettingsKey | null;
   onOpenSettings: (next: OpenNavSettings | null) => void;
   onAddEntry?: (parentKey: NavSettingsKey, kind: AddEntryKind, value: string) => void;
-  repoPaths?: string[];
+  /** Built once at the top of the tree from the repo path set + docs
+   *  subdirectory, then threaded down so every page row gets the same
+   *  resolution semantics (CLI `content/` shape preferred, legacy root
+   *  shape as fallback). */
+  resolveEntryPath: (entry: PageEntry) => string | null;
   frontmatterCache?: Record<string, Record<string, unknown> | null>;
   frontmatterLoaded?: ReadonlySet<string>;
 }
@@ -224,7 +241,7 @@ function TabSection({
   settingsOpenKey,
   onOpenSettings,
   onAddEntry,
-  repoPaths,
+  resolveEntryPath,
   frontmatterCache,
   frontmatterLoaded,
 }: {
@@ -290,7 +307,7 @@ function TabSection({
             settingsOpenKey={settingsOpenKey}
             onOpenSettings={onOpenSettings}
             onAddEntry={onAddEntry}
-            repoPaths={repoPaths}
+            resolveEntryPath={resolveEntryPath}
             frontmatterCache={frontmatterCache}
             frontmatterLoaded={frontmatterLoaded}
           />
@@ -306,7 +323,7 @@ function TabSection({
             settingsOpenKey={settingsOpenKey}
             onOpenSettings={onOpenSettings}
             onAddEntry={onAddEntry}
-            repoPaths={repoPaths}
+            resolveEntryPath={resolveEntryPath}
             frontmatterCache={frontmatterCache}
             frontmatterLoaded={frontmatterLoaded}
           />
@@ -333,7 +350,7 @@ function GroupSection({
   settingsOpenKey,
   onOpenSettings,
   onAddEntry,
-  repoPaths,
+  resolveEntryPath,
   frontmatterCache,
   frontmatterLoaded,
 }: {
@@ -403,7 +420,7 @@ function GroupSection({
               settingsOpenKey={settingsOpenKey}
               onOpenSettings={onOpenSettings}
               onAddEntry={onAddEntry}
-              repoPaths={repoPaths}
+              resolveEntryPath={resolveEntryPath}
               frontmatterCache={frontmatterCache}
               frontmatterLoaded={frontmatterLoaded}
             />
@@ -431,7 +448,7 @@ function PageOrGroup({
   settingsOpenKey,
   onOpenSettings,
   onAddEntry,
-  repoPaths,
+  resolveEntryPath,
   frontmatterCache,
   frontmatterLoaded,
 }: {
@@ -450,13 +467,13 @@ function PageOrGroup({
         settingsOpenKey={settingsOpenKey}
         onOpenSettings={onOpenSettings}
         onAddEntry={onAddEntry}
-        repoPaths={repoPaths}
+        resolveEntryPath={resolveEntryPath}
         frontmatterCache={frontmatterCache}
         frontmatterLoaded={frontmatterLoaded}
       />
     );
   }
-  const filePath = pageEntryToFilePath(entry);
+  const filePath = resolveEntryPath(entry);
   const isSelected = filePath !== null && filePath === selectedPath;
 
   // Frontmatter is the source of truth per Mintlify; docs.json values are

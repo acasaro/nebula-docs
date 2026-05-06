@@ -50,6 +50,12 @@ export function Card({
     <Component
       className={cn(
         'group relative my-2 block w-full overflow-hidden rounded-2xl border border-stone-950/10 bg-white font-normal ring-2 ring-transparent dark:border-white/10 dark:bg-stone-900/40',
+        // When the Card is a link, the wrapper is an `<a>` and would
+        // otherwise inherit the prose link color + hover underline from
+        // `.mdx-prose a` rules. The Card's own affordance is the border
+        // highlight + arrow; suppress text-decoration + force the local
+        // text color so the body type doesn't read as a hyperlink.
+        isLink && 'text-inherit no-underline hover:no-underline focus:no-underline',
         isLink &&
           'cursor-pointer hover:border-stone-950/30 dark:hover:border-white/30',
         isLink &&

@@ -32,6 +32,17 @@ function flatTheme(t: ThemeTokens): Record<string, string> {
   return out;
 }
 
+/** Extract a theme's dark surface/border overrides as a flat string map. */
+function flatThemeDark(t: ThemeTokens): Record<string, string> {
+  const out: Record<string, string> = {};
+  const dark = (t as { darkMode?: Record<string, unknown> }).darkMode;
+  if (!dark || typeof dark !== 'object') return out;
+  for (const [k, v] of Object.entries(dark)) {
+    if (typeof v === 'string') out[k] = v;
+  }
+  return out;
+}
+
 /** Flatten GlobalTokens (skip nested darkOverrides). */
 function flatGlobals(g: GlobalTokens): Record<string, string> {
   const out: Record<string, string> = {};
@@ -51,17 +62,20 @@ function flatGlobals(g: GlobalTokens): Record<string, string> {
  *     <globals>              — typography/spacing/etc.
  *   }
  *   [data-theme="dark"] {
- *     <global dark overrides>
+ *     <theme dark surfaces>  — bgPrimary, borderDefault, etc. from theme.darkMode
+ *     <global dark overrides>— text colors etc. from globals.darkOverrides
  *   }
  *
- * Theme-specific dark overrides (e.g., uhc dark mode) are applied at runtime
- * by McoeThemeProvider — not in this static CSS.
+ * Theme.darkMode order before globals.darkOverrides so global text-color
+ * overrides win on key collisions (matches the runtime composition order
+ * the Platform's McoeThemeProvider uses).
  */
 export function generateTokensCss(
   theme: ThemeTokens,
   globals: GlobalTokens
 ): string {
   const root = { ...flatTheme(theme), ...flatGlobals(globals) };
+  const dark = { ...flatThemeDark(theme), ...globals.darkOverrides };
   return [
     '/* AUTO-GENERATED from @nebula-docs/theme — do not edit by hand. */',
     '/* Source: packages/theme/src/themes + globals.ts */',
@@ -71,7 +85,7 @@ export function generateTokensCss(
     '}',
     '',
     '[data-theme="dark"] {',
-    emit(globals.darkOverrides),
+    emit(dark),
     '}',
     '',
   ].join('\n');

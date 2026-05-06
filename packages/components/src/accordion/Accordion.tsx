@@ -1,11 +1,15 @@
 import { useId, useState, type ReactNode } from 'react';
 import { ChevronRight } from 'lucide-react';
+import { Icon } from '../icon';
 import { cn } from '../utils/cn';
 
 export interface AccordionProps {
   title: ReactNode;
   description?: string;
   defaultOpen?: boolean;
+  /** A Lucide icon name (Mintlify-style: `icon="dollar-sign"`) or any
+   *  ReactNode. Strings are looked up via `<Icon>` so MDX usage like
+   *  `<Accordion icon="dollar-sign" ... />` resolves to the actual SVG. */
   icon?: ReactNode;
   className?: string;
   children?: ReactNode;
@@ -46,19 +50,25 @@ export function Accordion({
       <summary
         aria-controls={contentId}
         aria-expanded={open}
-        className="not-prose flex cursor-pointer list-none items-center gap-3 px-6 py-4 text-left text-stone-700 hover:bg-stone-50/50 dark:text-stone-200 dark:hover:bg-white/5 [&::-webkit-details-marker]:hidden"
+        className="not-prose flex cursor-pointer list-none items-start gap-3 px-6 py-4 text-left text-stone-700 hover:bg-stone-50/50 dark:text-stone-200 dark:hover:bg-white/5 [&::-webkit-details-marker]:hidden"
         data-component-part="accordion-summary"
       >
         <ChevronRight
           aria-hidden="true"
           className={cn(
-            'size-4 shrink-0 text-stone-400 transition-transform dark:text-stone-500',
+            // `mt-0.5` nudges the chevron's optical center onto the title's
+            // cap-line so it reads as aligned-with-the-first-line, not as
+            // floating above. Same offset applied to the optional icon
+            // below — `items-start` puts both at the column top, but with
+            // a 16px glyph and a `text-sm` title there's a small gap that
+            // `mt-0.5` (2px) closes without nudging into the title row.
+            'mt-0.5 size-4 shrink-0 text-stone-400 transition-transform dark:text-stone-500',
             open && 'rotate-90',
           )}
         />
         {icon ? (
-          <span className="size-4 shrink-0 text-stone-700 dark:text-stone-200">
-            {icon}
+          <span className="mt-0.5 size-4 shrink-0 text-stone-700 dark:text-stone-200">
+            {typeof icon === 'string' ? <Icon icon={icon} size={16} /> : icon}
           </span>
         ) : null}
         <div className="flex flex-col gap-0.5 leading-tight">

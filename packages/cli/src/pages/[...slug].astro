@@ -6,6 +6,7 @@ import Steps from '../runtime/components/Steps.astro';
 import Step from '../runtime/components/Step.astro';
 import Tabs from '../runtime/components/Tabs.astro';
 import Tab from '../runtime/components/Tab.astro';
+import Mermaid from '../runtime/components/Mermaid.astro';
 
 export async function getStaticPaths() {
   const entries = await getCollection('docs');
@@ -26,14 +27,23 @@ const title = data.title ?? entry.id;
 const description = data.description;
 const currentSlug = entry.id;
 
-// Merge Astro components for blocks that introspect children (Tabs/Steps)
-// over the React component map.
+// Merge Astro variants over the React component map. Astro variants are
+// required for:
+//   - Tabs/Steps — children-introspection breaks across the Astro+React+MDX
+//     boundary (children come through as pre-rendered HTML strings).
+//   - Mermaid — needs a `client:visible` directive that the components-map
+//     prop can't carry; the Astro wrapper attaches it.
+// Add new entries to BOTH this map AND the auto-import skip list in
+// `astro.config.mjs` — otherwise the auto-import plugin shadows this map
+// with a raw `import { X } from "@nebula-docs/components"` and the React
+// variant wins.
 const components = {
   ...reactComponents,
   Steps,
   Step,
   Tabs,
   Tab,
+  Mermaid,
 };
 ---
 <DocsLayout

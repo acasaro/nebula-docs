@@ -21,6 +21,7 @@ import { Button } from '@/components/ui/button';
 import type { IconValue as DocsIconValue } from '@/lib/docsConfig';
 import {
   findEntry,
+  type ResolveContext,
   type ResolvedEntry,
 } from '@/lib/docsConfigOps';
 import {
@@ -46,6 +47,10 @@ interface NavSettingsPanelProps {
     patch: Record<string, unknown>,
   ) => void;
   onDelete: () => void;
+  /** Repo path set + docs subdirectory used to translate docs.json page
+   *  entries to their actual MDX paths. Required for `findEntry` to match
+   *  page settings keys minted by NavTree. */
+  resolveCtx: ResolveContext;
 }
 
 /**
@@ -66,11 +71,12 @@ export function NavSettingsPanel({
   pageDraft,
   onFrontmatterChange,
   onDelete,
+  resolveCtx,
 }: NavSettingsPanelProps) {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const resolved = useMemo(
-    () => (config ? findEntry(config, settings.key) : null),
-    [config, settings.key],
+    () => (config ? findEntry(config, settings.key, resolveCtx) : null),
+    [config, settings.key, resolveCtx],
   );
 
   return (
@@ -117,6 +123,7 @@ export function NavSettingsPanel({
             onConfigChange={onConfigChange}
             pageDraft={pageDraft}
             onFrontmatterChange={onFrontmatterChange}
+            resolveCtx={resolveCtx}
           />
         ) : (
           <p className="text-sm text-muted-foreground">
@@ -161,6 +168,7 @@ function SettingsBody({
   onConfigChange,
   pageDraft,
   onFrontmatterChange,
+  resolveCtx,
 }: {
   resolved: ResolvedEntry;
   settingsKey: string;
@@ -170,6 +178,7 @@ function SettingsBody({
     filePath: string,
     patch: Record<string, unknown>,
   ) => void;
+  resolveCtx: ResolveContext;
 }) {
   if (resolved.kind === 'tab') {
     const tab = resolved.tab as Tab & Record<string, unknown>;
@@ -183,8 +192,12 @@ function SettingsBody({
     };
     const onChange = (patch: Partial<TabConfigValues>) => {
       onConfigChange((config) =>
-        replaceResolvedEntry(config, settingsKey, (e) =>
-          e.kind === 'tab' ? mergeTab(e.tab, patch) : (e as ResolvedEntry),
+        replaceResolvedEntry(
+          config,
+          settingsKey,
+          (e) =>
+            e.kind === 'tab' ? mergeTab(e.tab, patch) : (e as ResolvedEntry),
+          resolveCtx,
         ),
       );
     };
@@ -204,8 +217,12 @@ function SettingsBody({
     };
     const onChange = (patch: Partial<GroupConfigValues>) => {
       onConfigChange((config) =>
-        replaceResolvedEntry(config, settingsKey, (e) =>
-          e.kind === 'group' ? mergeGroup(e.group, patch) : (e as ResolvedEntry),
+        replaceResolvedEntry(
+          config,
+          settingsKey,
+          (e) =>
+            e.kind === 'group' ? mergeGroup(e.group, patch) : (e as ResolvedEntry),
+          resolveCtx,
         ),
       );
     };
@@ -338,8 +355,9 @@ function replaceResolvedEntry(
   config: DocsConfig,
   key: string,
   replacer: (resolved: ResolvedEntry) => unknown,
+  resolveCtx: ResolveContext,
 ): DocsConfig {
-  const resolved = findEntry(config, key);
+  const resolved = findEntry(config, key, resolveCtx);
   if (!resolved) return config;
   return mutateResolvedEntry(config, resolved, replacer(resolved));
 }

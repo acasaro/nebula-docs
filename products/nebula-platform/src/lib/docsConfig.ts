@@ -135,14 +135,59 @@ export function useDocsConfig({
 }
 
 /**
- * Resolve a page entry's path to an MDX file path in the repo.
- * "documentation/overview" → "documentation/overview.mdx"
- * Returns null if the entry doesn't reference a local page.
+ * Map a page entry to its raw, content-relative path. No subdirectory or
+ * `content/` prefix is applied — the returned string is just the page slug
+ * with `.mdx` appended.
+ *
+ *   "documentation/overview" → "documentation/overview.mdx"
+ *
+ * Returns null if the entry doesn't reference a local page. Use
+ * `buildPageEntryResolver` to get the actual repo path that includes the
+ * docs subdirectory and `content/` prefix where applicable.
  */
 export function pageEntryToFilePath(entry: PageEntry): string | null {
   if (typeof entry === 'string') return `${entry}.mdx`;
   if (isPageObject(entry) && entry.page) return `${entry.page}.mdx`;
   return null;
+}
+
+/**
+ * Build a resolver that maps a docs.json page entry to the repo path of
+ * its MDX file.
+ *
+ * Tries the Nebula CLI shape first (`<docsSubdirectory>/content/<page>.mdx`),
+ * then falls back to the legacy / Mintlify-shaped layout
+ * (`<docsSubdirectory>/<page>.mdx`) — same two-candidate pattern the snippet
+ * resolver uses, so pre-migration tenants and CLI tenants both work without
+ * per-tenant config.
+ *
+ * When neither candidate exists in `repoPaths` (e.g. a freshly-added entry
+ * whose MDX file hasn't been committed yet), the resolver picks the shape
+ * the rest of the repo uses: CLI shape if any file under
+ * `<docsSubdirectory>/content/` exists, otherwise the root shape.
+ */
+export function buildPageEntryResolver(
+  repoPaths: ReadonlySet<string>,
+  docsSubdirectory: string,
+): (entry: PageEntry) => string | null {
+  const sub = docsSubdirectory.replace(/\/+$/, '');
+  const contentPrefix = sub ? `${sub}/content/` : 'content/';
+  let hasContentTree = false;
+  for (const p of repoPaths) {
+    if (p.startsWith(contentPrefix)) {
+      hasContentTree = true;
+      break;
+    }
+  }
+  return (entry) => {
+    const raw = pageEntryToFilePath(entry);
+    if (raw === null) return null;
+    const cliPath = sub ? `${sub}/content/${raw}` : `content/${raw}`;
+    const rootPath = sub ? `${sub}/${raw}` : raw;
+    if (repoPaths.has(cliPath)) return cliPath;
+    if (repoPaths.has(rootPath)) return rootPath;
+    return hasContentTree ? cliPath : rootPath;
+  };
 }
 
 /**

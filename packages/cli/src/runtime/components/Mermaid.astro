@@ -1,0 +1,53 @@
+---
+import { Mermaid as MermaidReact } from '@nebula-docs/components';
+
+interface Props {
+  chart?: string;
+  className?: string;
+  ariaLabel?: string;
+}
+
+const { chart, ...rest } = Astro.props as Props;
+
+/**
+ * Mermaid is a React island that lazy-loads the `mermaid` library on first
+ * render — that work has to run in the browser, not during Astro's SSR
+ * build. Without a `client:` directive the React component runs SSR, the
+ * `useEffect` never fires, and the page ships with empty `<div role="img">`
+ * containers.
+ *
+ * Wrapping in an Astro component lets us attach `client:visible` (load the
+ * library only when the diagram scrolls into view) without forcing every
+ * MDX caller to know about Astro hydration directives. The MDX `components`
+ * prop on `<Content components={...}>` doesn't accept `client:` props, so
+ * the wrapper is the only path.
+ *
+ * Source can come either via `chart="..."` prop (`<Mermaid chart="..." />`)
+ * or as children via a JSX template-literal expression
+ * (`<Mermaid>{` + 'flowchart...' + `}</Mermaid>`). The default slot is
+ * rendered to a string and passed through to the React component, which
+ * handles both forms.
+ */
+/**
+ * Mermaid diagrams contain `>`, `<`, `&`, and `"` characters as part of
+ * their syntax (e.g. `A --> B`, `B-->|label| C`). `Astro.slots.render()`
+ * returns the slot as HTML — angle brackets become `&gt;` etc. The React
+ * Mermaid component then ships that to the `mermaid` library, which fails
+ * to parse it. Decode the standard HTML entities before passing through;
+ * the `&amp;` decode is intentionally last so we don't re-decode an
+ * already-encoded `&` mid-string.
+ */
+function decodeEntities(s: string): string {
+  return s
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#0?39;/g, "'")
+    .replace(/&apos;/g, "'")
+    .replace(/&amp;/g, '&');
+}
+
+const slotRaw = await Astro.slots.render('default');
+const source = chart ?? (slotRaw ? decodeEntities(slotRaw) : '');
+---
+<MermaidReact client:visible chart={source} {...rest} />

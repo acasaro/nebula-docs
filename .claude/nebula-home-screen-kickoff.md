@@ -1,6 +1,6 @@
 # Kickoff: Nebula Dashboard, Home Screen
 
-You're building the Home screen of the Nebula dashboard. Nebula is a git-based MDX editor (a Mintlify clone) for the MCoE docs platform. The Home screen mirrors Mintlify's per-deployment dashboard, with Nebula branding. Two screenshots are attached showing the two tab states (Activity and Previews). Match them as closely as possible.
+You're building the Home screen of the Nebula Docs Platform dashboard. The Platform is a git-based MDX editor for the MCoE docs site. The Home screen mirrors Mintlify's per-deployment dashboard, with Nebula Docs branding. Two screenshots are attached showing the two tab states (Activity and Previews). Match them as closely as possible.
 
 ---
 
@@ -35,12 +35,12 @@ Wait for my approval before implementing.
 
 ## Mission
 
-Implement the Home screen of the Nebula dashboard. It's the per-deployment landing page, exactly one repo's status. Match the attached Mintlify screenshots 1:1 in **layout, spacing, and information density**, but NOT in color. Brand swaps:
+Implement the Home screen of the Nebula Docs Platform dashboard. It's the per-deployment landing page, exactly one repo's status. Match the attached Mintlify screenshots 1:1 in **layout, spacing, and information density**, but NOT in color. Brand swaps:
 
 - **Color semantics**, the Mintlify screenshots use one green for two different roles. Map them to two different tokens: brand-coded elements (Live pill backdrop, "Add custom domain" link, bot avatar ring, hover/active accents) use the existing Nebula primary brand token, status-coded elements (Successful status pill, deployment log checkmarks) use a separate success token. Use whatever tokens are already wired up in the Nebula app, do not introduce new ones.
-- Nebula branding everywhere (no "Mintlify" copy or logo)
+- Nebula Docs branding everywhere (no "Mintlify" copy or logo)
 - The bot actor `nebula-docs[bot]` keeps the orbit/satellite glyph as the Nebula bot avatar
-- "Powered by mintlify" footer in the thumbnail becomes "Powered by Nebula" or is dropped
+- "Powered by mintlify" footer in the thumbnail becomes "Powered by Nebula Docs" or is dropped
 
 ## In-scope UI
 

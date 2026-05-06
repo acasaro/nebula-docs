@@ -1,6 +1,8 @@
-# Nebula CMS — Architecture & Build Plan
+# Nebula Docs Platform — Architecture & Build Plan
 
-This is the design doc for Nebula, the in-house docs editor. The previous
+This is the design doc for the Nebula Docs Platform — the in-house editor
+side of Nebula Docs (paired with the SSG documented in
+[nebula-ssg.md](nebula-ssg.md)). The previous
 attempt (a runtime-CMS that wrote `Block[]` trees to Firestore and rendered
 them on the docs site at runtime) has been reverted — it created a visual
 fidelity gap with the existing Docusaurus output and complicated search.

@@ -1,4 +1,4 @@
-name: Build & Deploy Nebula CMS to OOSS
+name: Build & Deploy Nebula Docs Platform to OOSS
 
 on:
   workflow_dispatch:

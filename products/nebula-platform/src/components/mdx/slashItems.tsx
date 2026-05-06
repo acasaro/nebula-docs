@@ -10,6 +10,7 @@ import {
   ArrowDownLeft,
   ArrowUpRight,
   Columns2,
+  FileCode,
   FolderTree,
   GitGraph,
   Image,
@@ -483,6 +484,36 @@ export const SLASH_ITEMS: SlashItem[] = [
               type: 'codeBlock',
               attrs: { language: 'json' },
               content: [{ type: 'text', text: '{}' }],
+            },
+          ],
+        })
+        .run();
+    },
+  },
+  {
+    id: 'code-group',
+    label: 'Code group',
+    description: 'Tabbed sibling code blocks',
+    Icon: FileCode,
+    keywords: ['code', 'group', 'tabs', 'languages'],
+    command: ({ editor, range }) => {
+      editor
+        .chain()
+        .focus()
+        .deleteRange(range)
+        .insertContent({
+          type: 'mdxCodeGroup',
+          attrs: {},
+          content: [
+            {
+              type: 'codeBlock',
+              attrs: { language: 'javascript', filename: 'helloWorld.js' },
+              content: [{ type: 'text', text: "console.log('Hello World');" }],
+            },
+            {
+              type: 'codeBlock',
+              attrs: { language: 'python', filename: 'hello_world.py' },
+              content: [{ type: 'text', text: "print('Hello World!')" }],
             },
           ],
         })

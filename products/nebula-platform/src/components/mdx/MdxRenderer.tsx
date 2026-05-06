@@ -158,8 +158,29 @@ function renderCode(node: Code, key: string): ReactNode {
     return <Mermaid key={key} chart={node.value} />;
   }
   return (
-    <CodeBlock key={key} code={node.value} language={node.lang ?? undefined} />
+    <CodeBlock
+      key={key}
+      code={node.value}
+      language={node.lang ?? undefined}
+      filename={parseCodeMetaFilename(node.meta)}
+    />
   );
+}
+
+/**
+ * Extract a filename hint from a fenced code block's `meta` string.
+ * Mintlify-style code blocks write meta as `<filename> [key={value}]…` —
+ * the first whitespace-delimited token that isn't a `key=value` pair is the
+ * filename label.
+ */
+function parseCodeMetaFilename(meta: string | null | undefined): string | undefined {
+  if (!meta) return undefined;
+  for (const token of meta.trim().split(/\s+/)) {
+    if (!token) continue;
+    if (/^[A-Za-z_][A-Za-z0-9_-]*=/.test(token)) continue;
+    return token;
+  }
+  return undefined;
 }
 
 function renderList(node: List, key: string): ReactNode {

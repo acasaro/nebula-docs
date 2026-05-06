@@ -14,52 +14,43 @@ The editor surface for MDX files. Tiptap (ProseMirror) doc is the in-memory stat
 
 - Tiptap installed: `@tiptap/core`, `react`, `pm`, `starter-kit`, `extension-code-block`, `extension-placeholder`, `suggestion`.
 - `products/nebula-platform/src/components/mdx/MdxEditor.tsx` — main editor. Loads via `mdxToTiptapDoc(source)`. Serializes back via `tiptapDocToMdx(doc)` on every `onUpdate`. `normalizeMdx()` round-trips a file through parser + serializer at load to dedupe drift (so opening a file doesn't mark it dirty).
-- 7 NodeViews under `products/nebula-platform/src/components/mdx/`: `MdxCalloutNode`, `MdxCardNode`, `MdxCodeBlockNode`, `MdxFrameNode`, `MdxRawNode`, `MdxStepsNode` (Steps + Step), `MdxUpdateNode`.
-- Slash command (`/`) — `mdx/slashCommand.ts` + `slashItems.tsx` + `SlashMenu.tsx`, built on `@tiptap/suggestion`.
-- BlockHandle: drag handle + kebab affordance per block. `EditorWithBlockHandle` wraps `EditorContent` in `MdxEditor`.
+- NodeViews under `products/nebula-platform/src/components/mdx/`: `MdxCalloutNode`, `MdxCardNode`, `MdxCodeBlockNode`, `MdxCodeGroupNode`, `MdxFrameNode`, `MdxRawNode`, `MdxStepsNode` (Steps + Step), `MdxUpdateNode`, `MdxTabsNode` (Tabs + Tab), `MdxAccordionNode` (Accordion + AccordionGroup), `MdxColumnsNode` (Columns + Column + CardGroup), `MdxExpandableNode`, `MdxTreeNode` (Tree + Tree.Folder + Tree.File), `MdxApiNodes` (ParamField + ResponseField + RequestExample + ResponseExample), `MdxMermaidNode`, `MdxBadgeNode` (inline).
+- Slash command (`/`) — `mdx/slashCommand.ts` + `slashItems.tsx` + `SlashMenu.tsx`, built on `@tiptap/suggestion`. Slash items added for every new NodeView.
+- BlockHandle: drag handle + kebab affordance per block. `EditorWithBlockHandle` wraps `EditorContent` in `MdxEditor`. Kebab → `AttributesPopover` is wired via `getBlockSchema` (patches via a `setNodeMarkup` transaction; trash via `deleteRange`).
 - Contextual placeholders (Step, Callout, Card child paragraphs).
+- Inline JSX support added in parser/serializer for `<Badge>` (handled in both `convertInlineNode` and a standalone `convertBlock` fallback so single-line Badge usage round-trips).
+- `<CodeGroup>` supported end-to-end: React component in `@nebula-docs/components/code-group`, runtime registry hookup, `CodeBlock.filename` prop, `MdxRenderer.renderCode` extracts the first non-`key=value` token of `code.meta` as filename, Tiptap node `mdxCodeGroup` (content `codeBlock+`) with editable filename inputs in the tab strip, parser converts `code` MDAST children directly, serializer emits ` ```lang filename\n…\n``` ` blocks inside `<CodeGroup>` wrappers.
 - Dev convenience: `window.__nebulaEditor` exposed in dev mode for REPL inspection.
 
 **OPEN**
 
-- Many `@nebula-docs/components` exports lack a NodeView (Tabs, Accordion, Tree, Mermaid, Property/ParamField/ResponseField, Tooltip, Badge, Expandable, Columns, Example). They round-trip via `MdxRaw` (preserves source verbatim, no editing UI). Each one needs a `Mdx<Name>Node.tsx` to become editable.
-- Verify edit-in-place inside child slots of Card / Frame / Step works for paragraphs, headings, and lists. Spot-check needed across the seven existing NodeViews.
-- Save flow: confirm `PublishMenu` commits the dirty MDX via Octokit (Phase 4 work). The dirty-tracking state lives in `RepoBrowser`.
+- `<Tooltip>`, `<Icon>`, `<VideoLoop>`, and the standalone `<Example>` still round-trip via `MdxRaw` (no editing UI). Add a `Mdx<Name>Node.tsx` if/when editor-time UI is needed.
+- Verify edit-in-place inside child slots of Card / Frame / Step / Tab / Accordion / Column / Expandable works for paragraphs, headings, and lists.
+- Save flow: dirty-tracking + commit pipeline already wired (`RepoBrowser.files[path].draft` → `PublishMenu` → `commitFiles`).
 
 ---
 
 ## Page settings forms
 
-Three forms (Page, Group, Tab) for nav-tree configuration. Phase A done; B/C/D/E pending.
+Three forms (Page, Group, Tab) for nav-tree configuration.
 
-**DONE — Phase A (form skeletons)**
+**DONE**
 
-- `products/nebula-platform/src/components/nav-settings/{PageSettingsForm,GroupSettingsForm,TabSettingsForm}.tsx`.
-- All fields per the original handoff doc, wired to local `useState` (Title, Slug, External URL, Description, Icon, Sidebar title, OG image, Tag, Hidden, Keywords, Mode for Page; equivalents for Group and Tab).
+- `products/nebula-platform/src/components/nav-settings/{PageSettingsForm,GroupSettingsForm,TabSettingsForm}.tsx`. Forms are fully controlled via `values` + `onChange` props.
 - Helper rows: `FormRow.tsx` (TextRow / SelectRow / ToggleRow), `IconRow.tsx`, `KeywordsRow.tsx`.
-- `NavSettingsPanel.tsx` switches on `kind` and renders the right form. Panel shell (header, close button, fixed-position aside, surface that matches the repo aside) is complete.
+- `NavSettingsPanel.tsx` orchestrates entry resolution, value extraction, patch routing. For pages, splits patches between docs.json (icon, sidebarTitle, externalUrl, tag, hidden) and MDX frontmatter (title, description, ogImage, keywords, mode).
+- `lib/docsConfigOps.ts` — `parseSettingsKey`, `findEntry`, `updateEntry`, `deleteEntry`, `appendToGroup` helpers walking the docs.json tree by key path.
+- `lib/frontmatter.ts` — minimal YAML splitter/serializer + `applyFrontmatterPatch` for the editor-time mutations.
+- `RepoBrowser.tsx` — derives `liveDocsConfig` from `files['docs.json'].draft` (or initial `useDocsConfig` fetch) so docs.json edits flow through the same dirty-tracking + save pipeline as MDX. Added `handleConfigChange`, `handleFrontmatterChange`, `handleDeleteOpenEntry`, `handleAddEntry`, plus a `deletions: Set<string>` queue for paths to remove on commit.
+- `commitFiles` in `lib/githubApi.ts` extended: `FileChange` is now a discriminated union supporting `{ delete: true }`. When the batch contains any deletions, the function fetches the parent commit's tree recursively and submits a fresh flat tree (without `base_tree`) — every existing blob, minus the deleted paths, plus the upserted blobs. The `sha: null` + `base_tree` merge that GitHub's docs suggest does not work reliably for nested paths and returns `GitRPC::BadObjectState`; this rebuild path is verified end-to-end against `acasaro/mcoe-docs` on a real test branch.
+- `PublishMenu` `PublishChange.status` extended with `"deleted"`.
+- Trash button → confirm `Dialog` → removes the docs.json entry and queues the MDX for deletion (page kind only).
+- `+` button on group rows → Radix popover with three options (Add page / Add group / Add existing file). Each opens a `Dialog` with appropriate input.
 
-**OPEN — Phase B (hydrate)**
+**OPEN**
 
-- On panel mount, hydrate forms from two sources:
-  1. `docs.json` page-object / group / tab entry (already loaded by `useDocsConfig`).
-  2. MDX frontmatter at the top of the page's `.mdx` (Page kind only).
-- Add helpers to `products/nebula-platform/src/lib/docsConfig.ts`: `findEntry(config, key)`, `updateEntry(config, key, patch)`, `deleteEntry(config, key)`. Keys are encoded by `<NavTree>` as `tab:<name>` / `group:<keyPath>` / `page:<filePath>`.
-- Frontmatter parsing: small YAML parser or `gray-matter`.
-
-**OPEN — Phase C (persist)**
-
-- `docs.json` patches → mutate the in-memory `docs.json`, mark dirty in the `files` map. `PublishMenu` commit flow handles GitHub.
-- Frontmatter patches → mutate the MDX file's draft content (frontmatter block), mark dirty.
-- UX: `onChange` updates local form state; `onBlur` (or explicit Save) propagates to the dirty draft.
-
-**OPEN — Phase D (Trash button)**
-
-- `NavSettingsPanel` renders a visual-stub trash button. Wire it: confirm Dialog → `deleteEntry(docs, key)` → for pages, queue MDX deletion in the commit batch (`commitFiles` in `lib/githubApi.ts` already supports deletions).
-
-**OPEN — Phase E (Add menus)**
-
-- `<NavTree>` renders an inert `+` button on group rows. Open a popover with three options: Add a page (filename → empty `.mdx` with minimal frontmatter), Add a group (title → `{ group, pages: [] }`), Add existing file (file picker over the loaded repo tree).
+- Slug field on the page form is read-only. Renaming a page (slug change → file move) is a follow-up — needs path-aware tracking that survives until the next commit.
+- The `+` button on the top-level "Navigation" header is still inert (only group-row `+` buttons are wired). Add top-level group / tab creation if needed.
 
 ---
 
@@ -72,15 +63,13 @@ Per-component prop editor opened from the BlockHandle kebab.
 - `products/nebula-platform/src/components/AttributesForm.tsx` — schema-driven field rendering. Switches on `field.kind` (text / toggle / select / icon).
 - `products/nebula-platform/src/components/AttributesPopover.tsx` — Radix popover anchored to the right side of the trigger element. Header (title + close), body (children), footer (Trash + Save Changes).
 - Field primitives in `products/nebula-platform/src/components/fields/`: `TextField`, `ToggleField`, `SelectField`. Plus `IconField.tsx` at the components root.
-- `products/nebula-platform/src/lib/blockSchemas/` — `BlockAttrSchema` type with `sections` and `AttrField` discriminated union.
+- `products/nebula-platform/src/lib/blockSchemas/` — `BlockAttrSchema` type with `sections` and `AttrField` discriminated union. Schemas cover: callout, card, frame, step, steps, update, accordion, columns, cardGroup, expandable, paramField, responseField, requestExample, responseExample, badge.
+- `BlockHandle` kebab → `AttributesPopover` is wired in `EditorWithBlockHandle`. `getBlockSchema(nodeType)` resolves the right schema. Patches apply via a `setNodeMarkup` transaction (functionally equivalent to `updateAttributes`); trash uses `deleteRange` over the active block. Edit happens on every keystroke; the "Save Changes" button is a confirm-and-close affordance.
 
 **OPEN**
 
-- Schema coverage for every NodeView. Verify each of `MdxCallout` / `MdxCard` / `MdxFrame` / `MdxSteps` / `MdxUpdate` / `MdxCodeBlock` has a defined schema; fill any gaps.
-- Wire the kebab in `BlockHandle` to open `AttributesPopover` with the matching schema + the node's current attrs.
-- `onChange` patches need to route through `editor.commands.updateAttributes(nodeType, patch)` so the Tiptap doc updates and the serializer re-emits MDX.
-- "Save Changes" button currently just closes the popover — confirm whether changes apply on every keystroke (preferred) or batch on Save.
-- Trash button in the popover footer is a visual stub. Wire to `editor.commands.deleteNode(nodeType)`.
+- `mdxCodeBlock` intentionally has no popover schema — its only user-facing attribute (`language`) is exposed via the inline dropdown in `MdxCodeBlockNode`. Add a schema if more attrs (filename, title) get modeled on the node.
+- The popover skips blocks with their own inline edit affordances (`mdxCard`, `mdxStep`, etc.) — those nodes wire their own `EllipsisVertical` button and popover instance. Keep that boundary in mind when wiring future schemas.
 
 ---
 
@@ -145,7 +134,9 @@ Multi-tenant Astro-based static site generator. Design doc: [nebula-cli.md](nebu
 
 **OPEN — Phase 1 follow-ups**
 
-- **SSR limitation: Tabs/Steps introspection.** Astro's MDX-React pipeline pre-renders nested React components to strings before passing them to the parent, so a parent that does `Children.toArray(children).filter(isValidElement)` to read each child's props sees an empty array. Affects `Tabs`, `Steps`, `Accordion`. Phase-1 workaround: `registry.tsx` ships static-only shims (`TabsShim`, `TabShim`, `StepsShim`, `StepShim`) that bypass introspection — every panel/step renders, no interactivity, step numbers come from the Step's own marker rather than auto-incremented by Steps. Phase 3 fix: replace the shims with Astro+React island wrappers using `client:load` so React owns the full subtree.
+- **Tailwind workspace scan.** `src/styles/global.css` adds `@source` directives for `../**/*.{astro,ts,tsx}` and `../../../components/src/**/*.{ts,tsx}` so utility classes from the symlinked workspace dep land in the bundle. Confirmed: Callout variants, Card/CardGroup, ParamField pills, RequestExample/ResponseExample all render with their @nebula-docs/components Tailwind styling.
+- **Tabs / Steps as Astro components, not React.** The Astro+MDX+React boundary pre-renders nested React children to HTML strings before they reach the parent, so `Children.toArray(...).filter(isValidElement)` always sees an empty array. Hydration boundaries don't help — the children come through as strings on both sides. `src/runtime/components/{Tabs,Tab,Steps,Step}.astro` sidestep the issue entirely with Astro slots: Steps uses CSS counters for auto-numbering + a `::after` connector line; Tabs renders panels with `data-tab-title`, and a small `is:inline` script reads them at load to build the tab-button row + wire click/arrow-key/Home/End. The page route in `src/pages/[...slug].astro` merges the Astro components over `reactComponents` in the components map. Verified end-to-end: Steps shows "1, 2, 3, 4" circles connected by a vertical line; Tabs switches between panels on click and via keyboard.
+- **Other introspection-pattern blocks.** `Accordion`, `Columns`, anything else that needs to read child props at render time will hit the same SSR boundary. Apply the same pattern (Astro slot wrappers) when a tenant exercises them.
 - **Distribution build.** The bin runs via `node --import tsx ./bin/nebula-docs.mjs` so workspace TS deps load without compilation. For npm-published consumption, Phase 6 needs to bundle (tsup/esbuild) the CLI + its workspace deps into shippable JS so `npx nebula-docs` works without tsx in the consumer's environment.
 - **Snippet path convention.** `<Snippet file="disclaimer" />` resolves to `content/snippets/disclaimer.mdx` (the file value is relative to the snippets dir, not the content dir). The fixture had `file="snippets/disclaimer"` originally; corrected. Worth a doc note in Phase 6 once the published JSON Schema enforces the convention.
 

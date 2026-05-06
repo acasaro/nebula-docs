@@ -1,49 +1,75 @@
 ---
-interface NestedGroup {
-  group: string;
-  pages: Array<string | NestedGroup>;
-}
+import NebulaIcon from './NebulaIcon.astro';
+import {
+  isGroup,
+  isPageObject,
+  pageHref,
+  pageLabel,
+  pageSlug,
+  resolveIcon,
+  isHidden,
+} from '../runtime/lib/nav.mjs';
 
 interface Props {
-  group: NestedGroup;
+  group: any;
   currentSlug: string;
   depth?: number;
 }
 
 const { group, currentSlug, depth = 0 } = Astro.props as Props;
-
-function pageHref(slug: string): string {
-  if (slug === 'index' || slug === '/') return '/';
-  return `/${slug}`;
-}
-
-function pageLabel(slug: string): string {
-  // Last segment, hyphens → spaces, title-cased.
-  const last = slug.split('/').pop() ?? slug;
-  return last
-    .split('-')
-    .map((s) => (s.length ? s[0]!.toUpperCase() + s.slice(1) : s))
-    .join(' ');
-}
+const groupIcon = resolveIcon(group.icon);
+const isTopLevel = depth === 0;
 ---
-<div class={depth === 0 ? 'nebula-sidebar-group' : 'nebula-sidebar-nested'}>
-  <p class="nebula-sidebar-group-title">{group.group}</p>
+<div class={isTopLevel ? 'nebula-sidebar-group' : 'nebula-sidebar-nested'}>
+  <p class="nebula-sidebar-group-title">
+    {groupIcon && isTopLevel && (
+      <NebulaIcon
+        name={groupIcon.name}
+        library={groupIcon.library}
+        type={groupIcon.type}
+        size={14}
+      />
+    )}
+    <span>{group.group}</span>
+  </p>
   <ul class="nebula-sidebar-list">
-    {group.pages.map((page) => {
-      if (typeof page === 'string') {
-        const href = pageHref(page);
-        const isCurrent = page === currentSlug;
+    {group.pages.filter((p: any) => !isHidden(p)).map((page: any) => {
+      if (isGroup(page)) {
         return (
           <li class="nebula-sidebar-item">
-            <a href={href} aria-current={isCurrent ? 'page' : undefined}>
-              {pageLabel(page)}
-            </a>
+            <Astro.self group={page} currentSlug={currentSlug} depth={depth + 1} />
           </li>
         );
       }
+
+      const href = pageHref(page);
+      const label = pageLabel(page);
+      const slug = pageSlug(page);
+      const isCurrent = slug === currentSlug;
+      const pageIcon = isPageObject(page) ? resolveIcon(page.icon) : null;
+      const isExternal = isPageObject(page) && Boolean(page.externalUrl);
+
       return (
         <li class="nebula-sidebar-item">
-          <Astro.self group={page} currentSlug={currentSlug} depth={depth + 1} />
+          <a
+            href={href}
+            aria-current={isCurrent ? 'page' : undefined}
+            target={isExternal ? '_blank' : undefined}
+            rel={isExternal ? 'noopener noreferrer' : undefined}
+          >
+            {pageIcon && (
+              <NebulaIcon
+                name={pageIcon.name}
+                library={pageIcon.library}
+                type={pageIcon.type}
+                size={14}
+              />
+            )}
+            <span>{label}</span>
+            {isPageObject(page) && page.tag && (
+              <span class="nebula-sidebar-tag">{page.tag}</span>
+            )}
+          </a>
         </li>
       );
     })}

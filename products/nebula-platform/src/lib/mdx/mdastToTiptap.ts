@@ -127,6 +127,13 @@ function convertBlock(node: RootContent, source: string): TiptapNode | null {
       if (name === 'ResponseExample')
         return convertGenericBlock(jsx, source, 'mdxResponseExample');
       if (name === 'Mermaid') return convertMermaid(jsx, source);
+      if (name === 'CodeGroup') return convertCodeGroup(jsx);
+      if (name === 'Badge') {
+        // MDX parses a standalone `<Badge>...</Badge>` line as a flow element.
+        // Wrap it in a paragraph so it round-trips through the inline node.
+        const badge = convertStandaloneInlineBadge(jsx);
+        return { type: 'paragraph', content: [badge] };
+      }
       return rawBlock(node, source);
     }
     default:
@@ -466,11 +473,42 @@ function convertBlockquote(node: Blockquote, source: string): TiptapNode {
 
 function convertCode(node: Code): TiptapNode {
   const text = node.value ?? '';
+  const filename = parseFilenameFromMeta(node.meta);
   return {
     type: 'codeBlock',
-    attrs: { language: node.lang ?? null },
+    attrs: {
+      language: node.lang ?? null,
+      filename: filename ?? null,
+    },
     ...(text ? { content: [{ type: 'text', text }] } : {}),
   };
+}
+
+function parseFilenameFromMeta(meta: string | null | undefined): string | undefined {
+  if (!meta) return undefined;
+  for (const token of meta.trim().split(/\s+/)) {
+    if (!token) continue;
+    if (/^[A-Za-z_][A-Za-z0-9_-]*=/.test(token)) continue;
+    return token;
+  }
+  return undefined;
+}
+
+function convertCodeGroup(node: MdxJsxFlowElement): TiptapNode {
+  const attrs = extractAttrs(node);
+  const items: TiptapNode[] = [];
+  for (const child of node.children ?? []) {
+    if (child.type === 'code') {
+      items.push(convertCode(child));
+    }
+  }
+  if (items.length === 0) {
+    items.push({
+      type: 'codeBlock',
+      attrs: { language: 'text', filename: null },
+    });
+  }
+  return { type: 'mdxCodeGroup', attrs, content: items };
 }
 
 function convertThematicBreak(_node: ThematicBreak): TiptapNode {
@@ -533,6 +571,27 @@ function convertInlineBadge(node: MdxJsxTextElement): TiptapNode {
   let label = '';
   for (const child of node.children ?? []) {
     if (child.type === 'text') label += child.value;
+  }
+  return {
+    type: 'mdxBadge',
+    attrs: { ...attrs, label: label.trim() },
+  };
+}
+
+function convertStandaloneInlineBadge(node: MdxJsxFlowElement): TiptapNode {
+  const attrs: Record<string, unknown> = {};
+  for (const a of node.attributes ?? []) {
+    if (a.type !== 'mdxJsxAttribute') continue;
+    if (typeof a.value === 'string') attrs[a.name] = a.value;
+    else if (a.value === null) attrs[a.name] = true;
+  }
+  let label = '';
+  for (const child of node.children ?? []) {
+    if (child.type === 'paragraph') {
+      for (const inline of child.children ?? []) {
+        if (inline.type === 'text') label += inline.value;
+      }
+    }
   }
   return {
     type: 'mdxBadge',

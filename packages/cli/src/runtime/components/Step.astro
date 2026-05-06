@@ -1,0 +1,63 @@
+---
+interface Props {
+  title?: string;
+  icon?: string;
+}
+const { title } = Astro.props as Props;
+---
+<li class="nebula-step">
+  {title && <p class="nebula-step-title">{title}</p>}
+  <div class="nebula-step-content"><slot /></div>
+</li>
+
+<style is:global>
+  .nebula-step {
+    counter-increment: nebula-step;
+    position: relative;
+    padding-left: 2.75rem;
+    padding-bottom: var(--mcoe-space-5);
+  }
+  .nebula-step::before {
+    content: counter(nebula-step);
+    position: absolute;
+    left: 0;
+    top: 0.1em;
+    width: 1.75rem;
+    height: 1.75rem;
+    border-radius: 50%;
+    background: var(--mcoe-bg-tertiary);
+    color: var(--mcoe-text-heading);
+    font-weight: var(--mcoe-font-weight-bold);
+    font-size: var(--mcoe-font-size-xs);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--mcoe-border-default);
+    z-index: 1;
+    line-height: 1;
+  }
+  .nebula-step::after {
+    content: '';
+    position: absolute;
+    left: calc(0.875rem - 0.5px);
+    top: 1.85rem;
+    bottom: 0;
+    width: 1px;
+    background: var(--mcoe-border-muted);
+  }
+  .nebula-step:last-child::after {
+    display: none;
+  }
+  .nebula-step-title {
+    font-weight: var(--mcoe-font-weight-bold);
+    color: var(--mcoe-text-heading);
+    margin: 0 0 var(--mcoe-space-2);
+    font-size: var(--mcoe-font-size-md);
+  }
+  .nebula-step-content > :first-child {
+    margin-top: 0;
+  }
+  .nebula-step-content > :last-child {
+    margin-bottom: 0;
+  }
+</style>

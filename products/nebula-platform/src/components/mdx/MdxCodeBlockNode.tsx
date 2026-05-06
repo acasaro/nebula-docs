@@ -45,6 +45,12 @@ const LANGUAGES: ReadonlyArray<{ value: string; label: string }> = [
 ];
 
 export const MdxCodeBlock = CodeBlock.extend({
+  addAttributes() {
+    return {
+      ...this.parent?.(),
+      filename: { default: null },
+    };
+  },
   addNodeView() {
     return ReactNodeViewRenderer(MdxCodeBlockView);
   },

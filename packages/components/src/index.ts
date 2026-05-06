@@ -5,6 +5,7 @@ export * from './badge';
 export * from './callout';
 export * from './card';
 export * from './code-block';
+export * from './code-group';
 export * from './columns';
 export * from './example';
 export * from './expandable';

@@ -19,6 +19,7 @@ import {
 } from './MdxApiNodes';
 import { MdxBadge } from './MdxBadgeNode';
 import { MdxCardGroup, MdxColumn, MdxColumns } from './MdxColumnsNode';
+import { MdxCodeGroup } from './MdxCodeGroupNode';
 import { MdxExpandable } from './MdxExpandableNode';
 import { MdxMermaid } from './MdxMermaidNode';
 import { MdxRaw } from './MdxRawNode';
@@ -45,6 +46,7 @@ export function MdxEditor({
     extensions: [
       StarterKit.configure({ codeBlock: false }),
       MdxCodeBlock,
+      MdxCodeGroup,
       MdxCallout,
       MdxCard,
       MdxFrame,

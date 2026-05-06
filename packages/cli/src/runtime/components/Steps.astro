@@ -1,0 +1,17 @@
+---
+// Astro implementation of <Steps>. Pure SSR with CSS counters — sidesteps the
+// Astro+React+MDX limitation where a parent React component can't introspect
+// nested React children's props. Auto-numbering is the counter; styling
+// matches @nebula-docs/components Steps as closely as the SSR boundary allows.
+---
+<ol class="nebula-steps"><slot /></ol>
+
+<style is:global>
+  .nebula-steps {
+    counter-reset: nebula-step;
+    list-style: none;
+    margin: var(--mcoe-space-5) 0 var(--mcoe-space-6);
+    padding: 0;
+    position: relative;
+  }
+</style>

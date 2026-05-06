@@ -1,0 +1,54 @@
+---
+// Renders an icon from the same CDN the Platform editor uses
+// (mcoe-icons.web.app, deployed via `pnpm -w run icons:deploy`).
+//
+// Reuses the buildIconUrl() helper from @nebula-docs/components so the URL
+// shape stays in lockstep with the React Icon component used elsewhere
+// (Callout, Card, Property, etc.). Renders as a CSS-mask <span> so the
+// icon picks up `currentColor` from its parent — used for sidebar group
+// labels, tab labels, page-link icons, etc.
+
+import { buildIconUrl } from '@nebula-docs/components';
+
+interface Props {
+  name?: string;
+  library?: 'lucide' | 'material' | 'material-symbols';
+  type?: string;
+  size?: number;
+  class?: string;
+}
+
+const {
+  name,
+  library = 'lucide',
+  type,
+  size = 14,
+  class: className,
+} = Astro.props as Props;
+
+if (!name) return null;
+
+const url = buildIconUrl(name, library, type as never);
+const dim = `${size}px`;
+---
+<span
+  class={['nebula-icon', className].filter(Boolean).join(' ')}
+  style={`--nebula-icon-url: url(${url}); width: ${dim}; height: ${dim};`}
+  aria-hidden="true"
+></span>
+
+<style is:global>
+  .nebula-icon {
+    display: inline-block;
+    background-color: currentColor;
+    -webkit-mask-image: var(--nebula-icon-url);
+    mask-image: var(--nebula-icon-url);
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+    -webkit-mask-position: center;
+    mask-position: center;
+    -webkit-mask-size: contain;
+    mask-size: contain;
+    flex-shrink: 0;
+  }
+</style>

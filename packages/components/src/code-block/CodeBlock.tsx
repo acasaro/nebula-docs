@@ -62,6 +62,8 @@ function getHighlighter(): Promise<ShikiInstance> {
 export interface CodeBlockProps {
   code: string;
   language?: string;
+  /** Optional filename label used when rendered inside a `<CodeGroup>`. */
+  filename?: string;
   className?: string;
   /**
    * If true, disables the lazy theme-switching behavior and always renders

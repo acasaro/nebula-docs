@@ -1,7 +1,11 @@
 ---
 import { getCollection, render } from 'astro:content';
 import DocsLayout from '../layouts/DocsLayout.astro';
-import { components } from '../runtime/components';
+import { components as reactComponents } from '../runtime/components';
+import Steps from '../runtime/components/Steps.astro';
+import Step from '../runtime/components/Step.astro';
+import Tabs from '../runtime/components/Tabs.astro';
+import Tab from '../runtime/components/Tab.astro';
 
 export async function getStaticPaths() {
   const entries = await getCollection('docs');
@@ -21,6 +25,16 @@ const data = (entry.data ?? {}) as { title?: string; description?: string };
 const title = data.title ?? entry.id;
 const description = data.description;
 const currentSlug = entry.id;
+
+// Merge Astro components for blocks that introspect children (Tabs/Steps)
+// over the React component map.
+const components = {
+  ...reactComponents,
+  Steps,
+  Step,
+  Tabs,
+  Tab,
+};
 ---
 <DocsLayout title={title} description={description} currentSlug={currentSlug}>
   <Content components={components} />

@@ -1,6 +1,26 @@
-import { useState, type MouseEvent as ReactMouseEvent, type ReactNode } from 'react';
-import { ChevronDown, ChevronRight, Folder, Plus, Settings } from 'lucide-react';
+import { useMemo, useState, type MouseEvent as ReactMouseEvent, type ReactNode } from 'react';
+import {
+  ChevronDown,
+  ChevronRight,
+  FilePlus,
+  FolderPlus,
+  FileSearch,
+  Folder,
+  Plus,
+  Settings,
+} from 'lucide-react';
+import * as Popover from '@radix-ui/react-popover';
 import { Icon } from '@nebula-docs/components';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import {
   defaultPageTitle,
@@ -27,6 +47,8 @@ export type NavSettingsKey = string;
 
 export type NavSettingsKind = 'tab' | 'group' | 'page';
 
+export type AddEntryKind = 'page' | 'group' | 'existing';
+
 export interface OpenNavSettings {
   key: NavSettingsKey;
   kind: NavSettingsKind;
@@ -43,6 +65,10 @@ interface NavTreeProps {
    * descriptor (kind + title + key) so the parent can render the right panel
    * without re-walking the tree. */
   onOpenSettings: (next: OpenNavSettings | null) => void;
+  /** Add a page / group / existing-file entry to the named group. */
+  onAddEntry?: (parentKey: NavSettingsKey, kind: AddEntryKind, value: string) => void;
+  /** All file paths in the repo — used by the "add existing file" flow. */
+  repoPaths?: string[];
 }
 
 // Pixel widths used to compute the cascading text-indent. The pattern:
@@ -62,6 +88,8 @@ export function NavTree({
   onSelectPath,
   settingsOpenKey,
   onOpenSettings,
+  onAddEntry,
+  repoPaths,
 }: NavTreeProps) {
   const tabs = (config.navigation?.tabs ?? []).filter((t) => !t.hidden);
 
@@ -88,6 +116,8 @@ export function NavTree({
             onSelectPath={onSelectPath}
             settingsOpenKey={settingsOpenKey}
             onOpenSettings={onOpenSettings}
+            onAddEntry={onAddEntry}
+            repoPaths={repoPaths}
           />
         ))}
       </div>
@@ -100,6 +130,8 @@ interface SectionCommon {
   onSelectPath: (path: string) => void;
   settingsOpenKey: NavSettingsKey | null;
   onOpenSettings: (next: OpenNavSettings | null) => void;
+  onAddEntry?: (parentKey: NavSettingsKey, kind: AddEntryKind, value: string) => void;
+  repoPaths?: string[];
 }
 
 function TabSection({
@@ -110,6 +142,8 @@ function TabSection({
   onSelectPath,
   settingsOpenKey,
   onOpenSettings,
+  onAddEntry,
+  repoPaths,
 }: {
   tab: Tab;
   tabIndex: number;
@@ -155,6 +189,8 @@ function TabSection({
             onSelectPath={onSelectPath}
             settingsOpenKey={settingsOpenKey}
             onOpenSettings={onOpenSettings}
+            onAddEntry={onAddEntry}
+            repoPaths={repoPaths}
           />
         ))}
       </div>
@@ -170,6 +206,8 @@ function GroupSection({
   onSelectPath,
   settingsOpenKey,
   onOpenSettings,
+  onAddEntry,
+  repoPaths,
 }: {
   group: Group;
   indent: number;
@@ -189,14 +227,12 @@ function GroupSection({
         showActions
         actions={
           <>
-            <ActionButton
-              ariaLabel={`Add to ${group.group}`}
-              onClick={(e) => {
-                e.stopPropagation();
-              }}
-            >
-              <Plus className="size-3.5" />
-            </ActionButton>
+            <AddEntryButton
+              parentLabel={group.group}
+              parentKey={settingsKey}
+              onAddEntry={onAddEntry}
+              repoPaths={repoPaths}
+            />
             <SettingsToggle
               label={group.group}
               isOpen={settingsOpen}
@@ -227,6 +263,8 @@ function GroupSection({
               onSelectPath={onSelectPath}
               settingsOpenKey={settingsOpenKey}
               onOpenSettings={onOpenSettings}
+              onAddEntry={onAddEntry}
+              repoPaths={repoPaths}
             />
           ))}
         </div>
@@ -243,6 +281,8 @@ function PageOrGroup({
   onSelectPath,
   settingsOpenKey,
   onOpenSettings,
+  onAddEntry,
+  repoPaths,
 }: {
   entry: PageEntry;
   indent: number;
@@ -258,6 +298,8 @@ function PageOrGroup({
         onSelectPath={onSelectPath}
         settingsOpenKey={settingsOpenKey}
         onOpenSettings={onOpenSettings}
+        onAddEntry={onAddEntry}
+        repoPaths={repoPaths}
       />
     );
   }
@@ -459,4 +501,203 @@ function pageKey(entry: PageEntry, i: number): string {
   if (typeof entry === 'string') return entry;
   if (isGroup(entry)) return `group:${entry.group}:${i}`;
   return `page:${entry.page ?? entry.slug ?? i}`;
+}
+
+interface AddEntryButtonProps {
+  parentLabel: string;
+  parentKey: NavSettingsKey;
+  onAddEntry?: (parentKey: NavSettingsKey, kind: AddEntryKind, value: string) => void;
+  repoPaths?: string[];
+}
+
+function AddEntryButton({
+  parentLabel,
+  parentKey,
+  onAddEntry,
+  repoPaths,
+}: AddEntryButtonProps) {
+  const [popoverOpen, setPopoverOpen] = useState(false);
+  const [dialogKind, setDialogKind] = useState<AddEntryKind | null>(null);
+  const [textValue, setTextValue] = useState('');
+  const [pickedFile, setPickedFile] = useState<string | null>(null);
+  const [filter, setFilter] = useState('');
+
+  const closeAll = () => {
+    setPopoverOpen(false);
+    setDialogKind(null);
+    setTextValue('');
+    setPickedFile(null);
+    setFilter('');
+  };
+
+  const handlePick = (kind: AddEntryKind) => {
+    setPopoverOpen(false);
+    setDialogKind(kind);
+  };
+
+  const submit = () => {
+    if (!onAddEntry || !dialogKind) return;
+    if (dialogKind === 'existing') {
+      if (!pickedFile) return;
+      const slug = pickedFile.replace(/\.mdx?$/i, '');
+      onAddEntry(parentKey, 'existing', slug);
+    } else {
+      const value = textValue.trim();
+      if (!value) return;
+      onAddEntry(parentKey, dialogKind, value);
+    }
+    closeAll();
+  };
+
+  const mdxPaths = useMemo(
+    () => (repoPaths ?? []).filter((p) => /\.mdx?$/i.test(p)),
+    [repoPaths],
+  );
+  const filtered = useMemo(() => {
+    const q = filter.trim().toLowerCase();
+    return q
+      ? mdxPaths.filter((p) => p.toLowerCase().includes(q))
+      : mdxPaths.slice(0, 100);
+  }, [mdxPaths, filter]);
+
+  return (
+    <>
+      <Popover.Root open={popoverOpen} onOpenChange={setPopoverOpen}>
+        <Popover.Trigger asChild>
+          <ActionButton
+            ariaLabel={`Add to ${parentLabel}`}
+            onClick={(e) => {
+              e.stopPropagation();
+              setPopoverOpen(true);
+            }}
+          >
+            <Plus className="size-3.5" />
+          </ActionButton>
+        </Popover.Trigger>
+        <Popover.Portal>
+          <Popover.Content
+            sideOffset={4}
+            align="end"
+            className={cn(
+              'z-50 min-w-[180px] rounded-md border bg-popover p-1 shadow-md',
+              'data-[state=open]:animate-in data-[state=closed]:animate-out',
+              'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
+              'data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95',
+            )}
+            onCloseAutoFocus={(e) => e.preventDefault()}
+          >
+            <button
+              type="button"
+              className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent"
+              onClick={() => handlePick('page')}
+            >
+              <FilePlus className="size-3.5" />
+              Add a page
+            </button>
+            <button
+              type="button"
+              className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent"
+              onClick={() => handlePick('group')}
+            >
+              <FolderPlus className="size-3.5" />
+              Add a group
+            </button>
+            <button
+              type="button"
+              className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent"
+              onClick={() => handlePick('existing')}
+            >
+              <FileSearch className="size-3.5" />
+              Add existing file
+            </button>
+          </Popover.Content>
+        </Popover.Portal>
+      </Popover.Root>
+
+      <Dialog open={!!dialogKind} onOpenChange={(open) => !open && closeAll()}>
+        <DialogContent
+          onClick={(e) => e.stopPropagation()}
+          onMouseDown={(e) => e.stopPropagation()}
+        >
+          <DialogHeader>
+            <DialogTitle>
+              {dialogKind === 'page'
+                ? `Add a page to ${parentLabel}`
+                : dialogKind === 'group'
+                  ? `Add a group inside ${parentLabel}`
+                  : `Add an existing file to ${parentLabel}`}
+            </DialogTitle>
+            <DialogDescription>
+              {dialogKind === 'page'
+                ? 'Enter a slug — a new MDX file will be created on the next commit.'
+                : dialogKind === 'group'
+                  ? 'Enter the group title — pages can be moved into it later.'
+                  : 'Pick an MDX file already in the repo.'}
+            </DialogDescription>
+          </DialogHeader>
+          {dialogKind === 'existing' ? (
+            <div className="flex flex-col gap-2">
+              <Input
+                placeholder="Filter…"
+                value={filter}
+                onChange={(e) => setFilter(e.target.value)}
+                autoFocus
+              />
+              <div className="max-h-64 overflow-y-auto rounded border border-border/40">
+                {filtered.length === 0 ? (
+                  <p className="px-3 py-4 text-sm text-muted-foreground">
+                    No matching files.
+                  </p>
+                ) : (
+                  filtered.map((path) => (
+                    <button
+                      key={path}
+                      type="button"
+                      onClick={() => setPickedFile(path)}
+                      className={cn(
+                        'flex w-full items-center px-3 py-1.5 text-left text-sm hover:bg-accent',
+                        pickedFile === path && 'bg-accent text-accent-foreground',
+                      )}
+                    >
+                      {path}
+                    </button>
+                  ))
+                )}
+              </div>
+            </div>
+          ) : (
+            <Input
+              placeholder={
+                dialogKind === 'page' ? 'getting-started' : 'Group title'
+              }
+              value={textValue}
+              onChange={(e) => setTextValue(e.target.value)}
+              autoFocus
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  submit();
+                }
+              }}
+            />
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={closeAll}>
+              Cancel
+            </Button>
+            <Button
+              onClick={submit}
+              disabled={
+                dialogKind === 'existing'
+                  ? !pickedFile
+                  : !textValue.trim()
+              }
+            >
+              Add
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
 }

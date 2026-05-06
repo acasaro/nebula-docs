@@ -100,7 +100,7 @@ export function findEntry(
     let group: Group | undefined = tab.groups?.[parsed.groupPath[0]!];
     if (!group) return null;
     for (let i = 1; i < parsed.groupPath.length; i++) {
-      const child = group.pages?.[parsed.groupPath[i]!];
+      const child: PageEntry | undefined = group.pages?.[parsed.groupPath[i]!];
       if (!child || !isGroup(child)) return null;
       group = child;
     }

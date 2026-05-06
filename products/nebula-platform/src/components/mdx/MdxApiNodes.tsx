@@ -261,7 +261,7 @@ function FieldView({
       >
         <button
           type="button"
-          aria-label={`Edit ${schema.title}`}
+          aria-label={schema.title}
           onMouseDown={stopPm}
           onClick={(e) => {
             stopPm(e);
@@ -373,7 +373,7 @@ function makeExampleView(variant: 'request' | 'response') {
               </div>
               <button
                 type="button"
-                aria-label={`Edit ${cfg.schema.title}`}
+                aria-label={cfg.schema.title}
                 onMouseDown={stopPm}
                 onClick={(e) => {
                   stopPm(e);

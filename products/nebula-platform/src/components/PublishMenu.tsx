@@ -17,7 +17,7 @@ import { useEffect, useState } from "react";
 
 export interface PublishChange {
   path: string;
-  status: "modified" | "added";
+  status: "modified" | "added" | "deleted";
 }
 
 type RevertTarget = { kind: "one"; path: string } | { kind: "all" };
@@ -218,7 +218,11 @@ function ChangesList({
               <span className='truncate font-medium'>{name}</span>
               {dir ? <span className='truncate text-xs text-muted-foreground'>{dir}</span> : null}
               <span className='ml-auto text-xs text-muted-foreground group-hover/row:hidden'>
-                {c.status === "added" ? "Added" : "Modified"}
+                {c.status === "added"
+                  ? "Added"
+                  : c.status === "deleted"
+                    ? "Deleted"
+                    : "Modified"}
               </span>
               <button
                 type='button'

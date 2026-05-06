@@ -3,12 +3,18 @@ import { FileTypeIcon, isBinaryFile } from "@/components/FileTypeIcon";
 import { useHeaderLeading, useHeaderSlot } from "@/components/HeaderSlot";
 import { MdxEditor, normalizeMdx } from "@/components/mdx/MdxEditor";
 import { NavSettingsPanel } from "@/components/NavSettingsPanel";
-import { NavTree, type OpenNavSettings } from "@/components/NavTree";
+import {
+  NavTree,
+  type AddEntryKind,
+  type OpenNavSettings,
+} from "@/components/NavTree";
 import { PublishMenu, type PublishChange } from "@/components/PublishMenu";
 import { InlineSpinner } from "@/components/ui/NebulaLoader";
 import { PageLoader } from "@/components/ui/PageLoader";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useDocsConfig } from "@/lib/docsConfig";
+import { useDocsConfig, type DocsConfig, type Group } from "@/lib/docsConfig";
+import { appendToGroup, deleteEntry, findEntry } from "@/lib/docsConfigOps";
+import { applyFrontmatterPatch } from "@/lib/frontmatter";
 import {
   commitFiles,
   createBranch,
@@ -16,6 +22,7 @@ import {
   fetchFileContent,
   fetchRepoTree,
   listBranches,
+  type FileChange,
 } from "@/lib/githubApi";
 import { useGitSettings } from "@/lib/gitSettings";
 import { buildTree, type TreeNode } from "@/lib/repoTree";
@@ -316,6 +323,7 @@ export function RepoBrowser() {
   const [fileError, setFileError] = useState<string | null>(null);
   const [mode, setMode] = useState<ViewMode>("visual");
   const [settingsOpen, setSettingsOpen] = useState<OpenNavSettings | null>(null);
+  const [deletions, setDeletions] = useState<Set<string>>(new Set());
 
   const currentBranch = branchParam;
   const [branches, setBranches] = useState<string[]>([]);
@@ -330,6 +338,7 @@ export function RepoBrowser() {
     if (lastBranchRef.current !== null && lastBranchRef.current !== currentBranch) {
       setFiles({});
       fetchedPathsRef.current = new Set();
+      setDeletions(new Set());
       setSaveMessage(null);
     }
     lastBranchRef.current = currentBranch;
@@ -364,6 +373,128 @@ export function RepoBrowser() {
     repo: active?.repo ?? null,
     ref: currentBranch,
   });
+
+  // Live in-memory docs config — derived from `files['docs.json'].draft` once
+  // the user has touched any setting; otherwise from the initial fetch via
+  // `useDocsConfig`. This single derivation keeps revert behaviour consistent
+  // with every other dirty file.
+  const liveDocsConfig = useMemo<DocsConfig | null>(() => {
+    const entry = files["docs.json"];
+    if (entry?.draft) {
+      try {
+        return JSON.parse(entry.draft) as DocsConfig;
+      } catch {
+        // Fall through to the loaded copy.
+      }
+    }
+    return docsConfigState.config;
+  }, [files, docsConfigState.config]);
+
+  const handleConfigChange = useCallback(
+    (updater: (config: DocsConfig) => DocsConfig) => {
+      setFiles((prev) => {
+        const current = prev["docs.json"];
+        const baseConfig = current?.draft
+          ? (JSON.parse(current.draft) as DocsConfig)
+          : docsConfigState.config;
+        if (!baseConfig) return prev;
+        const nextConfig = updater(baseConfig);
+        const nextDraft = `${JSON.stringify(nextConfig, null, 2)}\n`;
+        if (current && current.draft === nextDraft) return prev;
+        if (!current) {
+          const original = `${JSON.stringify(docsConfigState.config ?? baseConfig, null, 2)}\n`;
+          return {
+            ...prev,
+            "docs.json": {
+              original,
+              draft: nextDraft,
+              sha: "",
+              revertNonce: 0,
+            },
+          };
+        }
+        return {
+          ...prev,
+          "docs.json": { ...current, draft: nextDraft },
+        };
+      });
+    },
+    [docsConfigState.config],
+  );
+
+  const handleFrontmatterChange = useCallback(
+    (filePath: string, patch: Record<string, unknown>) => {
+      setFiles((prev) => {
+        const entry = prev[filePath];
+        if (!entry) return prev;
+        const nextDraft = applyFrontmatterPatch(entry.draft, patch);
+        if (nextDraft === entry.draft) return prev;
+        return { ...prev, [filePath]: { ...entry, draft: nextDraft } };
+      });
+    },
+    [],
+  );
+
+  const handleDeleteOpenEntry = useCallback(() => {
+    if (!settingsOpen || !liveDocsConfig) return;
+    const resolved = findEntry(liveDocsConfig, settingsOpen.key);
+    if (!resolved) {
+      setSettingsOpen(null);
+      return;
+    }
+    handleConfigChange((cfg) => deleteEntry(cfg, settingsOpen.key));
+    if (resolved.kind === "page") {
+      setDeletions((prev) => {
+        const next = new Set(prev);
+        next.add(resolved.filePath);
+        return next;
+      });
+    }
+    setSettingsOpen(null);
+  }, [settingsOpen, liveDocsConfig, handleConfigChange]);
+
+  const handleAddEntry = useCallback(
+    (parentKey: string, kind: AddEntryKind, value: string) => {
+      if (!liveDocsConfig) return;
+      if (kind === "group") {
+        const newGroup: Group = { group: value, pages: [] };
+        handleConfigChange((cfg) => appendToGroup(cfg, parentKey, newGroup));
+        return;
+      }
+      const slug = value.replace(/\.mdx?$/i, "");
+      const filePath = `${slug}.mdx`;
+      handleConfigChange((cfg) => appendToGroup(cfg, parentKey, slug));
+      if (kind === "page") {
+        // Seed an empty MDX file in the files map so the next commit creates it.
+        const title =
+          slug.split("/").pop()?.replace(/[-_]+/g, " ").replace(/^./, (c) => c.toUpperCase()) ?? slug;
+        const initial = `---\ntitle: ${JSON.stringify(title)}\n---\n\n# ${title}\n`;
+        setFiles((prev) =>
+          prev[filePath]
+            ? prev
+            : {
+                ...prev,
+                [filePath]: {
+                  original: "",
+                  draft: initial,
+                  sha: "",
+                  revertNonce: 0,
+                },
+              },
+        );
+      }
+      // For "existing" kind the file already lives in the repo — no file-map edit.
+    },
+    [liveDocsConfig, handleConfigChange],
+  );
+
+  const currentPageDraft = useMemo(() => {
+    if (!settingsOpen || settingsOpen.kind !== "page") return null;
+    const filePath = settingsOpen.key.replace(/^page:/, "");
+    const entry = files[filePath];
+    if (!entry) return null;
+    return { path: filePath, content: entry.draft };
+  }, [settingsOpen, files]);
 
   useEffect(() => {
     if (!active || !currentBranch) return;
@@ -515,19 +646,32 @@ export function RepoBrowser() {
     navigateToBranch(name, true);
   };
 
+  const deletionList = useMemo(() => Array.from(deletions), [deletions]);
+
   const handleSave = async () => {
-    if (!active || !currentBranch || dirtyPaths.length === 0) return;
+    if (!active || !currentBranch) return;
+    if (dirtyPaths.length === 0 && deletionList.length === 0) return;
     setSaving(true);
     setSaveMessage(null);
     try {
-      const changes: Array<{ path: string; content: string }> = [];
+      const changes: FileChange[] = [];
       for (const path of dirtyPaths) {
         const entry = files[path];
         if (entry) changes.push({ path, content: entry.draft });
       }
+      for (const path of deletionList) {
+        changes.push({ path, delete: true });
+      }
       if (changes.length === 0) return;
       const message =
-        changes.length === 1 ? `Update ${changes[0]!.path}` : `Update ${changes.length} files`;
+        dirtyPaths.length + deletionList.length === 1
+          ? deletionList.length === 1
+            ? `Delete ${deletionList[0]}`
+            : `Update ${dirtyPaths[0]}`
+          : `Update ${dirtyPaths.length} file${dirtyPaths.length === 1 ? "" : "s"}` +
+            (deletionList.length > 0
+              ? `, delete ${deletionList.length}`
+              : "");
       await commitFiles(
         active.installationId,
         active.owner,
@@ -539,13 +683,19 @@ export function RepoBrowser() {
       setFiles((prev) => {
         const next: Record<string, FileEntry> = { ...prev };
         for (const change of changes) {
-          const entry = next[change.path];
-          if (entry) next[change.path] = { ...entry, original: change.content };
+          if ("content" in change) {
+            const entry = next[change.path];
+            if (entry) next[change.path] = { ...entry, original: change.content };
+          } else {
+            // After successful deletion, drop the entry so the file map matches reality.
+            delete next[change.path];
+          }
         }
         return next;
       });
+      setDeletions(new Set());
       setSaveMessage(
-        `Saved ${changes.length} file${changes.length === 1 ? "" : "s"} to ${currentBranch}.`,
+        `Saved ${changes.length} change${changes.length === 1 ? "" : "s"} to ${currentBranch}.`,
       );
     } catch (err) {
       setSaveMessage(err instanceof Error ? `Save failed: ${err.message}` : "Save failed.");
@@ -583,8 +733,11 @@ export function RepoBrowser() {
   };
 
   const publishChanges = useMemo<PublishChange[]>(
-    () => dirtyPaths.map((path) => ({ path, status: "modified" as const })),
-    [dirtyPaths],
+    () => [
+      ...dirtyPaths.map((path) => ({ path, status: "modified" as const })),
+      ...deletionList.map((path) => ({ path, status: "deleted" as const })),
+    ],
+    [dirtyPaths, deletionList],
   );
 
   const headerSlot = useMemo(() => {
@@ -724,13 +877,15 @@ export function RepoBrowser() {
               <p className='px-3 py-2 text-sm text-muted-foreground'>Loading navigation…</p>
             ) : docsConfigState.error ? (
               <p className='px-3 py-2 text-sm text-destructive'>{docsConfigState.error}</p>
-            ) : docsConfigState.config ? (
+            ) : liveDocsConfig ? (
               <NavTree
-                config={docsConfigState.config}
+                config={liveDocsConfig}
                 selectedPath={selectedPath}
                 onSelectPath={handleSelectPath}
                 settingsOpenKey={settingsOpen?.key ?? null}
                 onOpenSettings={setSettingsOpen}
+                onAddEntry={handleAddEntry}
+                repoPaths={allPaths}
               />
             ) : (
               <FileTreePanel
@@ -763,7 +918,15 @@ export function RepoBrowser() {
         </div>
       </aside>
       {settingsOpen ? (
-        <NavSettingsPanel settings={settingsOpen} onClose={() => setSettingsOpen(null)} />
+        <NavSettingsPanel
+          settings={settingsOpen}
+          onClose={() => setSettingsOpen(null)}
+          config={liveDocsConfig}
+          onConfigChange={handleConfigChange}
+          pageDraft={currentPageDraft}
+          onFrontmatterChange={handleFrontmatterChange}
+          onDelete={handleDeleteOpenEntry}
+        />
       ) : null}
       <main className='flex flex-1 flex-col overflow-hidden bg-background'>
         <FileViewer

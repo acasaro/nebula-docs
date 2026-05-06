@@ -1,0 +1,14 @@
+---
+interface Props {
+  title?: string;
+}
+const { title } = Astro.props as Props;
+---
+<section
+  data-nebula-tab
+  data-tab-title={title ?? ''}
+  role="tabpanel"
+  hidden
+>
+  <slot />
+</section>

@@ -193,32 +193,78 @@ export async function commitFiles(
     ),
   );
 
-  const treeEntries: Parameters<typeof oct.git.createTree>[0]['tree'] = [
-    ...upsertBlobs.map((b) => ({
-      path: b.path,
-      mode: '100644' as const,
-      type: 'blob' as const,
-      sha: b.sha,
-    })),
-    ...deletions.map((d) => ({
-      path: d.path,
-      mode: '100644' as const,
-      type: 'blob' as const,
-      sha: null,
-    })),
-  ];
+  type TreeEntry = {
+    path: string;
+    mode: '100644' | '100755' | '040000' | '160000' | '120000';
+    type: 'blob' | 'tree' | 'commit';
+    sha: string;
+  };
 
-  const { data: tree } = await oct.git.createTree({
-    owner,
-    repo,
-    base_tree: parentCommit.tree.sha,
-    tree: treeEntries,
-  });
+  let createdTreeSha: string;
+
+  if (deletions.length === 0) {
+    // Pure upsert: merge into the parent tree via base_tree.
+    const { data: tree } = await oct.git.createTree({
+      owner,
+      repo,
+      base_tree: parentCommit.tree.sha,
+      tree: upsertBlobs.map((b) => ({
+        path: b.path,
+        mode: '100644' as const,
+        type: 'blob' as const,
+        sha: b.sha,
+      })),
+    });
+    createdTreeSha = tree.sha;
+  } else {
+    // Mixed (or pure-delete): GitHub's Git Data API does not reliably honour
+    // `sha: null` for nested paths in a base_tree merge. Rebuild the full
+    // flat tree explicitly: every existing blob, minus deletions, plus
+    // upserts.
+    const { data: baseTreeData } = await oct.git.getTree({
+      owner,
+      repo,
+      tree_sha: parentCommit.tree.sha,
+      recursive: 'true',
+    });
+    const deletedSet = new Set(deletions.map((d) => d.path));
+    const upsertMap = new Map(upsertBlobs.map((b) => [b.path, b.sha]));
+
+    const treeEntries: TreeEntry[] = [];
+    for (const item of baseTreeData.tree) {
+      if (!item.path) continue;
+      if (item.type === 'tree') continue; // git infers trees from blob paths
+      if (deletedSet.has(item.path)) continue;
+      if (upsertMap.has(item.path)) continue; // overridden below
+      if (!item.sha) continue;
+      treeEntries.push({
+        path: item.path,
+        mode: (item.mode ?? '100644') as TreeEntry['mode'],
+        type: (item.type ?? 'blob') as TreeEntry['type'],
+        sha: item.sha,
+      });
+    }
+    for (const [path, sha] of upsertMap) {
+      treeEntries.push({
+        path,
+        mode: '100644',
+        type: 'blob',
+        sha,
+      });
+    }
+
+    const { data: tree } = await oct.git.createTree({
+      owner,
+      repo,
+      tree: treeEntries,
+    });
+    createdTreeSha = tree.sha;
+  }
   const { data: commit } = await oct.git.createCommit({
     owner,
     repo,
     message,
-    tree: tree.sha,
+    tree: createdTreeSha,
     parents: [parentSha],
   });
   await oct.git.updateRef({

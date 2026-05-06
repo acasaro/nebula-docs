@@ -3,7 +3,7 @@ import '../styles/global.css';
 import Sidebar from '../components/Sidebar.astro';
 import Navbar from '../components/Navbar.astro';
 import Footer from '../components/Footer.astro';
-import { loadDocsConfig } from '../runtime/lib/loadDocsConfig.mjs';
+import { loadDocsConfig, findGroupForSlug } from '../runtime/lib/loadDocsConfig.mjs';
 
 interface Props {
   title: string;
@@ -13,6 +13,7 @@ interface Props {
 
 const { title, description, currentSlug } = Astro.props as Props;
 const docs = loadDocsConfig();
+const eyebrow = findGroupForSlug(docs, currentSlug);
 ---
 <!doctype html>
 <html lang="en">
@@ -29,8 +30,17 @@ const docs = loadDocsConfig();
         <Sidebar docs={docs} currentSlug={currentSlug} />
       </aside>
       <main class="nebula-main">
-        <article class="nebula-prose">
-          <slot />
+        <article>
+          <header class="nebula-page-header">
+            {eyebrow && <p class="nebula-eyebrow">{eyebrow}</p>}
+            <h1 class="nebula-page-title">{title}</h1>
+            {description && (
+              <p class="nebula-page-description">{description}</p>
+            )}
+          </header>
+          <div class="nebula-prose">
+            <slot />
+          </div>
         </article>
         <Footer docs={docs} />
       </main>

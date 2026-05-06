@@ -51,8 +51,10 @@ function serializeBlock(node: TiptapNode): string {
         .join('\n');
     case 'codeBlock': {
       const lang = (node.attrs?.language as string | null | undefined) ?? '';
+      const filename = (node.attrs?.filename as string | null | undefined) ?? '';
       const text = (node.content ?? []).map((c) => c.text ?? '').join('');
-      return '```' + lang + '\n' + text + '\n```';
+      const meta = filename ? ` ${filename}` : '';
+      return '```' + lang + meta + '\n' + text + '\n```';
     }
     case 'horizontalRule':
       return '---';
@@ -102,6 +104,8 @@ function serializeBlock(node: TiptapNode): string {
       return serializeJsxBlock(node, 'ResponseExample');
     case 'mdxMermaid':
       return serializeMermaid(node);
+    case 'mdxCodeGroup':
+      return serializeCodeGroup(node);
     case 'hardBreak':
       return '  \n';
     default:
@@ -159,6 +163,16 @@ function serializeSteps(node: TiptapNode): string {
     .filter(Boolean)
     .join('\n\n');
   return `<Steps${attrs}>\n${stepBlocks}\n</Steps>`;
+}
+
+function serializeCodeGroup(node: TiptapNode): string {
+  const attrs = serializeAttrs(node.attrs);
+  const body = (node.content ?? [])
+    .filter((child) => child.type === 'codeBlock')
+    .map((child) => serializeBlock(child))
+    .filter(Boolean)
+    .join('\n\n');
+  return `<CodeGroup${attrs}>\n${body}\n</CodeGroup>`;
 }
 
 function serializeMermaid(node: TiptapNode): string {

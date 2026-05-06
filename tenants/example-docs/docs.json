@@ -21,12 +21,14 @@
         "groups": [
           {
             "group": "Getting Started",
+            "icon": "rocket",
             "pages": [
               "getting-started/installation"
             ]
           },
           {
             "group": "Components",
+            "icon": "layers",
             "pages": [
               "components/cards",
               "components/tabs"
@@ -34,6 +36,7 @@
           },
           {
             "group": "API Reference",
+            "icon": "code",
             "pages": [
               "api/users"
             ]

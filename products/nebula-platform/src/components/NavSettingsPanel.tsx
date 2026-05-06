@@ -333,7 +333,10 @@ function mergePage(
   if (patch.hidden !== undefined) next.hidden = patch.hidden || undefined;
   // If the entry was a plain string and no overrides remain, keep it a string
   // to preserve diff cleanliness.
-  if (typeof page === 'string' && !hasAnyDefinedField(next, ['page'])) {
+  if (
+    typeof page === 'string' &&
+    !hasAnyDefinedField(next as unknown as Record<string, unknown>, ['page'])
+  ) {
     return page;
   }
   return next;

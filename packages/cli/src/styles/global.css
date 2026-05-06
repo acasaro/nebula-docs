@@ -1,9 +1,30 @@
 @import "tailwindcss";
 
+/* Inter (variable) for prose, JetBrains Mono for code. The base font stack
+   ships with the renderer so every tenant inherits the same look without
+   pinning fonts in their own theme.json. Tenants can override via
+   theme.json.fonts.{body,mono} (Phase 3 — currently a no-op). */
+@import url("https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300..700&family=JetBrains+Mono:wght@400..700&display=swap");
+
+/* Tell Tailwind v4 to scan workspace component sources. By default the @vite
+   plugin only walks the current project tree; pnpm-symlinked workspace deps
+   under node_modules wouldn't be picked up, so utility classes that only
+   appear inside @nebula-docs/components would be silently dropped from the
+   bundle. Globs are relative to this file. */
+@source "../**/*.{astro,ts,tsx}";
+@source "../../../components/src/**/*.{ts,tsx}";
+
 /* Composed at startup by prepareAstroEnv (src/cli/prepareAstro.mjs):
      globalTokens + base theme + tenant theme.json overrides → CSS vars.
    Generated to packages/cli/.nebula/tokens.css; gitignored. */
 @import "../../.nebula/tokens.css";
+
+:root {
+  --nebula-font-body: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI",
+    Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  --nebula-font-mono: "JetBrains Mono", "SF Mono", Menlo, Consolas,
+    "Liberation Mono", monospace;
+}
 
 :root {
   color-scheme: light;
@@ -17,15 +38,19 @@ html,
 body {
   margin: 0;
   padding: 0;
-  font-family: var(--mcoe-font-family, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif);
+  font-family: var(--nebula-font-body);
   color: var(--mcoe-text-primary);
   background: var(--mcoe-bg-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
 body {
   min-height: 100vh;
   font-size: var(--mcoe-font-size-base);
   line-height: 1.6;
+  letter-spacing: -0.0125rem;
 }
 
 a {
@@ -37,28 +62,68 @@ a:hover {
   text-decoration: underline;
 }
 
-/* Default content styling — Tailwind utilities still take precedence. */
-.nebula-prose h1 {
-  font-size: var(--mcoe-font-size-3xl);
-  font-weight: var(--mcoe-font-weight-bold);
+/* Page-header block: eyebrow (parent group), title, description.
+   Driven by docs.json navigation + MDX frontmatter — content MDX is expected
+   to start at H2 since the layout owns the H1. */
+.nebula-page-header {
+  margin: 0 0 var(--mcoe-space-7);
+}
+
+.nebula-eyebrow {
+  font-size: var(--mcoe-font-size-xs);
+  font-weight: var(--mcoe-font-weight-medium);
+  color: var(--mcoe-brand-primary);
+  text-transform: capitalize;
+  letter-spacing: normal;
+  margin: 0 0 var(--mcoe-space-2);
+  line-height: 1.2;
+}
+
+.nebula-page-title {
+  font-size: 1.875rem;
+  line-height: 2.25rem;
+  font-weight: var(--mcoe-font-weight-medium);
   color: var(--mcoe-text-heading);
-  margin: 0 0 var(--mcoe-space-5);
-  letter-spacing: -0.02em;
+  letter-spacing: -0.03125rem;
+  margin: 0;
+}
+
+.nebula-page-description {
+  margin: var(--mcoe-space-3) 0 0;
+  font-size: var(--mcoe-font-size-md);
+  line-height: 1.6;
+  color: var(--mcoe-text-secondary);
+}
+
+/* Default content styling — Tailwind utilities still take precedence. */
+.nebula-prose {
+  letter-spacing: -0.0125rem;
 }
 
 .nebula-prose h2 {
-  font-size: var(--mcoe-font-size-2xl);
-  font-weight: var(--mcoe-font-weight-bold);
+  font-size: var(--mcoe-font-size-xl);
+  font-weight: var(--mcoe-font-weight-medium);
   color: var(--mcoe-text-heading);
   margin: var(--mcoe-space-7) 0 var(--mcoe-space-4);
-  letter-spacing: -0.01em;
+  letter-spacing: -0.025rem;
+  line-height: 1.3;
 }
 
 .nebula-prose h3 {
-  font-size: var(--mcoe-font-size-xl);
-  font-weight: var(--mcoe-font-weight-bold);
+  font-size: var(--mcoe-font-size-md);
+  font-weight: var(--mcoe-font-weight-medium);
   color: var(--mcoe-text-heading);
-  margin: var(--mcoe-space-6) 0 var(--mcoe-space-3);
+  margin: var(--mcoe-space-6) 0 var(--mcoe-space-2);
+  letter-spacing: -0.0125rem;
+  line-height: 1.4;
+}
+
+.nebula-prose h4 {
+  font-size: var(--mcoe-font-size-base);
+  font-weight: var(--mcoe-font-weight-medium);
+  color: var(--mcoe-text-heading);
+  margin: var(--mcoe-space-5) 0 var(--mcoe-space-2);
+  letter-spacing: -0.0125rem;
 }
 
 .nebula-prose p {
@@ -77,22 +142,24 @@ a:hover {
 }
 
 .nebula-prose code {
-  font-family: var(--mcoe-font-family-mono);
+  font-family: var(--nebula-font-mono);
   font-size: 0.875em;
   background: var(--mcoe-bg-tertiary);
   padding: 0.15em 0.4em;
   border-radius: var(--mcoe-radius-sm);
   border: 1px solid var(--mcoe-border-muted);
+  letter-spacing: normal;
 }
 
 .nebula-prose pre {
-  font-family: var(--mcoe-font-family-mono);
+  font-family: var(--nebula-font-mono);
   background: var(--mcoe-code-background);
   color: var(--mcoe-code-plain-text);
   padding: var(--mcoe-space-4);
   border-radius: var(--mcoe-radius);
   overflow-x: auto;
   margin: 0 0 var(--mcoe-space-4);
+  letter-spacing: normal;
 }
 
 .nebula-prose pre code {

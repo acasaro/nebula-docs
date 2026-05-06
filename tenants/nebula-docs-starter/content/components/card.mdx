@@ -1,0 +1,77 @@
+---
+title: 'Card'
+description: 'Linkable container blocks. Single, grouped, and horizontal variations.'
+icon: 'square'
+---
+
+`<Card>` is the linkable container. Group several with `<CardGroup>` to get a responsive grid; pair with `<Columns>` for arbitrary mixed content.
+
+## Single card
+
+<Card title="Quickstart" icon="rocket" href="/quickstart">
+  Five-minute walkthrough — install, authenticate, send your first request.
+</Card>
+
+## With a CTA
+
+<Card title="Architecture" icon="box" href="/concepts/architecture" cta="Read the deep dive">
+  How an SDK call gets from your runtime to a stored record and back.
+</Card>
+
+## Horizontal layout
+
+<Card title="API Reference" icon="code" href="/api" horizontal>
+  Every endpoint, every field, every status code.
+</Card>
+
+## Without a link
+
+<Card title="Just a container" icon="info">
+  A card without `href` renders as a div, not an anchor. Useful as a section primitive when you want the card chrome without the link affordance.
+</Card>
+
+## External link
+
+<Card title="Status page" icon="activity" href="https://status.acmecloud.example">
+  External `href` automatically renders an outbound-arrow indicator.
+</Card>
+
+## CardGroup — 2 columns
+
+<CardGroup cols={2}>
+  <Card title="Users API" icon="users" href="/api/users/get-user">
+    GET, POST, and LIST users in a project.
+  </Card>
+  <Card title="Posts API" icon="file-text" href="/api/posts/get-post">
+    GET and POST posts; LIST coming soon.
+  </Card>
+</CardGroup>
+
+## CardGroup — 3 columns
+
+<CardGroup cols={3}>
+  <Card title="TypeScript" icon="braces" href="/quickstart#typescript">
+    Node 20+, browser, edge runtimes.
+  </Card>
+  <Card title="Python" icon="snake" href="/quickstart#python">
+    3.11+ — async and sync clients shipped in the same package.
+  </Card>
+  <Card title="Go" icon="bird" href="/quickstart#go">
+    1.22+. Context-aware, cancellation-safe.
+  </Card>
+</CardGroup>
+
+## CardGroup — 4 columns
+
+<CardGroup cols={4}>
+  <Card title="us-east" icon="map-pin">N. Virginia</Card>
+  <Card title="us-west" icon="map-pin">Oregon</Card>
+  <Card title="eu" icon="map-pin">Frankfurt</Card>
+  <Card title="ap" icon="map-pin">Tokyo</Card>
+</CardGroup>
+
+## Disabled
+
+<Card title="Coming soon" icon="lock" href="/api" disabled>
+  A disabled card is non-interactive — no hover, no link.
+</Card>

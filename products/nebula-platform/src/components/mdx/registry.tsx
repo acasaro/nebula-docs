@@ -30,7 +30,6 @@ import {
   Update,
   Warning,
 } from '@nebula-docs/components';
-import { SnippetInline } from './SnippetInline';
 
 /**
  * Components are registered by JSX tag name. The set ships in
@@ -78,7 +77,6 @@ export const componentRegistry: Record<string, MdxComponent> = {
   ResponseExample: ResponseExample as unknown as MdxComponent,
   Mermaid: Mermaid as unknown as MdxComponent,
   Icon: Icon as unknown as MdxComponent,
-  Snippet: SnippetInline as unknown as MdxComponent,
 };
 
 export function registerComponent(name: string, Component: MdxComponent): void {

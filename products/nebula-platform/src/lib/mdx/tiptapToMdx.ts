@@ -1,8 +1,30 @@
+import {
+  groupImportsByPath,
+  serializeImports,
+  type ImportSpec,
+} from '@nebula-docs/mdx';
 import type { TiptapDoc, TiptapMark, TiptapNode } from './mdastToTiptap';
 
 const MARK_INNER_TO_OUTER = ['code', 'strike', 'italic', 'bold'];
 
-export function tiptapDocToMdx(doc: TiptapDoc): string {
+/**
+ * Serialize the editor doc back to MDX body source. Optionally accepts the
+ * imports the editor parsed at load time — preserved verbatim and
+ * prepended at the top of the output so round-trip is byte-clean (open
+ * file → no edit → unchanged source) even when the user has hand-authored
+ * imports (e.g. for variables, named exports, or React component
+ * snippets) whose bindings don't appear as `mdxImportedSnippet` nodes.
+ *
+ * Imports added via the `/snippet` slash command stay in the file even
+ * after the user deletes the snippet's JSX node — the unused import is a
+ * cosmetic-only no-op at build time, and stripping them would risk
+ * deleting a variable import the editor doesn't model yet (`import { foo }
+ * from "/snippets/lib.mdx"` → `{foo}` body interpolation).
+ */
+export function tiptapDocToMdx(
+  doc: TiptapDoc,
+  imports: readonly ImportSpec[] = [],
+): string {
   // Drop trailing empty paragraphs. ProseMirror auto-inserts one on focus
   // when the doc ends with an atom; without this strip, focus + undo would
   // leave the draft serializing differently than its load state and falsely
@@ -18,8 +40,16 @@ export function tiptapDocToMdx(doc: TiptapDoc): string {
     }
   }
   const blocks = content.slice(0, end).map(serializeBlock).filter((b) => b !== null);
-  return blocks.join('\n\n') + '\n';
+  const body = blocks.join('\n\n') + '\n';
+
+  if (imports.length === 0) return body;
+  const importBlock = serializeImports(imports);
+  return `${importBlock}\n\n${body}`;
 }
+
+// `groupImportsByPath` is re-exported as a convenience so MdxEditor can
+// dedupe before passing to the serializer if needed.
+export { groupImportsByPath };
 
 function serializeBlock(node: TiptapNode): string {
   switch (node.type) {
@@ -106,8 +136,8 @@ function serializeBlock(node: TiptapNode): string {
       return serializeMermaid(node);
     case 'mdxCodeGroup':
       return serializeCodeGroup(node);
-    case 'mdxSnippet':
-      return serializeSnippet(node);
+    case 'mdxImportedSnippet':
+      return serializeImportedSnippet(node);
     case 'hardBreak':
       return '  \n';
     default:
@@ -167,12 +197,16 @@ function serializeSteps(node: TiptapNode): string {
   return `<Steps${attrs}>\n${stepBlocks}\n</Steps>`;
 }
 
-function serializeSnippet(node: TiptapNode): string {
-  const file = (node.attrs?.file as string | undefined) ?? '';
-  // Always self-close on the original `file` attribute — never serialize
-  // resolved snippet content back. The NodeView renders content read-only
-  // from the resolver context; the source on disk stays the JSX include.
-  return `<Snippet file="${file.replace(/"/g, '\\"')}" />`;
+function serializeImportedSnippet(node: TiptapNode): string {
+  const binding = (node.attrs?.binding as string | undefined) ?? '';
+  const jsxAttrs =
+    (node.attrs?.jsxAttrs as Record<string, unknown> | undefined) ?? {};
+  if (!binding) return '';
+  const attrStr = serializeAttrs(jsxAttrs);
+  // Always self-close. The NodeView renders the resolved snippet body
+  // read-only; the source on disk stays the JSX call site + the import
+  // declaration that `tiptapDocToMdx` re-emits at the top of the file.
+  return `<${binding}${attrStr} />`;
 }
 
 function serializeCodeGroup(node: TiptapNode): string {

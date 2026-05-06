@@ -3,6 +3,7 @@ import {
   AlertTriangle,
   CheckCircle,
   Code2,
+  FileText,
   Frame,
   Heading1,
   Heading2,
@@ -20,6 +21,7 @@ import {
   Lightbulb,
   Maximize2,
   PanelTopOpen,
+  Puzzle,
   ShieldCheck,
   Sliders,
   Tag as TagIcon,
@@ -33,6 +35,7 @@ import {
   Type as TypeIcon,
 } from 'lucide-react';
 import type { Editor } from '@tiptap/react';
+import type { SnippetCatalogEntry } from '@/lib/mdx/snippetResolver';
 
 export interface SlashItem {
   id: string;
@@ -652,10 +655,46 @@ export const SLASH_ITEMS: SlashItem[] = [
   },
 ];
 
-export function filterSlashItems(query: string): SlashItem[] {
+/**
+ * Build the slash menu's full item list including one entry per available
+ * snippet (Mintlify-style import-and-render). Snippet items appear after
+ * the static block items so typing `/snip` surfaces them, and typing the
+ * snippet's filename (`/disclaimer`) finds them directly.
+ */
+export function buildSlashItems(
+  catalog: readonly SnippetCatalogEntry[],
+): SlashItem[] {
+  const snippetItems: SlashItem[] = catalog.map((entry) => ({
+    id: `snippet:${entry.importPath}`,
+    label: entry.defaultBinding,
+    description: entry.isReact
+      ? `React component snippet — ${entry.importPath}`
+      : `Reusable snippet — ${entry.importPath}`,
+    Icon: entry.isReact ? Puzzle : FileText,
+    keywords: ['snippet', 'include', entry.defaultBinding.toLowerCase(), entry.importPath],
+    command: ({ editor, range }) => {
+      editor
+        .chain()
+        .focus()
+        .deleteRange(range)
+        .insertImportedSnippet({
+          binding: entry.defaultBinding,
+          path: entry.importPath,
+          isReact: entry.isReact,
+        })
+        .run();
+    },
+  }));
+  return [...SLASH_ITEMS, ...snippetItems];
+}
+
+export function filterSlashItems(
+  query: string,
+  items: SlashItem[] = SLASH_ITEMS,
+): SlashItem[] {
   const q = query.trim().toLowerCase();
-  if (!q) return SLASH_ITEMS;
-  return SLASH_ITEMS.filter((item) => {
+  if (!q) return items;
+  return items.filter((item) => {
     if (item.label.toLowerCase().includes(q)) return true;
     if (item.description.toLowerCase().includes(q)) return true;
     if (item.keywords?.some((k) => k.toLowerCase().includes(q))) return true;

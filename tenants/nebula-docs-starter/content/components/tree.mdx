@@ -1,0 +1,84 @@
+---
+title: 'Tree'
+description: 'Collapsible file-tree visualization.'
+icon: 'folder-tree'
+---
+
+`<Tree>` renders a hierarchical file/folder structure. Use `<Tree.Folder>` for a directory and `<Tree.File>` for a leaf. Folders are collapsible by clicking; the chevron rotates to indicate state.
+
+## Basic project structure
+
+<Tree>
+  <Tree.Folder name="acme-todo" defaultOpen>
+    <Tree.Folder name="src" defaultOpen>
+      <Tree.File name="App.tsx" />
+      <Tree.File name="main.tsx" />
+      <Tree.Folder name="components">
+        <Tree.File name="Header.tsx" />
+        <Tree.File name="TodoList.tsx" />
+        <Tree.File name="TodoItem.tsx" />
+      </Tree.Folder>
+      <Tree.Folder name="lib">
+        <Tree.File name="acmecloud.ts" />
+        <Tree.File name="auth.ts" />
+      </Tree.Folder>
+    </Tree.Folder>
+    <Tree.File name="package.json" />
+    <Tree.File name="tsconfig.json" />
+    <Tree.File name="vite.config.ts" />
+    <Tree.File name=".env.local" />
+  </Tree.Folder>
+</Tree>
+
+## Mixed depth
+
+<Tree>
+  <Tree.Folder name="config" defaultOpen>
+    <Tree.Folder name="environments" defaultOpen>
+      <Tree.File name="dev.json" />
+      <Tree.File name="staging.json" />
+      <Tree.File name="prod.json" />
+    </Tree.Folder>
+    <Tree.Folder name="schemas">
+      <Tree.File name="user.schema.json" />
+      <Tree.File name="post.schema.json" />
+    </Tree.Folder>
+    <Tree.File name="defaults.json" />
+  </Tree.Folder>
+</Tree>
+
+## Without `defaultOpen`
+
+Folders default to closed. Click a folder to expand:
+
+<Tree>
+  <Tree.Folder name="docs">
+    <Tree.Folder name="guides">
+      <Tree.File name="getting-started.md" />
+      <Tree.File name="advanced.md" />
+    </Tree.Folder>
+    <Tree.Folder name="reference">
+      <Tree.File name="cli.md" />
+      <Tree.File name="api.md" />
+    </Tree.Folder>
+    <Tree.File name="README.md" />
+  </Tree.Folder>
+</Tree>
+
+## A non-folder root
+
+The Tree's children don't have to start with a folder:
+
+<Tree>
+  <Tree.File name="index.html" />
+  <Tree.File name="favicon.svg" />
+  <Tree.Folder name="assets">
+    <Tree.File name="logo.svg" />
+    <Tree.File name="banner.png" />
+  </Tree.Folder>
+  <Tree.File name="robots.txt" />
+</Tree>
+
+<Callout type="tip">
+  Pair Tree with [Frame](/components/frame) when you want a screenshot of the *real* file tree from a tutorial. Use Tree itself when the structure is the canonical reference.
+</Callout>

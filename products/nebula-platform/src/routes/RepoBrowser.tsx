@@ -26,8 +26,9 @@ import { applyFrontmatterPatch } from "@/lib/frontmatter";
 import { useFrontmatterCache } from "@/lib/frontmatterCache";
 import { SnippetResolverProvider } from "@/lib/mdx/snippetResolver";
 import {
+  buildRepoPathResolver,
   buildSnippetResolver,
-  pickActiveSnippetsBase,
+  useSnippetCatalog,
   useSnippetPrefetch,
   type SnippetCacheEntry,
 } from "@/lib/snippetCache";
@@ -406,18 +407,19 @@ export function RepoBrowser() {
     knownFiles: files,
   });
 
-  // Snippet files referenced from page MDX as `<Snippet file="x" />`.
-  // Resolution tries `<docsSubdirectory>/content/snippets/x.mdx` first
-  // (the Nebula CLI convention) then `<docsSubdirectory>/snippets/x.mdx`
-  // (the Mintlify-shaped convention some pre-migration tenants still use).
-  // Pre-fetch them so the editor's snippet NodeView has content to render
-  // the moment a page mounts. Until a fetch lands, the NodeView shows
-  // "Snippet not found".
+  // Snippet files referenced from page MDX via Mintlify-style imports:
+  //   `import Disclaimer from "/snippets/disclaimer.mdx"; <Disclaimer />`
+  // Bases are tried in order — `content/snippets/` is the Nebula CLI
+  // convention; `snippets/` is the Mintlify-shaped convention some
+  // pre-migration tenants still use. Pre-fetch the snippet directory at
+  // branch-load time so the editor's snippet NodeView can resolve
+  // synchronously the moment a page mounts.
   const snippetsBases = useMemo(() => {
     const subdir = (active?.docsSubdirectory ?? "").replace(/\/+$/, "");
     const prefix = subdir ? `${subdir}/` : "";
     return [`${prefix}content/snippets`, `${prefix}snippets`];
   }, [active?.docsSubdirectory]);
+  const docsSubdir = active?.docsSubdirectory ?? "";
 
   const loadedFilePaths = useMemo(
     () => new Set(Object.keys(files)),
@@ -446,18 +448,16 @@ export function RepoBrowser() {
   });
 
   const resolveSnippetContent = useMemo(
-    () => buildSnippetResolver(files, snippetsBases),
-    [files, snippetsBases],
+    () => buildSnippetResolver(files, snippetsBases, docsSubdir),
+    [files, snippetsBases, docsSubdir],
   );
 
-  const resolveSnippetPath = useCallback(
-    (file: string) => {
-      const cleaned = file.replace(/^\/+/, "").replace(/\.mdx?$/i, "");
-      const activeBase = pickActiveSnippetsBase(allPaths, snippetsBases);
-      return `${activeBase}/${cleaned}.mdx`;
-    },
-    [allPaths, snippetsBases],
+  const resolveSnippetRepoPath = useMemo(
+    () => buildRepoPathResolver(files, snippetsBases, docsSubdir),
+    [files, snippetsBases, docsSubdir],
   );
+
+  const snippetCatalog = useSnippetCatalog(files, snippetsBases, docsSubdir);
 
   // Live in-memory docs config — derived from `files['docs.json'].draft` once
   // the user has touched any setting; otherwise from the initial fetch via
@@ -1037,7 +1037,8 @@ export function RepoBrowser() {
       <main className='flex flex-1 flex-col overflow-hidden bg-background'>
         <SnippetResolverProvider
           resolveContent={resolveSnippetContent}
-          resolvePath={resolveSnippetPath}
+          resolveRepoPath={resolveSnippetRepoPath}
+          catalog={snippetCatalog}
         >
           <FileViewer
             path={selectedPath}

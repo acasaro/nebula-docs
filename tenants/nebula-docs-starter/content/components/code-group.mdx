@@ -1,0 +1,34 @@
+---
+title: 'CodeGroup'
+description: 'Tabbed multi-language code panels — currently broken in the renderer.'
+icon: 'layout-grid'
+tag: 'Beta'
+---
+
+<Callout type="warning" title="Expected broken">
+  `<CodeGroup>` is a known-broken block in the CLI renderer. It's intentionally referenced on this page so the fix has a regression target. Two issues stack:
+
+  1. `CodeGroup` is exported from `@nebula-docs/components` but not registered in the CLI's MDX components map, so MDX referencing the tag throws "expected component to be defined".
+  2. Even if registered, the React implementation hits the Astro+MDX SSR boundary where a parent React component can't introspect nested React children's props — same issue Tabs and Steps had before they were rewritten as Astro slot wrappers.
+
+  See `.claude/status.md` for the full notes and the planned fix.
+</Callout>
+
+## Intended shape
+
+When this block ships, the MDX shape will be a `CodeGroup` element wrapping fenced code blocks. Each fence's first non-`key=value` token (after the language) becomes the tab label. Falls back to the language name when no filename is set.
+
+The relevant pieces:
+
+- The wrapper element name is `CodeGroup` (capital C, capital G).
+- Children are zero or more fenced code blocks. Plain ` ```lang ` works; ` ```lang filename ` sets the tab label.
+- The active tab is determined by `defaultIndex` (zero-based, defaults to `0`).
+- An optional `dropdown` prop renders the switcher as a `<select>` instead of a tab strip.
+
+## Workaround until the fix lands
+
+Use a plain `<Tabs>` with one `<Tab>` per language, putting the code block inside each tab. See [Tabs](/components/tabs) for the live pattern; [Quickstart](/quickstart) shows the same workaround applied to an `npm` / `pnpm` / `pip` / `go` install matrix. It's a few more characters of MDX but it renders correctly today and converts to `<CodeGroup>` mechanically once the block is fixed.
+
+## Regression target
+
+Until the fix lands this page intentionally does not mount a live `<CodeGroup>` element. Adding one back is the regression check — the page should render, the tabs should switch, and the Astro slot wrapper (planned at `packages/cli/src/runtime/components/CodeGroup.astro`) should pick up `data-codeblock-tab` attrs from each panel.

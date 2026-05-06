@@ -1,0 +1,128 @@
+---
+title: 'POST /posts'
+description: 'Create a new post. Beta — request shape may change.'
+icon: 'plus'
+tag: 'Beta'
+keywords: ['posts', 'create', 'beta']
+---
+
+<Callout type="warning" title="Beta endpoint">
+  This surface is in public beta. The request and response shapes can change without a major-version bump until it ships GA. Pin your SDK to a patch version if you depend on the current shape.
+</Callout>
+
+Create a new post in the project. The author is inferred from the API key's session.
+
+```
+POST https://api.acmecloud.example/v2/posts
+```
+
+## Headers
+
+<ParamField header="Authorization" type="string" required>
+  Bearer token.
+</ParamField>
+
+<ParamField header="Idempotency-Key" type="string">
+  Optional. Repeats with the same key + body return the original response.
+</ParamField>
+
+## Body parameters
+
+<ParamField body="title" type="string" required>
+  Free-form title. Up to 200 characters.
+</ParamField>
+
+<ParamField body="body" type="string" required>
+  Markdown body. Up to 256 KB.
+</ParamField>
+
+<ParamField body="tags" type="string[]" default="[]">
+  Free-form tags. Up to 16 per post; up to 64 characters each.
+</ParamField>
+
+<ParamField body="visibility" type="'public' | 'project' | 'draft'" default="draft">
+  Visibility level. `public` requires the project's `posts:publish` scope.
+</ParamField>
+
+## Response — 201 Created
+
+<ResponseField name="id" type="string">
+  The newly created post's stable identifier.
+</ResponseField>
+
+<ResponseField name="authorId" type="string">
+  Inferred from the API key.
+</ResponseField>
+
+<ResponseField name="revision" type="number">
+  Always `1` for a new post.
+</ResponseField>
+
+<ResponseField name="createdAt" type="string">
+  ISO-8601 timestamp.
+</ResponseField>
+
+## Examples
+
+<RequestExample>
+  ```bash cURL
+  curl -X POST https://api.acmecloud.example/v2/posts \
+    -H "Authorization: Bearer $ACME_KEY" \
+    -H "Content-Type: application/json" \
+    -d '{
+      "title": "Welcome to AcmeCloud",
+      "body": "# Hello world\n\nThis is the seed post.",
+      "tags": ["announcement"],
+      "visibility": "project"
+    }'
+  ```
+
+  ```ts TypeScript
+  const post = await client.posts.create({
+    title: 'Welcome to AcmeCloud',
+    body: '# Hello world\n\nThis is the seed post.',
+    tags: ['announcement'],
+    visibility: 'project',
+  });
+  ```
+</RequestExample>
+
+<ResponseExample>
+  ```json 201
+  {
+    "id": "pst_4f8c",
+    "authorId": "usr_e8a3",
+    "title": "Welcome to AcmeCloud",
+    "body": "# Hello world\n\nThis is the seed post.",
+    "tags": ["announcement"],
+    "visibility": "project",
+    "revision": 1,
+    "createdAt": "2026-05-06T12:00:00Z",
+    "updatedAt": "2026-05-06T12:00:00Z"
+  }
+  ```
+
+  ```json 403
+  {
+    "error": {
+      "code": "forbidden",
+      "message": "API key lacks the posts:publish scope required for visibility=public.",
+      "requestId": "req_8f2c9a"
+    }
+  }
+  ```
+</ResponseExample>
+
+## What might change
+
+<Accordion title="The visibility enum">
+  We're considering an `unlisted` value for "URL-known visitors only". If it lands, `public` semantics will tighten to require search-engine inclusion.
+</Accordion>
+
+<Accordion title="The body field's size limit">
+  256 KB is the current cap. The next iteration may add a `bodyAttachmentId` for posts that exceed it, with the inline `body` capped at 32 KB.
+</Accordion>
+
+<Accordion title="Idempotency-Key TTL">
+  Currently 24 hours. Could shrink to 1 hour for the GA release if storage costs justify it.
+</Accordion>

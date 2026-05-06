@@ -2,9 +2,11 @@ import { useEffect, useMemo, useRef } from 'react';
 import { EditorContent, useEditor } from '@tiptap/react';
 import { StarterKit } from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
-import { mdxToTiptapDoc } from '@/lib/mdx/mdastToTiptap';
+import type { ImportSpec } from '@nebula-docs/mdx';
+import { parseMdxForEditor } from '@/lib/mdx/mdastToTiptap';
 import { tiptapDocToMdx } from '@/lib/mdx/tiptapToMdx';
 import { splitFrontmatter } from '@/lib/frontmatter';
+import { useSnippetCatalog } from '@/lib/mdx/snippetResolver';
 import { cn } from '@/lib/utils';
 import { EditorWithBlockHandle } from './BlockHandle';
 import { MdxCallout } from './MdxCalloutNode';
@@ -42,19 +44,31 @@ export function MdxEditor({
   onSourceChange,
   className,
 }: MdxEditorProps) {
-  const initialDoc = useMemo(() => mdxToTiptapDoc(source), [source]);
+  const initial = useMemo(() => parseMdxForEditor(source), [source]);
+  const initialDoc = initial.doc;
 
-  // The Tiptap parser drops yaml frontmatter — the editor's doc is body-only.
-  // To stop the editor's onUpdate from clobbering frontmatter the settings
-  // panel just wrote, remember the current frontmatter block and re-attach
-  // it on every emission. The settings panel updates the file's draft via a
-  // separate path; we sync the latest frontmatter into this ref through a
-  // `data-frontmatter` attribute the host can refresh without re-mounting
-  // the editor (handled by RepoBrowser's `handleContentChange`).
+  // The Tiptap parser drops yaml frontmatter and ES module imports/exports —
+  // the editor's doc is pure body content. To stop onUpdate from clobbering
+  // frontmatter the settings panel just wrote, remember the current
+  // frontmatter block and re-attach it on every emission. Imports follow the
+  // same pattern: the parsed list is held in a ref, the serializer
+  // garbage-collects entries whose binding is no longer referenced.
   const frontmatterRef = useRef<string>(extractFrontmatterBlock(source));
   useEffect(() => {
     frontmatterRef.current = extractFrontmatterBlock(source);
   }, [source]);
+  const importsRef = useRef<ImportSpec[]>(initial.imports);
+  useEffect(() => {
+    importsRef.current = initial.imports;
+  }, [initial.imports]);
+
+  // The slash command's catalog of available snippets is read fresh on every
+  // menu open so prefetched-after-mount snippets show up without a remount.
+  const snippetCatalog = useSnippetCatalog();
+  const snippetCatalogRef = useRef(snippetCatalog);
+  useEffect(() => {
+    snippetCatalogRef.current = snippetCatalog;
+  }, [snippetCatalog]);
 
   const editor = useEditor({
     extensions: [
@@ -84,9 +98,29 @@ export function MdxEditor({
       MdxResponseExample,
       MdxMermaid,
       MdxBadge,
-      MdxSnippet,
+      MdxSnippet.configure({
+        onInsert: (spec) => {
+          // Register the import for this binding/path if not already there.
+          // Multiple inserts of the same snippet share one import statement;
+          // re-imports of a different binding from the same path coalesce
+          // via `groupImportsByPath` at serialize time.
+          const exists = importsRef.current.some(
+            (i) => i.binding === spec.binding && i.path === spec.path,
+          );
+          if (!exists) {
+            importsRef.current = [
+              ...importsRef.current,
+              spec.isReact
+                ? { kind: 'named', binding: spec.binding, source: spec.binding, path: spec.path }
+                : { kind: 'default', binding: spec.binding, path: spec.path },
+            ];
+          }
+        },
+      }),
       MdxRaw,
-      SlashCommand,
+      SlashCommand.configure({
+        getSnippetCatalog: () => snippetCatalogRef.current,
+      }),
       Placeholder.configure({
         placeholder: ({ editor, node, pos }) => {
           if (node.type.name !== 'paragraph') return '';
@@ -121,8 +155,8 @@ export function MdxEditor({
       },
     },
     onUpdate: ({ editor }) => {
-      const doc = editor.getJSON() as ReturnType<typeof mdxToTiptapDoc>;
-      const body = tiptapDocToMdx(doc);
+      const doc = editor.getJSON() as Parameters<typeof tiptapDocToMdx>[0];
+      const body = tiptapDocToMdx(doc, importsRef.current);
       onSourceChange?.(frontmatterRef.current + body);
     },
   });
@@ -182,13 +216,15 @@ export function MdxEditor({
  * the stored "original" matches the editor's first emission — without this,
  * any whitespace drift in the serializer would mark a file dirty on open.
  *
- * Frontmatter is preserved verbatim — the Tiptap parser drops yaml nodes,
- * so we splice the original frontmatter block back in front of the
- * round-tripped body.
+ * Frontmatter and `import` declarations are preserved verbatim — the Tiptap
+ * parser strips both. Frontmatter is spliced back in front of the
+ * round-tripped body; imports are re-emitted by the serializer from the
+ * parsed list (filtered to bindings actually referenced in the body).
  */
 export function normalizeMdx(source: string): string {
   const fmBlock = extractFrontmatterBlock(source);
-  return fmBlock + tiptapDocToMdx(mdxToTiptapDoc(source));
+  const { doc, imports } = parseMdxForEditor(source);
+  return fmBlock + tiptapDocToMdx(doc, imports);
 }
 
 function extractFrontmatterBlock(source: string): string {

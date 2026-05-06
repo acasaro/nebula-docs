@@ -187,19 +187,51 @@ Per-PR builds at `bucket/previews/<PR-number>/`, surfaced via the dashboard's ex
   - `products/nebula-platform/` — Preview button reads `build.previewUrl` and opens in new tab
 - **Order**: CLI flag first (depends on Phase 2 bootstrap); workflow YAML in tenant template; webhook URL computation; Platform button wiring last.
 
-### ~~2. Snippets~~ — DONE
+### ~~2. Snippets~~ — DONE (Mintlify-aligned import model)
 
-`<Snippet file="..." />` resolves to inlined MDX content at both build-time (CLI) and editor-time (Platform).
+Mintlify-style ES module imports for snippets and React components. Pages
+use `import Disclaimer from "/snippets/disclaimer.mdx"; <Disclaimer />` and
+the editor + CLI both resolve through Astro/Vite's standard module
+resolution. Replaces an earlier custom `<Snippet file="..." />` JSX wrapper
+that was Phase A's first attempt — that prototype shipped briefly but was
+ripped out in favour of the standard import syntax per the user's request
+to follow Mintlify's [reusable snippets](https://www.mintlify.com/docs/create/reusable-snippets)
+and [React components](https://www.mintlify.com/docs/customize/react-components)
+docs.
 
 **Landed:**
 
-- `@nebula-docs/mdx` — `remarkSnippets({ resolveFile })` plugin walks both `mdxJsxFlowElement` (block) and `mdxJsxTextElement` (inline) named `Snippet` with a `file` attribute, calls `resolveFile(file) → string | undefined`, parses, splices into parent. Inline snippets only flatten when the resolved content is a single paragraph (we splice its phrasing children); otherwise the inline JSX is left in place. Unresolved snippets are left untouched.
-- `@nebula-docs/cli` — already passing a filesystem `resolveFile` from `astro.config.mjs`. Unchanged. Verified `<Snippet file="disclaimer" />` still inlines on `tenants/nebula-docs-starter-empty/getting-started/installation`.
-- `products/nebula-platform/` — does NOT apply the plugin in the editor walk. Instead, `mdastToTiptap.ts` emits a `mdxSnippet` Tiptap atom carrying `{ file }`. The atom's NodeView (`MdxSnippetNode.tsx`) reads from a React context (`SnippetResolverProvider` + `useSnippetContent`) and renders the resolved MDX through `MdxFragment` inside a `contentEditable={false}` wrapper. Read-only by construction. Round-trip: serializer always emits `<Snippet file="..." />` (never the resolved children), so opening a page → no edit → no dirty marker. Verified byte-exact on four MDX shapes.
-- Snippet prefetch: `useSnippetPrefetch` in `lib/snippetCache.ts` fans out `fetchFileContent` calls for every `<snippetsBase>/*.mdx` discovered in the repo tree at branch-load time, with concurrency 4. `RepoBrowser` adds prefetched snippets to its existing `files` map and marks them in `fetchedPathsRef` so opening a snippet directly doesn't double-fetch. The resolver reads `files[path].draft`, so editing a snippet file in another tab updates every page that includes it live.
-- Resolver tries two bases in order — `<docsSubdirectory>/content/snippets` (the Nebula CLI convention) then `<docsSubdirectory>/snippets` (the Mintlify-shaped convention some pre-migration tenants still use). The first base with files in the tree wins for the "open source" affordance.
-- Missing-snippet UX: destructive-themed inline callout matching `MdxRenderer.tsx`'s parse-failure styling. Resolved snippets get a subtle left-border treatment (`border-l-2 border-primary/40`) + a hover-revealed "open source" button that navigates to the snippet file. The same `<Snippet>` JSX inside an `mdxRaw` fallback (e.g. nested in an unrecognized JSX block) renders via a `SnippetInline` component registered on the MDX renderer's component map, so resolution is consistent across both surfaces.
+- `@nebula-docs/mdx`:
+  - `extractImports(tree)` walks `mdxjsEsm` nodes, returns one `ImportSpec` per binding (default / named / namespace). `parseImportStatement(value)` parses a single statement into bindings; `groupImportsByPath` + `serializeImports` round-trip them back to source.
+  - `extractExports(tree)` returns `export const NAME = VALUE` declarations from a snippet file, used by Phase B variable substitution.
+  - `bindingNameFromPath(path)` derives a PascalCase JSX name from a snippet filename (`disclaimer.mdx` → `Disclaimer`, `nebula-banner.mdx` → `NebulaBanner`) for the slash-command picker's defaults.
+  - `remarkAutoComponentImports({ components })` plugin walks an MDX AST, collects unimported component-name JSX tags, and prepends `import { ... } from "<source>"` statements with a properly populated `data.estree` (parsed via acorn — the MDX-to-JS compiler reads the estree, not `value`; injecting nodes with only `value` silently drops them). Wired into the CLI's `astro.config.mjs`. Verified end-to-end: `<Callout>` in a snippet file with **no explicit import** renders correctly on the consuming page.
+  - The earlier `remarkSnippets` plugin was deleted.
+- `products/nebula-platform/`:
+  - `mdastToTiptap.parseMdxForEditor(source)` returns `{ doc, imports }`. Imports are stripped from the doc body; JSX whose tag matches an imported binding becomes a new `mdxImportedSnippet` Tiptap atom carrying `{ binding, path, jsxAttrs, isReact }`.
+  - `tiptapToMdx.tiptapDocToMdx(doc, imports)` re-emits all captured imports verbatim (grouped by path) at the top of the body, then serializes `mdxImportedSnippet` nodes as `<Binding {...attrs} />`. Imports are NOT garbage-collected — keeping unused imports preserves user-authored named imports for variables and prevents the dirty-marker from firing on open.
+  - `MdxImportedSnippet` NodeView (`components/mdx/MdxSnippetNode.tsx`):
+    - Reads resolved snippet content via `useSnippetContent(path)` from `SnippetResolverProvider` context.
+    - Substitutes `{propName}` placeholders in the snippet body with JSX attributes passed at the call site (`<Disclaimer word="bananas" />` substitutes `{word}`). Phase B prop substitution.
+    - For `.jsx` / `.tsx` snippets shows a labelled placeholder (`<ColorGenerator />` + path + props) — live React eval is build-time only. Phase B placeholder render.
+    - Visual: subtle left border + hover-revealed "open `snippets/<file>.mdx`" link that navigates to the snippet source. Missing-snippet shows a destructive-themed callout.
+  - `MdxEditor` tracks `importsRef: ImportSpec[]` parallel to `frontmatterRef`. The serializer reads from `importsRef.current` on every onUpdate. The slash-command insert path calls `MdxSnippet.options.onInsert(spec)` which appends to `importsRef`.
+  - `/snippet` slash command: `slashItems.tsx` `buildSlashItems(catalog)` returns one slash item per available snippet (entries with their PascalCase binding as the item label and the import path as the description). Filters via the existing slash-menu typeahead (`/snip`, `/disclaimer`, etc.). React component snippets show a Puzzle icon; MDX snippets show a FileText icon.
+  - Snippet catalog: `useSnippetCatalog` in `lib/snippetCache.ts` produces a sorted, dedup'd catalog from the prefetched files. Walks both `<docsSubdirectory>/content/snippets/` and `<docsSubdirectory>/snippets/` (canonicalizes both shapes to a single `/snippets/...` import path so the editor writes Mintlify-compatible source).
+  - Snippet resolver: `buildSnippetResolver(files, snippetsBases, docsSubdirectory)` and `buildRepoPathResolver(...)` map the `/`-rooted import path back to the actual repo file.
+- `@nebula-docs/cli`:
+  - `astro.config.mjs` drops the `remarkSnippets` plugin (no longer needed). Imports work via Astro/MDX's native ES module resolution.
+  - Vite aliases: `/snippets/*` → `<tenantRoot>/snippets/*`, `/content/snippets/*` → `<tenantRoot>/content/snippets/*`, `/shared/*` → `<tenantRoot>/shared/*`. So Mintlify-style absolute import paths resolve correctly from inside MDX files.
+  - Workspace alias: `@nebula-docs/components` → resolved via `require.resolve` so MDX files in the tenant repo (which has no node_modules) can import workspace packages.
+- Tenant fixture migrated: `tenants/nebula-docs-starter-empty/content/getting-started/installation.mdx` now uses `import Disclaimer from "/content/snippets/disclaimer.mdx"; <Disclaimer />`. Verified end-to-end on the running CLI dev server — disclaimer Callout renders inline.
 - `pnpm --filter @nebula-docs/mdx typecheck` and `pnpm --filter @nebula-docs/platform typecheck` both pass.
+
+**Open:**
+
+- **Variable substitution depth.** `{propName}` substitution in snippet bodies uses a simple regex — collisions with intentional `{` in the source are user-visible (and would be a JSX expression error anyway). Doesn't yet handle nested expressions or computed values. `extractExports` is exposed for Phase B's reusable-variable model (`import { brandName } from "/snippets/vars.mdx"; # {brandName}`) but the rendering side isn't wired yet.
+- **`.jsx` snippet live-render in editor.** Currently shows a placeholder. Live render would need a sandboxed eval — defer until a tenant actually wants in-editor preview of their custom React components.
+- **Snippet props editor in AttributesPopover (Phase C).** Schema not yet defined for `mdxImportedSnippet`. Editing `word="bananas"` requires source mode today.
+- **Auto-import doesn't yet cover tenant-local components.** Only `@nebula-docs/components` is in the auto-import map. If a tenant authors `tenants/foo/components/MyWidget.tsx`, MDX still needs an explicit `import { MyWidget } from "..."`. Adding tenant-local discovery is a small extension to the catalog used by both the auto-import map and the slash menu — defer until a tenant has tenant-local components.
 
 ### 3. Custom theming (visual branding)
 

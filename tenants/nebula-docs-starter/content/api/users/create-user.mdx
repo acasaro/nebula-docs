@@ -1,0 +1,127 @@
+---
+title: 'POST /users'
+description: 'Create a new user inside a project.'
+icon: 'plus'
+keywords: ['users', 'create', 'POST']
+---
+
+Create a new user. Email must be unique within the project.
+
+```
+POST https://api.acmecloud.example/v2/users
+```
+
+## Headers
+
+<ParamField header="Authorization" type="string" required>
+  Bearer token. See [Quickstart](/quickstart) to mint one.
+</ParamField>
+
+<ParamField header="Idempotency-Key" type="string">
+  Optional. If provided, repeating the same key + body returns the original response without creating a duplicate user. Keys expire 24 hours after first use.
+</ParamField>
+
+## Body parameters
+
+<ParamField body="email" type="string" required>
+  The user's email address. Must be unique within the project.
+</ParamField>
+
+<ParamField body="name" type="string">
+  Optional display name. Up to 100 characters.
+</ParamField>
+
+<ParamField body="roles" type="string[]" default="['member']">
+  Role identifiers to grant. Custom roles must be defined in the project's role registry first.
+</ParamField>
+
+<ParamField body="profile" type="object">
+  Optional profile metadata.
+
+  <Expandable title="properties">
+    <ParamField body="profile.avatarUrl" type="string">
+      Public URL to the user's avatar. Validated as a URL.
+    </ParamField>
+    <ParamField body="profile.bio" type="string">
+      Short biography. Up to 280 characters.
+    </ParamField>
+    <ParamField body="profile.timezone" type="string">
+      IANA timezone identifier. Defaults to the project's timezone.
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+## Response — 201 Created
+
+<ResponseField name="id" type="string">
+  The newly created user's stable identifier.
+</ResponseField>
+
+<ResponseField name="email" type="string">
+  Echoed back from the request.
+</ResponseField>
+
+<ResponseField name="roles" type="string[]">
+  The roles granted, including any project defaults applied.
+</ResponseField>
+
+<ResponseField name="createdAt" type="string">
+  ISO-8601 timestamp.
+</ResponseField>
+
+## Examples
+
+<RequestExample>
+  ```bash cURL
+  curl -X POST https://api.acmecloud.example/v2/users \
+    -H "Authorization: Bearer $ACME_KEY" \
+    -H "Content-Type: application/json" \
+    -d '{
+      "email": "ada@example.com",
+      "name": "Ada Lovelace",
+      "roles": ["editor"]
+    }'
+  ```
+
+  ```ts TypeScript
+  const user = await client.users.create({
+    email: 'ada@example.com',
+    name: 'Ada Lovelace',
+    roles: ['editor'],
+  });
+  ```
+
+  ```python Python
+  user = client.users.create(
+      email='ada@example.com',
+      name='Ada Lovelace',
+      roles=['editor'],
+  )
+  ```
+</RequestExample>
+
+<ResponseExample>
+  ```json 201
+  {
+    "id": "usr_e8a3",
+    "email": "ada@example.com",
+    "name": "Ada Lovelace",
+    "roles": ["editor"],
+    "createdAt": "2026-05-06T12:00:00Z"
+  }
+  ```
+
+  ```json 409
+  {
+    "error": {
+      "code": "conflict",
+      "message": "A user with email ada@example.com already exists.",
+      "requestId": "req_8f2c9a"
+    }
+  }
+  ```
+</ResponseExample>
+
+<Callout type="warning">
+  Creating a user does not send them an email. To onboard a real human, follow up with `POST /invites`.
+</Callout>

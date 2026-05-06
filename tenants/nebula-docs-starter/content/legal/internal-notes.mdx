@@ -1,0 +1,19 @@
+---
+title: 'Internal notes'
+description: 'URL-accessible page intentionally omitted from the navigation tree.'
+hidden: true
+---
+
+This page exercises the "hidden — URL-only" pattern. It exists in the file tree (so the static route is generated), but it's not listed in `docs.json`, so it never appears in the sidebar.
+
+The frontmatter `hidden: true` is also set, but the load-bearing thing is the absence from `navigation.tabs`. Pages can be either or both.
+
+## Use cases
+
+- Drafts that need a shareable preview URL
+- Legal copy linked to from emails but not from the docs themselves
+- Internal-team how-tos kept inside the docs site for searchability without surfacing them
+
+## Caveat
+
+Pagefind will index this page by default. If you want it search-hidden too, add `data-pagefind-ignore` to the page wrapper or set the indexer to skip the path. The `hidden: true` frontmatter does not affect search-index inclusion.

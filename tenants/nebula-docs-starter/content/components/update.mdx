@@ -1,0 +1,58 @@
+---
+title: 'Update'
+description: 'Two-column changelog entry — label + tags pinned left, content right.'
+icon: 'history'
+---
+
+`<Update>` is the changelog primitive. Stack several to make a full release-notes page like [Resources → Changelog](/resources/changelog).
+
+## Single update
+
+<Update label="v2.4.0" description="2026-04-22">
+  Added `client.users.me()` shorthand for the `GET /users/me` endpoint. Saves one line in every health-check integration.
+</Update>
+
+## With tags
+
+<Update label="v2.4.0" description="2026-04-22" tags={['sdk', 'platform']}>
+  Tags render as pills under the version label. Use them to slice the changelog by area.
+</Update>
+
+## Tags as a comma-separated string
+
+The `tags` prop also accepts a comma-separated string for cases where the editor produces flat strings:
+
+<Update label="v2.3.5" description="2026-03-30" tags="sdk, fix">
+  Fixed a TypeScript-only race condition where two parallel `client.users.list()` calls could swap response bodies under the network failure path. Single-flight in the SDK; no API change.
+</Update>
+
+## With rich body content
+
+<Update label="v2.0.0" description="2025-10-01" tags={['breaking', 'platform']}>
+  ### Breaking changes
+
+  - `Authorization` header now requires the `Bearer ` prefix
+  - `users.list()` pagination shape changed from offset to cursor
+
+  ### Migration
+
+  Run `pnpm exec acmecloud migrate v1-v2` to update both your `.env` files and any in-tree fixtures. The migration is idempotent — re-running it is safe.
+
+  <Callout type="warning">
+    Pre-2.0 clients sending raw keys without the `Bearer` prefix get a 401 with a migration hint in the response body.
+  </Callout>
+</Update>
+
+## Stacked
+
+<Update label="v2.4.1" description="2026-05-01" tags={['sdk', 'fix']}>
+  Patch release. Fixes a regression in the Python SDK's `posts.create()` where the `tags` field was double-serialized when passed as a Python list.
+</Update>
+
+<Update label="v2.4.0" description="2026-04-22" tags={['sdk', 'platform']}>
+  Minor release. New region (`ap-northeast-1`); deploy SHA in webhook payloads.
+</Update>
+
+<Update label="v2.3.0" description="2026-03-08" tags={['sdk']}>
+  SDK retry policy changed from fixed-jitter to exponential-with-full-jitter.
+</Update>

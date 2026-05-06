@@ -15,7 +15,7 @@ import type {
   ThematicBreak,
 } from 'mdast';
 import type { MdxJsxFlowElement, MdxJsxTextElement } from 'mdast-util-mdx';
-import { parseMdx } from '@nebula-docs/mdx';
+import { extractImports, parseMdx, type ImportSpec } from '@nebula-docs/mdx';
 import { splitFrontmatter } from '@/lib/frontmatter';
 
 const CALLOUT_NAMES = new Set([
@@ -77,75 +77,114 @@ export interface TiptapDoc {
   content: TiptapNode[];
 }
 
+/** Result of parsing an MDX page into editor state. The body lives in
+ *  `doc`; imports are surfaced separately so `MdxEditor` can reconstruct
+ *  them on serialize without polluting the visible editor canvas. */
+export interface MdxParseResult {
+  doc: TiptapDoc;
+  /** All `import` declarations found in the source — preserved verbatim
+   *  on save (filtered down to the bindings actually referenced in the
+   *  body so unused imports don't pile up). */
+  imports: ImportSpec[];
+}
+
 export function mdxToTiptapDoc(source: string): TiptapDoc {
+  return parseMdxForEditor(source).doc;
+}
+
+/**
+ * Full editor parse: returns both the Tiptap doc body and the page's
+ * import statements as a structured list. Imports are stripped from the
+ * Tiptap body (they're metadata managed by `MdxEditor`'s `importsRef`)
+ * and any JSX whose tag name matches an imported binding becomes an
+ * `mdxImportedSnippet` atom node carrying the binding + import path.
+ */
+export function parseMdxForEditor(source: string): MdxParseResult {
   let tree: Root;
   try {
     tree = parseMdx(source);
   } catch {
-    // Files with malformed JSX (e.g. 4-backtick fences containing
-    // unclosed-looking tags) trip @mdx-js/mdx's parser. Don't unmount the
-    // editor over it — surface the file as a single opaque MdxRaw block so
-    // the user can still see, switch to source mode, and fix it by hand.
-    // Strip frontmatter so MdxEditor's onUpdate path doesn't double-prepend
-    // it (it always re-attaches the current frontmatter to the emitted body).
+    // Files with malformed JSX trip @mdx-js/mdx's parser. Surface the file
+    // as a single opaque MdxRaw block so the editor still mounts.
     const split = splitFrontmatter(source);
     const body = split.frontmatter ? split.body : source;
     return {
-      type: 'doc',
-      content: [{ type: 'mdxRaw', attrs: { source: body } }],
+      doc: { type: 'doc', content: [{ type: 'mdxRaw', attrs: { source: body } }] },
+      imports: [],
     };
   }
+  const imports = extractImports(tree);
+  const bindingMap = new Map<string, ImportSpec>();
+  for (const spec of imports) bindingMap.set(spec.binding, spec);
+
+  const ctx: ConvertCtx = { source, bindingMap };
   const content: TiptapNode[] = [];
   for (const node of tree.children) {
-    const converted = convertBlock(node, source);
+    if (node.type === 'mdxjsEsm') continue; // imports/exports — stored separately
+    const converted = convertBlock(node, ctx);
     if (converted) content.push(converted);
   }
   if (content.length === 0) content.push({ type: 'paragraph' });
-  return { type: 'doc', content };
+  return { doc: { type: 'doc', content }, imports };
 }
 
-function convertBlock(node: RootContent, source: string): TiptapNode | null {
+/** Threaded through every block-level converter so JSX whose tag name
+ *  matches an imported binding becomes an `mdxImportedSnippet` atom. */
+interface ConvertCtx {
+  source: string;
+  bindingMap: Map<string, ImportSpec>;
+}
+
+function convertBlock(node: RootContent, ctx: ConvertCtx): TiptapNode | null {
+  const { source, bindingMap } = ctx;
   switch (node.type) {
     case 'paragraph':
-      return convertParagraph(node, source);
+      return convertParagraph(node, ctx);
     case 'heading':
       return convertHeading(node, source);
     case 'list':
-      return convertList(node, source);
+      return convertList(node, ctx);
     case 'blockquote':
-      return convertBlockquote(node, source);
+      return convertBlockquote(node, ctx);
     case 'code':
       return convertCode(node);
     case 'thematicBreak':
       return convertThematicBreak(node);
     case 'yaml':
       return null;
+    case 'mdxjsEsm':
+      return null;
     case 'mdxJsxFlowElement': {
       const jsx = node as MdxJsxFlowElement;
       const name = jsx.name;
-      if (name && CALLOUT_NAMES.has(name)) return convertCallout(jsx, source);
-      if (name === 'Card') return convertSimpleBlock(jsx, source, 'mdxCard');
-      if (name === 'Frame') return convertSimpleBlock(jsx, source, 'mdxFrame');
-      if (name === 'Update') return convertSimpleBlock(jsx, source, 'mdxUpdate');
-      if (name === 'Steps') return convertSteps(jsx, source);
-      if (name === 'Tabs') return convertTabs(jsx, source);
-      if (name === 'Accordion') return convertAccordion(jsx, source);
-      if (name === 'AccordionGroup') return convertAccordionGroup(jsx, source);
-      if (name === 'Columns') return convertColumns(jsx, source);
-      if (name === 'CardGroup') return convertCardGroup(jsx, source);
-      if (name === 'Expandable') return convertExpandable(jsx, source);
-      if (name === 'Tree') return convertTree(jsx, source);
+      // Imported snippet — `<Disclaimer />` after `import Disclaimer from
+      // "/snippets/disclaimer.mdx"`. Resolved at render time by the
+      // NodeView; round-tripped back to the JSX tag on serialize.
+      if (name && bindingMap.has(name)) {
+        return convertImportedSnippet(jsx, bindingMap.get(name)!);
+      }
+      if (name && CALLOUT_NAMES.has(name)) return convertCallout(jsx, ctx);
+      if (name === 'Card') return convertSimpleBlock(jsx, ctx, 'mdxCard');
+      if (name === 'Frame') return convertSimpleBlock(jsx, ctx, 'mdxFrame');
+      if (name === 'Update') return convertSimpleBlock(jsx, ctx, 'mdxUpdate');
+      if (name === 'Steps') return convertSteps(jsx, ctx);
+      if (name === 'Tabs') return convertTabs(jsx, ctx);
+      if (name === 'Accordion') return convertAccordion(jsx, ctx);
+      if (name === 'AccordionGroup') return convertAccordionGroup(jsx, ctx);
+      if (name === 'Columns') return convertColumns(jsx, ctx);
+      if (name === 'CardGroup') return convertCardGroup(jsx, ctx);
+      if (name === 'Expandable') return convertExpandable(jsx, ctx);
+      if (name === 'Tree') return convertTree(jsx, ctx);
       if (name === 'ParamField')
-        return convertGenericBlock(jsx, source, 'mdxParamField');
+        return convertGenericBlock(jsx, ctx, 'mdxParamField');
       if (name === 'ResponseField')
-        return convertGenericBlock(jsx, source, 'mdxResponseField');
+        return convertGenericBlock(jsx, ctx, 'mdxResponseField');
       if (name === 'RequestExample')
-        return convertGenericBlock(jsx, source, 'mdxRequestExample');
+        return convertGenericBlock(jsx, ctx, 'mdxRequestExample');
       if (name === 'ResponseExample')
-        return convertGenericBlock(jsx, source, 'mdxResponseExample');
+        return convertGenericBlock(jsx, ctx, 'mdxResponseExample');
       if (name === 'Mermaid') return convertMermaid(jsx, source);
       if (name === 'CodeGroup') return convertCodeGroup(jsx);
-      if (name === 'Snippet') return convertSnippet(jsx);
       if (name === 'Badge') {
         // MDX parses a standalone `<Badge>...</Badge>` line as a flow element.
         // Wrap it in a paragraph so it round-trips through the inline node.
@@ -161,20 +200,20 @@ function convertBlock(node: RootContent, source: string): TiptapNode | null {
 
 function convertSimpleBlock(
   node: MdxJsxFlowElement,
-  source: string,
+  ctx: ConvertCtx,
   type: 'mdxCard' | 'mdxFrame' | 'mdxUpdate',
 ): TiptapNode {
   const attrs = extractAttrs(node);
   const content: TiptapNode[] = [];
   for (const child of node.children ?? []) {
-    const conv = convertBlock(child as RootContent, source);
+    const conv = convertBlock(child as RootContent, ctx);
     if (conv) content.push(conv);
   }
   if (content.length === 0) content.push({ type: 'paragraph' });
   return { type, attrs, content };
 }
 
-function convertSteps(node: MdxJsxFlowElement, source: string): TiptapNode {
+function convertSteps(node: MdxJsxFlowElement, ctx: ConvertCtx): TiptapNode {
   const attrs = extractAttrs(node);
   const items: TiptapNode[] = [];
   for (const child of node.children ?? []) {
@@ -186,7 +225,7 @@ function convertSteps(node: MdxJsxFlowElement, source: string): TiptapNode {
       const stepAttrs = extractAttrs(stepNode);
       const stepContent: TiptapNode[] = [];
       for (const sc of stepNode.children ?? []) {
-        const conv = convertBlock(sc as RootContent, source);
+        const conv = convertBlock(sc as RootContent, ctx);
         if (conv) stepContent.push(conv);
       }
       if (stepContent.length === 0) stepContent.push({ type: 'paragraph' });
@@ -203,7 +242,7 @@ function convertSteps(node: MdxJsxFlowElement, source: string): TiptapNode {
   return { type: 'mdxSteps', attrs, content: items };
 }
 
-function convertTabs(node: MdxJsxFlowElement, source: string): TiptapNode {
+function convertTabs(node: MdxJsxFlowElement, ctx: ConvertCtx): TiptapNode {
   const attrs = extractAttrs(node);
   const items: TiptapNode[] = [];
   for (const child of node.children ?? []) {
@@ -215,7 +254,7 @@ function convertTabs(node: MdxJsxFlowElement, source: string): TiptapNode {
       const tabAttrs = extractAttrs(tabNode);
       const tabContent: TiptapNode[] = [];
       for (const tc of tabNode.children ?? []) {
-        const conv = convertBlock(tc as RootContent, source);
+        const conv = convertBlock(tc as RootContent, ctx);
         if (conv) tabContent.push(conv);
       }
       if (tabContent.length === 0) tabContent.push({ type: 'paragraph' });
@@ -232,11 +271,11 @@ function convertTabs(node: MdxJsxFlowElement, source: string): TiptapNode {
   return { type: 'mdxTabs', attrs, content: items };
 }
 
-function convertAccordion(node: MdxJsxFlowElement, source: string): TiptapNode {
+function convertAccordion(node: MdxJsxFlowElement, ctx: ConvertCtx): TiptapNode {
   const attrs = extractAttrs(node);
   const content: TiptapNode[] = [];
   for (const child of node.children ?? []) {
-    const conv = convertBlock(child as RootContent, source);
+    const conv = convertBlock(child as RootContent, ctx);
     if (conv) content.push(conv);
   }
   if (content.length === 0) content.push({ type: 'paragraph' });
@@ -245,7 +284,7 @@ function convertAccordion(node: MdxJsxFlowElement, source: string): TiptapNode {
 
 function convertAccordionGroup(
   node: MdxJsxFlowElement,
-  source: string,
+  ctx: ConvertCtx,
 ): TiptapNode {
   const items: TiptapNode[] = [];
   for (const child of node.children ?? []) {
@@ -253,7 +292,7 @@ function convertAccordionGroup(
       child.type === 'mdxJsxFlowElement' &&
       (child as MdxJsxFlowElement).name === 'Accordion'
     ) {
-      items.push(convertAccordion(child as MdxJsxFlowElement, source));
+      items.push(convertAccordion(child as MdxJsxFlowElement, ctx));
     }
   }
   if (items.length === 0) {
@@ -266,7 +305,7 @@ function convertAccordionGroup(
   return { type: 'mdxAccordionGroup', content: items };
 }
 
-function convertColumns(node: MdxJsxFlowElement, source: string): TiptapNode {
+function convertColumns(node: MdxJsxFlowElement, ctx: ConvertCtx): TiptapNode {
   const attrs = extractAttrs(node);
   const items: TiptapNode[] = [];
   for (const child of node.children ?? []) {
@@ -277,7 +316,7 @@ function convertColumns(node: MdxJsxFlowElement, source: string): TiptapNode {
       const colNode = child as MdxJsxFlowElement;
       const colContent: TiptapNode[] = [];
       for (const cc of colNode.children ?? []) {
-        const conv = convertBlock(cc as RootContent, source);
+        const conv = convertBlock(cc as RootContent, ctx);
         if (conv) colContent.push(conv);
       }
       if (colContent.length === 0) colContent.push({ type: 'paragraph' });
@@ -290,7 +329,7 @@ function convertColumns(node: MdxJsxFlowElement, source: string): TiptapNode {
   return { type: 'mdxColumns', attrs, content: items };
 }
 
-function convertCardGroup(node: MdxJsxFlowElement, source: string): TiptapNode {
+function convertCardGroup(node: MdxJsxFlowElement, ctx: ConvertCtx): TiptapNode {
   const attrs = extractAttrs(node);
   const cards: TiptapNode[] = [];
   for (const child of node.children ?? []) {
@@ -298,7 +337,7 @@ function convertCardGroup(node: MdxJsxFlowElement, source: string): TiptapNode {
       child.type === 'mdxJsxFlowElement' &&
       (child as MdxJsxFlowElement).name === 'Card'
     ) {
-      cards.push(convertSimpleBlock(child as MdxJsxFlowElement, source, 'mdxCard'));
+      cards.push(convertSimpleBlock(child as MdxJsxFlowElement, ctx, 'mdxCard'));
     }
   }
   if (cards.length === 0) {
@@ -313,32 +352,32 @@ function convertCardGroup(node: MdxJsxFlowElement, source: string): TiptapNode {
 
 function convertExpandable(
   node: MdxJsxFlowElement,
-  source: string,
+  ctx: ConvertCtx,
 ): TiptapNode {
   const attrs = extractAttrs(node);
   const content: TiptapNode[] = [];
   for (const child of node.children ?? []) {
-    const conv = convertBlock(child as RootContent, source);
+    const conv = convertBlock(child as RootContent, ctx);
     if (conv) content.push(conv);
   }
   if (content.length === 0) content.push({ type: 'paragraph' });
   return { type: 'mdxExpandable', attrs, content };
 }
 
-function convertTree(node: MdxJsxFlowElement, source: string): TiptapNode {
-  const items = collectTreeItems(node, source);
+function convertTree(node: MdxJsxFlowElement, ctx: ConvertCtx): TiptapNode {
+  const items = collectTreeItems(node, ctx.source);
   return { type: 'mdxTree', content: items };
 }
 
 function convertGenericBlock(
   node: MdxJsxFlowElement,
-  source: string,
+  ctx: ConvertCtx,
   type: string,
 ): TiptapNode {
   const attrs = extractAttrs(node);
   const content: TiptapNode[] = [];
   for (const child of node.children ?? []) {
-    const conv = convertBlock(child as RootContent, source);
+    const conv = convertBlock(child as RootContent, ctx);
     if (conv) content.push(conv);
   }
   if (content.length === 0) content.push({ type: 'paragraph' });
@@ -418,7 +457,7 @@ function collectTreeItems(
   return items;
 }
 
-function convertCallout(node: MdxJsxFlowElement, source: string): TiptapNode {
+function convertCallout(node: MdxJsxFlowElement, ctx: ConvertCtx): TiptapNode {
   const attrs: Record<string, unknown> = {};
   for (const a of node.attributes ?? []) {
     if (a.type === 'mdxJsxAttribute' && typeof a.value === 'string') {
@@ -428,7 +467,7 @@ function convertCallout(node: MdxJsxFlowElement, source: string): TiptapNode {
   const variant = calloutVariantFor(node.name ?? 'Callout', attrs);
   const content: TiptapNode[] = [];
   for (const child of node.children ?? []) {
-    const conv = convertBlock(child as RootContent, source);
+    const conv = convertBlock(child as RootContent, ctx);
     if (conv) content.push(conv);
   }
   if (content.length === 0) content.push({ type: 'paragraph' });
@@ -439,9 +478,9 @@ function convertCallout(node: MdxJsxFlowElement, source: string): TiptapNode {
   };
 }
 
-function convertParagraph(node: Paragraph, source: string): TiptapNode {
+function convertParagraph(node: Paragraph, ctx: ConvertCtx): TiptapNode {
   const inline = convertInline(node.children);
-  if (!inline) return rawBlock(node, source);
+  if (!inline) return rawBlock(node, ctx.source);
   return { type: 'paragraph', ...(inline.length ? { content: inline } : {}) };
 }
 
@@ -455,10 +494,10 @@ function convertHeading(node: Heading, source: string): TiptapNode {
   };
 }
 
-function convertList(node: List, source: string): TiptapNode {
+function convertList(node: List, ctx: ConvertCtx): TiptapNode {
   const items: TiptapNode[] = [];
   for (const child of node.children) {
-    items.push(convertListItem(child, source));
+    items.push(convertListItem(child, ctx));
   }
   const attrs: Record<string, unknown> = {};
   if (node.ordered && node.start != null) attrs.start = node.start;
@@ -469,20 +508,20 @@ function convertList(node: List, source: string): TiptapNode {
   };
 }
 
-function convertListItem(node: ListItem, source: string): TiptapNode {
+function convertListItem(node: ListItem, ctx: ConvertCtx): TiptapNode {
   const content: TiptapNode[] = [];
   for (const child of node.children) {
-    const conv = convertBlock(child as RootContent, source);
+    const conv = convertBlock(child as RootContent, ctx);
     if (conv) content.push(conv);
   }
   if (content.length === 0) content.push({ type: 'paragraph' });
   return { type: 'listItem', content };
 }
 
-function convertBlockquote(node: Blockquote, source: string): TiptapNode {
+function convertBlockquote(node: Blockquote, ctx: ConvertCtx): TiptapNode {
   const content: TiptapNode[] = [];
   for (const child of node.children) {
-    const conv = convertBlock(child as RootContent, source);
+    const conv = convertBlock(child as RootContent, ctx);
     if (conv) content.push(conv);
   }
   if (content.length === 0) content.push({ type: 'paragraph' });
@@ -512,14 +551,20 @@ function parseFilenameFromMeta(meta: string | null | undefined): string | undefi
   return undefined;
 }
 
-function convertSnippet(node: MdxJsxFlowElement): TiptapNode {
-  const file =
-    node.attributes.find(
-      (a) => a.type === 'mdxJsxAttribute' && a.name === 'file',
-    )?.value;
+function convertImportedSnippet(
+  node: MdxJsxFlowElement,
+  spec: ImportSpec,
+): TiptapNode {
+  const jsxAttrs = extractAttrs(node);
+  const isReact = /\.(jsx|tsx)$/i.test(spec.path);
   return {
-    type: 'mdxSnippet',
-    attrs: { file: typeof file === 'string' ? file : '' },
+    type: 'mdxImportedSnippet',
+    attrs: {
+      binding: spec.binding,
+      path: spec.path,
+      jsxAttrs,
+      isReact,
+    },
   };
 }
 

@@ -1,0 +1,51 @@
+---
+title: 'Badge'
+description: 'Inline status pill — eight colors, four sizes, two shapes, two variants.'
+icon: 'tag'
+---
+
+`<Badge>` is the inline-label primitive. Use it for status, version, environment, or a state pill next to a heading.
+
+## Colors
+
+<Badge color="gray">gray</Badge>{' '}
+<Badge color="blue">blue</Badge>{' '}
+<Badge color="green">green</Badge>{' '}
+<Badge color="yellow">yellow</Badge>{' '}
+<Badge color="orange">orange</Badge>{' '}
+<Badge color="red">red</Badge>{' '}
+<Badge color="purple">purple</Badge>{' '}
+<Badge color="surface">surface</Badge>
+
+## Sizes
+
+<Badge size="xs" color="blue">xs</Badge>{' '}
+<Badge size="sm" color="blue">sm</Badge>{' '}
+<Badge size="md" color="blue">md</Badge>{' '}
+<Badge size="lg" color="blue">lg</Badge>
+
+## Shapes
+
+<Badge shape="rounded" color="green">rounded</Badge>{' '}
+<Badge shape="pill" color="green">pill</Badge>
+
+## Variants
+
+<Badge variant="solid" color="purple">solid</Badge>{' '}
+<Badge variant="outline" color="purple">outline</Badge>
+
+## With an icon
+
+<Badge color="green" icon="check">Operational</Badge>{' '}
+<Badge color="orange" icon="triangle-alert">Degraded</Badge>{' '}
+<Badge color="red" icon="x">Outage</Badge>
+
+## In context
+
+A status badge alongside a heading reads cleanly when the badge takes the same baseline as the surrounding text:
+
+The `posts.stream()` API <Badge color="orange" size="sm">Beta</Badge> tails revisions in near-real-time over Server-Sent Events.
+
+<Callout type="tip">
+  Pair badges with [Update](/components/update) entries on a changelog page — the badge gives a quick "what kind of change" cue, the Update body has the detail.
+</Callout>

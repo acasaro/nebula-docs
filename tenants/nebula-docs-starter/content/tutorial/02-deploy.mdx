@@ -1,0 +1,300 @@
+---
+title: 'Deploy'
+description: 'Take the AcmeCloud-backed app from part one to a production URL with monitoring, smoke tests, and a rollback plan.'
+icon: 'rocket'
+sidebarTitle: '2. Deploy'
+keywords: ['deploy', 'production', 'rollback', 'monitoring']
+---
+
+This page is the long-form companion to [part one](/tutorial/01-setup). It walks through every decision you'll make on the way from a working dev build to a production deploy you can sleep through. The headings on the right form the table of contents — use them to jump around.
+
+<Callout type="info" title="Authentication required">
+  All AcmeCloud API requests must include an `Authorization: Bearer <token>` header. See [Quickstart](/quickstart) to mint a key.
+</Callout>
+
+## Overview
+
+The shape of a typical AcmeCloud-backed deploy:
+
+<Steps>
+  <Step title="Provision a prod project" />
+  <Step title="Wire secrets and configuration" />
+  <Step title="Build and verify locally" />
+  <Step title="Write a deploy workflow" />
+  <Step title="Add validation and smoke tests" />
+  <Step title="Route traffic and monitor" />
+</Steps>
+
+Each section below covers one of those steps. None of them is hard in isolation; the value is doing them in this order so the rollback plan exists *before* the first deploy.
+
+## Prerequisites
+
+You'll need:
+
+- The [setup tutorial](/tutorial/01-setup) finished (you have a working dev app)
+- A Git repo for the project (we'll assume GitHub Actions for CI examples)
+- Permission to create OOSS buckets in your org's account
+- Five environment variables you can put behind a vault
+
+### What you don't need
+
+You don't need a Docker registry, a Kubernetes cluster, or a load balancer. AcmeCloud-backed apps are static-by-default; the SDK runs in the user's browser or your edge runtime. We'll deploy to OOSS and call it a day.
+
+## Provisioning the project
+
+Spin up a *new* project for prod — never reuse the dev project from part one. You want hard isolation between test data and real users.
+
+### Naming
+
+Use the convention `<app>-prod` for the project name and `<app>-prod-<region>` for the home region. Example: `acme-todo-prod` in `us-east`.
+
+### Tier selection
+
+The free tier is fine for traffic under 120 rpm. Move to `pro` before the launch — `pro` is the lowest tier that includes per-region replication, which is a hard prerequisite for the rollback procedure described below.
+
+### Project IDs
+
+Capture the `prj_<24 hex>` ID from the dashboard. You'll reference it in three places: the build args, the OOSS bucket name, and the rollback runbook.
+
+## Configuring environments
+
+Production deploys read from three configuration sources. Get the precedence right or you'll spend the launch debugging stale config.
+
+### Build-time env vars
+
+Vite inlines anything prefixed `VITE_` at build. Use this for non-secret values: the AcmeCloud project ID, the API base URL, the build SHA.
+
+```bash
+VITE_ACME_PROJECT=prj_e8a3...
+VITE_ACME_BASE_URL=https://api.acmecloud.example/v2
+VITE_BUILD_SHA=$(git rev-parse --short HEAD)
+```
+
+### Runtime config from a fetch
+
+Anything that might change without a redeploy — feature flags, A/B test allocations, copy strings — comes from a `/config.json` fetched at startup.
+
+### Vault-managed secrets
+
+API keys, signing secrets, and webhook signing keys live in your org's secret store. Surface them to the build via short-lived workload identity tokens, not long-lived static creds.
+
+## Wiring secrets
+
+The AcmeCloud key is the only secret most apps need. Mint a *prod-only* key scoped to the production project; do not reuse the dev key. The cheapest way to leak prod data is to use a key whose scope drifted up over time.
+
+### Storing the key
+
+```bash
+gh secret set ACME_KEY --body "acme_live_..."
+```
+
+### Loading at build time
+
+```yaml
+- name: Build
+  env:
+    ACME_KEY: ${{ secrets.ACME_KEY }}
+    VITE_ACME_PROJECT: ${{ vars.ACME_PROJECT }}
+  run: pnpm build
+```
+
+### Auditing key usage
+
+The dashboard's **Settings → API keys → Audit log** shows every request signed with each key, broken down by source IP. If you're not sure whether a deploy is using the right key, check there first.
+
+## Building locally
+
+Reproduce CI on your laptop before you trust it remotely.
+
+```bash
+ACME_KEY="$(op read 'op://prod/acmecloud/api-key')" \
+VITE_ACME_PROJECT="prj_e8a3..." \
+  pnpm build
+```
+
+### Verifying the build output
+
+The build emits to `dist/`. Three files matter:
+
+- `dist/index.html` — the entrypoint
+- `dist/assets/*.js` — hashed bundle output
+- `dist/assets/*.css` — the styles
+
+If any of those are missing, the build is broken and `dist/` should not be uploaded.
+
+### Smoke-running the production bundle
+
+```bash
+pnpm preview
+```
+
+Hit http://localhost:4173 and make sure the home page loads against your prod project. This is the last chance to catch a misconfigured environment before the bundle is in front of users.
+
+## Running the dev preview
+
+For PR review, deploy each PR to a per-PR preview URL. The pattern:
+
+```yaml
+on:
+  pull_request:
+jobs:
+  preview:
+    steps:
+      - run: pnpm build --base /previews/${{ github.event.number }}/
+      - run: aws s3 sync dist/ s3://acme-todo-previews/${{ github.event.number }}/
+```
+
+The `--base` flag tells Vite to emit relative URLs prefixed by the PR number, so multiple previews can coexist in a single bucket without conflicting.
+
+## Writing the deploy job
+
+A minimal `.github/workflows/deploy.yml`:
+
+```yaml
+name: Deploy
+on:
+  push:
+    branches: [main]
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v3
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+        env:
+          ACME_KEY: ${{ secrets.ACME_KEY }}
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.DEPLOY_ROLE }}
+          aws-region: us-east-1
+      - run: aws s3 sync dist/ s3://acme-todo-prod/ --delete
+      - run: aws cloudfront create-invalidation --distribution-id ${{ vars.CF_ID }} --paths '/*'
+```
+
+### Why `pnpm install --frozen-lockfile`
+
+Lockfile drift between dev and prod is the second-most common deploy break (after stale env vars). Frozen-lockfile guarantees the same dependency tree as your dev install.
+
+### Why a separate role for deploys
+
+The deploy role can write to `acme-todo-prod` and invalidate CloudFront — nothing else. A leaked CI token cannot read user data, mint keys, or modify other infra.
+
+## Configuring the runner
+
+Use a self-hosted runner if your AcmeCloud key has IP restrictions; otherwise `ubuntu-latest` is fine.
+
+### Runner sizing
+
+The build is CPU-bound on TypeScript compilation. The default 2 vCPU runner takes ~90s; bumping to 4 vCPU drops it to ~50s. Below 2 vCPU you'll start hitting OOM kills on the worker.
+
+### Cache scopes
+
+Cache `~/.pnpm-store` keyed by `pnpm-lock.yaml`. Don't cache `node_modules` itself — it's a symlink farm into the store and rehydrates faster than restoring it from a tarball.
+
+## Adding pre-deploy validation
+
+Run these *before* the upload step, not after:
+
+- `pnpm typecheck`
+- `pnpm test`
+- `pnpm lint`
+- `pnpm exec acmecloud validate ./config/`
+
+Failing any of them fails the workflow and leaves the previous deploy in place. The OOSS upload is the point of no return; everything before it is reversible.
+
+## Adding post-deploy smoke tests
+
+Once the upload completes, hit the live URL and assert four things:
+
+```bash
+curl -sf "$DEPLOY_URL/health" | jq -e '.ok == true'
+curl -sf "$DEPLOY_URL/" | grep -q "$VITE_BUILD_SHA"
+curl -sf "$DEPLOY_URL/assets/index-*.js" -o /dev/null
+curl -sf "$DEPLOY_URL/api/users/me" -H "Authorization: Bearer $TEST_KEY"
+```
+
+If any fail, trigger the rollback procedure described below.
+
+## Routing traffic
+
+Two patterns are common:
+
+### Atomic swap
+
+Upload to a new bucket prefix per deploy (`acme-todo-prod/v123/`), then flip the CloudFront origin path to the new prefix. The previous version stays in place; rollback is a one-line config change.
+
+### Sync-and-invalidate
+
+Upload directly to `acme-todo-prod/`, then invalidate the CDN. Simpler to set up; rollback requires re-running the previous deploy from a checkout of the previous SHA.
+
+We recommend atomic swap for any app with more than one daily user — the rollback story is dramatically better.
+
+## Monitoring rollout
+
+The dashboard's **Deployments** page shows live request rates, error rates, and p95 latency, sliced by deploy SHA. Watch it for 10 minutes after every deploy.
+
+### What "good" looks like
+
+- Error rate stays under 0.1%
+- p95 latency stays within 20% of the previous deploy
+- No new entries in the **Settings → API keys → Audit log** showing unauthorized scopes
+
+### What "bad" looks like
+
+- Error-rate spike to >1% within the first 60 seconds
+- Latency cliff (p95 doubles immediately after deploy)
+- Sudden drop in successful `users.me()` calls — usually a config bug
+
+## Rolling back
+
+If the smoke test fails or monitoring goes red, roll back. Don't try to fix forward unless the cause is *obvious* and you've already shipped a fix you trust.
+
+### Atomic-swap rollback
+
+```bash
+aws cloudfront update-distribution \
+  --id "$CF_ID" \
+  --origin-path "/v$PREVIOUS_VERSION"
+```
+
+Takes ~60 seconds to propagate.
+
+### Sync-and-invalidate rollback
+
+```bash
+git checkout "$PREVIOUS_SHA"
+pnpm build
+aws s3 sync dist/ s3://acme-todo-prod/ --delete
+aws cloudfront create-invalidation --paths '/*'
+```
+
+Takes ~5 minutes — the same as a normal deploy.
+
+## Tuning autoscaling
+
+AcmeCloud's edge nodes scale automatically. The only knob you control is the per-project rate-limit ceiling.
+
+<Callout type="note" title="Rate limits">
+  Free-tier projects are limited to **120 requests/minute** per API key. Paid tiers raise the ceiling to 10,000 rpm. Every response includes `X-RateLimit-Remaining` and `X-RateLimit-Reset` headers so SDK clients can back off cleanly.
+</Callout>
+
+If you're hitting 429 responses from the edge, raise the ceiling in **Settings → Rate limits**. Tier upgrades take effect within five minutes.
+
+## Hardening for production
+
+A short punch list once you're live:
+
+- [ ] CSP headers configured at the CDN, not just `<meta>` tags
+- [ ] Subresource Integrity (SRI) hashes on every external `<script>` and `<link>`
+- [ ] HSTS preloaded
+- [ ] Sentry or equivalent error reporting wired to the deploy SHA
+- [ ] Synthetic check from a third-party probe (Datadog, Pingdom) hitting `/health` every 60s
+- [ ] On-call rota documented in your team's runbook
+
+<Callout type="check" title="You're done">
+  The app is live, the deploy is reversible, and the monitoring is honest. Anything more is optimization.
+</Callout>

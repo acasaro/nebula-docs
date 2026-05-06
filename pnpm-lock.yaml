@@ -171,6 +171,9 @@ importers:
 
   packages/mdx:
     dependencies:
+      acorn:
+        specifier: ^8.16.0
+        version: 8.16.0
       mdast-util-mdx:
         specifier: ^3.0.0
         version: 3.0.0
@@ -459,6 +462,10 @@ importers:
         version: 7.3.2(@types/node@22.19.17)(jiti@2.7.0)(lightningcss@1.32.0)(terser@5.46.2)(tsx@4.21.0)
 
   tenants/example-docs: {}
+
+  tenants/nebula-docs-starter: {}
+
+  tenants/nebula-docs-starter-empty: {}
 
 packages:
 

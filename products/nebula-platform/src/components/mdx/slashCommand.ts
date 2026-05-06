@@ -2,9 +2,16 @@ import { Extension } from '@tiptap/core';
 import Suggestion from '@tiptap/suggestion';
 import { ReactRenderer } from '@tiptap/react';
 import { SlashMenu, type SlashMenuRef } from './SlashMenu';
-import { filterSlashItems, type SlashItem } from './slashItems';
+import { buildSlashItems, filterSlashItems, type SlashItem } from './slashItems';
+import type { SnippetCatalogEntry } from '@/lib/mdx/snippetResolver';
 
 import type { Editor } from '@tiptap/react';
+
+interface SlashCommandOptions {
+  /** Snapshot getter for the snippet catalog. Read fresh each time the
+   *  menu opens so newly-fetched snippets show up without a remount. */
+  getSnippetCatalog?: () => readonly SnippetCatalogEntry[];
+}
 
 interface SuggestionProps {
   editor: Editor;
@@ -15,8 +22,12 @@ interface SuggestionProps {
   clientRect: (() => DOMRect | null) | null;
 }
 
-export const SlashCommand = Extension.create({
+export const SlashCommand = Extension.create<SlashCommandOptions>({
   name: 'slashCommand',
+
+  addOptions() {
+    return { getSnippetCatalog: undefined };
+  },
 
   addProseMirrorPlugins() {
     return [
@@ -29,7 +40,10 @@ export const SlashCommand = Extension.create({
           const item = props as SlashItem;
           item.command({ editor, range });
         },
-        items: ({ query }) => filterSlashItems(query),
+        items: ({ query }) => {
+          const catalog = this.options.getSnippetCatalog?.() ?? [];
+          return filterSlashItems(query, buildSlashItems(catalog));
+        },
         render: () => {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           let component: ReactRenderer<SlashMenuRef, any> | null = null;

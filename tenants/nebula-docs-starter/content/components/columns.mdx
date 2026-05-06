@@ -1,0 +1,59 @@
+---
+title: 'Columns'
+description: 'Responsive grid wrapper for arbitrary children.'
+icon: 'columns'
+---
+
+`<Columns>` lays out arbitrary children in a CSS grid. Use it for non-card content that still wants the same horizontal rhythm as a `<CardGroup>`.
+
+## Two columns
+
+<Columns cols={2}>
+  <div>
+    **Edge nodes** validate the request, run the rate-limit accounting, and serve cache hits. 38 nodes worldwide.
+  </div>
+  <div>
+    **Regions** handle uncached reads and all writes. Four regions: `us-east`, `us-west`, `eu`, `ap`.
+  </div>
+</Columns>
+
+## Three columns
+
+<Columns cols={3}>
+  <div>
+    **TypeScript SDK**
+
+    Async-first. Tree-shakeable. Ships with full type generation from the OpenAPI spec.
+  </div>
+  <div>
+    **Python SDK**
+
+    Sync and async clients in the same package. Zero deps beyond `httpx`.
+  </div>
+  <div>
+    **Go SDK**
+
+    Context-aware, cancellation-safe. Net/http under the hood.
+  </div>
+</Columns>
+
+## Four columns
+
+<Columns cols={4}>
+  <Card title="us-east" icon="map-pin">N. Virginia</Card>
+  <Card title="us-west" icon="map-pin">Oregon</Card>
+  <Card title="eu" icon="map-pin">Frankfurt</Card>
+  <Card title="ap" icon="map-pin">Tokyo</Card>
+</Columns>
+
+## One column (degenerate)
+
+<Columns cols={1}>
+  <div>
+    With `cols=1` the layout collapses to a single full-width column. Useful when a page has a `<Columns>` whose column count is computed.
+  </div>
+</Columns>
+
+<Callout type="tip">
+  `<Columns>` collapses to a single column on narrow viewports automatically. No media queries needed in your MDX.
+</Callout>

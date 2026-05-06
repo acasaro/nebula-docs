@@ -1,0 +1,80 @@
+---
+title: 'Steps'
+description: 'Numbered ordered list with auto-generated step numbers and connector lines.'
+icon: 'list-ordered'
+---
+
+`<Steps>` renders a vertical sequence of `<Step>` items with an auto-numbered circle on each and a connecting line between them.
+
+## Basic
+
+<Steps>
+  <Step title="Install the SDK">
+    Pull the package from your registry of choice.
+  </Step>
+  <Step title="Mint an API key">
+    Create a key from the dashboard and export it.
+  </Step>
+  <Step title="Send your first request">
+    The SDK does the rest.
+  </Step>
+</Steps>
+
+## With per-step icons
+
+<Steps>
+  <Step title="Provision" icon="server">
+    Create a project and pick a home region.
+  </Step>
+  <Step title="Configure" icon="settings">
+    Wire your secrets and pick a tier.
+  </Step>
+  <Step title="Deploy" icon="rocket">
+    Run the deploy job from CI.
+  </Step>
+  <Step title="Monitor" icon="activity">
+    Watch the dashboard for the first 10 minutes.
+  </Step>
+</Steps>
+
+## With richer step bodies
+
+<Steps>
+  <Step title="Clone the repo">
+    ```bash
+    git clone git@github.com:acmecloud/sample-app.git
+    cd sample-app
+    ```
+  </Step>
+  <Step title="Install dependencies">
+    ```bash
+    pnpm install
+    ```
+
+    <Callout type="info">
+      The first install pulls the SDK and resolves the lockfile.
+    </Callout>
+  </Step>
+  <Step title="Run the dev server">
+    ```bash
+    pnpm dev
+    ```
+
+    Open [http://localhost:5173](http://localhost:5173).
+  </Step>
+  <Step title="Send a request">
+    Visit `/api/me`. The response body is the result of `client.users.me()`.
+  </Step>
+</Steps>
+
+## A standalone step
+
+A single `<Step>` outside a `<Steps>` container still renders a numbered circle (always `1`):
+
+<Step title="Just one thing">
+  Use a standalone Step when you have a single, prominent action to call out.
+</Step>
+
+<Callout type="tip">
+  The step number and connector line are filled in by the parent `<Steps>` via prop injection. The CLI's renderer uses an Astro slot wrapper instead of the React introspection path so SSR works correctly.
+</Callout>

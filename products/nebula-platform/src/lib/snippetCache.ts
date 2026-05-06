@@ -1,12 +1,14 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
+import { bindingNameFromPath } from '@nebula-docs/mdx';
 import { fetchFileContent } from '@/lib/githubApi';
+import type { SnippetCatalogEntry } from '@/lib/mdx/snippetResolver';
 
 /**
- * Snippet files are referenced from page MDX as `<Snippet file="x" />`. Their
- * source content lives at `<snippetsBase>/x.mdx` in the repo. The Platform
- * pre-fetches every snippet file alongside the page-level frontmatter cache
- * so that when an MDX page mounts in the editor, the snippet resolver can
- * synchronously satisfy the lookup.
+ * Snippet files are referenced from page MDX as
+ * `import Disclaimer from "/snippets/disclaimer.mdx"; <Disclaimer />`. The
+ * Platform pre-fetches every snippet file alongside the page-level
+ * frontmatter cache so that when an MDX page mounts in the editor, the
+ * snippet resolver can synchronously satisfy the lookup.
  *
  * If a snippet hasn't loaded by the time the editor mounts, the snippet
  * NodeView renders a "not found" placeholder until the fetch lands and the
@@ -34,19 +36,18 @@ interface UseSnippetPrefetchArgs {
    *  `["content/snippets", "snippets"]` to also support Mintlify-shaped
    *  tenants pre-migration). The first candidate that resolves wins. */
   snippetsBases: readonly string[];
-  /** Files already loaded by the parent — anything present here is skipped
-   *  (covers both already-fetched snippets and the open page itself). */
+  /** Files already loaded by the parent — anything present here is skipped. */
   loadedPaths: Set<string>;
   /** Push a freshly-fetched snippet into the parent's `files` map. */
   onLoad: (path: string, entry: SnippetCacheEntry) => void;
 }
 
 const CONCURRENCY = 4;
+const SNIPPET_EXTENSIONS = /\.(mdx?|jsx?|tsx?)$/i;
 
 /**
- * Prefetch every `<snippetsBase>/*.mdx` referenced by the file tree. Runs
- * once per branch + base-dir change, with bounded concurrency so a tenant
- * with hundreds of snippets doesn't hammer the GitHub API.
+ * Prefetch every snippet file referenced by the file tree. Runs once per
+ * branch + base-dir change, with bounded concurrency.
  */
 export function useSnippetPrefetch({
   installationId,
@@ -58,8 +59,6 @@ export function useSnippetPrefetch({
   loadedPaths,
   onLoad,
 }: UseSnippetPrefetchArgs): void {
-  // Latch latest props in refs so the effect's deps stay narrow — re-running
-  // the prefetch on every parent re-render would burn API quota.
   const onLoadRef = useRef(onLoad);
   useEffect(() => {
     onLoadRef.current = onLoad;
@@ -74,7 +73,7 @@ export function useSnippetPrefetch({
     const prefixes = snippetsBases.map((b) => `${b.replace(/\/+$/, '')}/`);
     const targets = allPaths.filter(
       (p) =>
-        p.endsWith('.mdx') &&
+        SNIPPET_EXTENSIONS.test(p) &&
         prefixes.some((pre) => p.startsWith(pre)) &&
         !loadedRef.current.has(p),
     );
@@ -103,8 +102,7 @@ export function useSnippetPrefetch({
               revertNonce: 0,
             });
           } catch {
-            // Snippet fetch failures are silent — the resolver returns
-            // `undefined` for the file and the NodeView renders the
+            // Silent — resolver returns undefined and the NodeView shows the
             // missing-snippet placeholder.
           }
         }
@@ -115,52 +113,141 @@ export function useSnippetPrefetch({
     return () => {
       cancelled = true;
     };
-    // `loadedPaths` is intentionally read via ref above; including it as a dep
-    // would re-run the prefetch every time a single fetch lands.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [installationId, owner, repo, ref, allPaths, snippetsBases]);
 }
 
 /**
- * Build the resolver function the editor passes to `SnippetResolverProvider`.
- * Tries each `snippetsBase` in order (`["content/snippets", "snippets"]` for
- * tenants that may be either Nebula- or Mintlify-shaped) and returns the
- * current draft from the first match. Reading from `draft` (rather than
- * `original`) means editing a snippet file in another tab updates the
- * resolved content live.
+ * Map an MDX import path (`/snippets/disclaimer.mdx`, `../shared/foo.mdx`,
+ * `/shared/lib.mdx`) to a repo-root-relative path that matches a key in the
+ * loaded `files` map.
+ *
+ * For absolute paths (`/...`), strip the leading slash and prepend any
+ * configured `docsSubdirectory` so resolution lines up with how
+ * `fetchRepoTree` returns paths. Relative paths are normalized against the
+ * current page's directory (caller's responsibility — see `withCurrentDir`).
+ */
+export function importPathToRepoPath(
+  importPath: string,
+  docsSubdirectory: string,
+): string {
+  const sub = docsSubdirectory.replace(/\/+$/, '');
+  const cleaned = importPath.replace(/^\/+/, '');
+  return sub ? `${sub}/${cleaned}` : cleaned;
+}
+
+/**
+ * Build a path-keyed resolver for the editor. Tries each `snippetsBase` to
+ * locate `/snippets/foo.mdx` against either a Nebula `content/snippets/foo`
+ * shape or a Mintlify `snippets/foo` shape (whichever the tenant uses), so
+ * pre-migration repos work without per-tenant config. Returns the current
+ * `draft` so unsaved snippet edits show up live in every page that
+ * references them.
  */
 export function buildSnippetResolver(
   files: Record<string, { draft: string }>,
   snippetsBases: readonly string[],
-): (file: string) => string | undefined {
-  const prefixes = snippetsBases.map((b) => b.replace(/\/+$/, ''));
-  return (file: string) => {
-    const cleaned = file.replace(/^\/+/, '').replace(/\.mdx?$/i, '');
-    for (const prefix of prefixes) {
-      const path = `${prefix}/${cleaned}.mdx`;
-      const entry = files[path];
-      if (entry) return entry.draft;
+  docsSubdirectory: string,
+): (importPath: string) => string | undefined {
+  const sub = docsSubdirectory.replace(/\/+$/, '');
+  return (importPath: string) => {
+    // 1. Direct map: strip leading `/`, prepend subdir, look it up.
+    const direct = importPathToRepoPath(importPath, docsSubdirectory);
+    if (files[direct]?.draft !== undefined) return files[direct].draft;
+
+    // 2. Mintlify-shaped fallback: `/snippets/foo.mdx` → try each base in
+    //    case the tenant's snippets live at `content/snippets/` or just
+    //    `snippets/`. Strip the leading-slash convention's `snippets/`
+    //    prefix and re-anchor against each base.
+    const cleaned = importPath.replace(/^\/+/, '');
+    const SHAPED = /^(snippets|shared)\/(.+)$/;
+    const shaped = cleaned.match(SHAPED);
+    if (shaped) {
+      const tail = shaped[2]!;
+      for (const baseRaw of snippetsBases) {
+        const base = baseRaw.replace(/\/+$/, '');
+        const prefixed = sub
+          ? `${sub}/${base}/${tail}`
+          : `${base}/${tail}`;
+        if (files[prefixed]?.draft !== undefined) return files[prefixed].draft;
+      }
     }
     return undefined;
   };
 }
 
 /**
- * Pick the first base that actually has snippet files in the repo (so the
- * "open source" link points at the right path even on Mintlify-shaped
- * tenants where the convention is `snippets/` at root). Falls back to the
- * first listed base when no snippet files have been discovered yet.
+ * Match an import path back to an actual repo path the "open source" link
+ * can navigate to. Same fallback logic as `buildSnippetResolver` but
+ * returns the repo path (or the direct guess if nothing matches).
  */
-export function pickActiveSnippetsBase(
-  allPaths: readonly string[],
+export function buildRepoPathResolver(
+  files: Record<string, { draft: string }>,
   snippetsBases: readonly string[],
-): string {
-  const prefixes = snippetsBases.map((b) => b.replace(/\/+$/, ''));
-  for (const prefix of prefixes) {
-    const candidate = `${prefix}/`;
-    if (allPaths.some((p) => p.startsWith(candidate) && p.endsWith('.mdx'))) {
-      return prefix;
+  docsSubdirectory: string,
+): (importPath: string) => string {
+  const sub = docsSubdirectory.replace(/\/+$/, '');
+  return (importPath: string) => {
+    const direct = importPathToRepoPath(importPath, docsSubdirectory);
+    if (files[direct]) return direct;
+    const cleaned = importPath.replace(/^\/+/, '');
+    const SHAPED = /^(snippets|shared)\/(.+)$/;
+    const shaped = cleaned.match(SHAPED);
+    if (shaped) {
+      const tail = shaped[2]!;
+      for (const baseRaw of snippetsBases) {
+        const base = baseRaw.replace(/\/+$/, '');
+        const prefixed = sub ? `${sub}/${base}/${tail}` : `${base}/${tail}`;
+        if (files[prefixed]) return prefixed;
+      }
     }
-  }
-  return prefixes[0] ?? 'content/snippets';
+    return direct;
+  };
+}
+
+/**
+ * Build the slash-command catalog from the prefetched snippet files. Each
+ * entry carries the `/`-rooted import path the editor writes into the
+ * import statement, plus the repo-root-relative path for navigation.
+ */
+export function useSnippetCatalog(
+  files: Record<string, unknown>,
+  snippetsBases: readonly string[],
+  docsSubdirectory: string,
+): readonly SnippetCatalogEntry[] {
+  const sub = docsSubdirectory.replace(/\/+$/, '');
+  return useMemo(() => {
+    const out: SnippetCatalogEntry[] = [];
+    const seen = new Set<string>();
+    const prefixes = snippetsBases.map((b) => `${b.replace(/\/+$/, '')}/`);
+    for (const p of Object.keys(files)) {
+      if (!SNIPPET_EXTENSIONS.test(p)) continue;
+      const matchesPrefix = prefixes.some((pre) =>
+        sub ? p.startsWith(`${sub}/${pre}`) : p.startsWith(pre),
+      );
+      if (!matchesPrefix) continue;
+      // Re-derive the `/`-rooted import path. The actual repo path may live
+      // under `<sub>/content/snippets/foo` or `<sub>/snippets/foo` — Mintlify
+      // canonicalizes to `/snippets/foo` regardless, so do the same.
+      const repoTail = sub && p.startsWith(`${sub}/`) ? p.slice(sub.length + 1) : p;
+      const importPath = canonicalizeToImportPath(repoTail);
+      if (seen.has(importPath)) continue;
+      seen.add(importPath);
+      out.push({
+        importPath,
+        repoPath: p,
+        defaultBinding: bindingNameFromPath(p),
+        isReact: /\.(jsx|tsx)$/i.test(p),
+      });
+    }
+    out.sort((a, b) => a.importPath.localeCompare(b.importPath));
+    return out;
+  }, [files, snippetsBases, sub]);
+}
+
+function canonicalizeToImportPath(repoRelative: string): string {
+  // Strip leading `content/` so both `content/snippets/foo.mdx` and
+  // `snippets/foo.mdx` canonicalize to the same `/snippets/foo.mdx` import.
+  const stripped = repoRelative.replace(/^content\//, '');
+  return `/${stripped}`;
 }

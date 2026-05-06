@@ -1,0 +1,61 @@
+---
+title: 'Callout'
+description: 'Admonition blocks for asides, warnings, tips, and danger notices.'
+icon: 'message-circle-warning'
+---
+
+`<Callout>` is the all-purpose admonition. Pick a `type` to control the icon and color. The aliases `<Info>`, `<Note>`, `<Tip>`, `<Check>`, `<Warning>`, and `<Danger>` are equivalent to passing the corresponding `type`.
+
+## All variants
+
+<Callout type="info">
+  **Info** — neutral context. Background information that helps but isn't critical.
+</Callout>
+
+<Callout type="note">
+  **Note** — something the reader should be aware of, but not act on immediately.
+</Callout>
+
+<Callout type="tip">
+  **Tip** — a non-obvious recommendation or shortcut.
+</Callout>
+
+<Callout type="check">
+  **Check** — confirmation that something is set up correctly.
+</Callout>
+
+<Callout type="warning">
+  **Warning** — describes a footgun. Reading this avoids the foot.
+</Callout>
+
+<Callout type="danger">
+  **Danger** — describes irreversible damage. Stop and read carefully.
+</Callout>
+
+## With a custom title
+
+<Callout type="warning" title="API key rotation has gotchas">
+  Rotating mid-deploy can leave one runner using the old key and one using the new. Use the 24-hour grace window — don't revoke until every workflow has redeployed.
+</Callout>
+
+## With rich children
+
+<Callout type="info" title="Migration path">
+  The `v1 → v2` migration involves three steps:
+
+  1. Update the SDK pin in `package.json`
+  2. Run `pnpm exec acmecloud migrate v1-v2`
+  3. Redeploy
+
+  See the full guide in [tutorial/01-setup](/tutorial/01-setup).
+</Callout>
+
+## Aliases
+
+The shorter alias forms work the same:
+
+<Note>This is `<Note>` — same as `<Callout type="note">`.</Note>
+
+<Tip>This is `<Tip>`.</Tip>
+
+<Warning>This is `<Warning>`.</Warning>

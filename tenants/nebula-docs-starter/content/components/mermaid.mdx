@@ -1,0 +1,71 @@
+---
+title: 'Mermaid'
+description: 'Diagrams from a string source, lazy-loaded.'
+icon: 'git-branch'
+---
+
+`<Mermaid>` renders a [Mermaid](https://mermaid.js.org) diagram client-side. The library lazy-loads on first render so pages without diagrams pay zero JS cost.
+
+## Flowchart
+
+<Mermaid>
+{`flowchart LR
+  A[Client SDK] --> B[Edge node]
+  B -->|cache hit| A
+  B -->|miss| C[Region]
+  C --> D[(Storage)]
+  C --> A`}
+</Mermaid>
+
+## Sequence diagram
+
+<Mermaid>
+{`sequenceDiagram
+  participant SDK
+  participant Edge
+  participant Region
+  participant Storage
+  SDK->>Edge: POST /users
+  Edge->>Edge: validate token
+  Edge->>Region: forward
+  Region->>Storage: write
+  Storage-->>Region: ack
+  Region-->>Edge: 201 Created
+  Edge-->>SDK: 201 Created`}
+</Mermaid>
+
+## State diagram
+
+<Mermaid>
+{`stateDiagram-v2
+  [*] --> Pending
+  Pending --> Active: approve
+  Pending --> Rejected: reject
+  Active --> Suspended: suspend
+  Suspended --> Active: reinstate
+  Active --> Archived: archive
+  Archived --> [*]`}
+</Mermaid>
+
+## ER diagram
+
+<Mermaid>
+{`erDiagram
+  PROJECT ||--o{ USER : "contains"
+  USER ||--o{ POST : "authors"
+  POST ||--o{ COMMENT : "has"
+  USER ||--o{ COMMENT : "writes"`}
+</Mermaid>
+
+## Pie chart
+
+<Mermaid>
+{`pie title SDK installs by language
+  "TypeScript" : 62
+  "Python" : 24
+  "Go" : 14`}
+</Mermaid>
+
+<Callout type="tip">
+  Mermaid recolors automatically when the dark-mode toggle flips. The renderer reinitializes the library with the new theme on each toggle.
+</Callout>

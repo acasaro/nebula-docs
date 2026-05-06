@@ -1,0 +1,89 @@
+---
+title: 'Tabs'
+description: 'Switchable content panels with keyboard nav.'
+icon: 'layout'
+---
+
+`<Tabs>` renders a row of tab buttons over a stack of `<Tab>` panels. The first tab is active by default; clicks and keyboard arrows switch between them.
+
+## Code panels
+
+The most common use is grouping the same operation in different languages:
+
+<Tabs>
+  <Tab title="TypeScript">
+    ```ts
+    const me = await client.users.me();
+    console.log(me.name);
+    ```
+  </Tab>
+  <Tab title="Python">
+    ```python
+    me = client.users.me()
+    print(me.name)
+    ```
+  </Tab>
+  <Tab title="Go">
+    ```go
+    me, err := client.Users.Me(ctx)
+    fmt.Println(me.Name)
+    ```
+  </Tab>
+  <Tab title="cURL">
+    ```bash
+    curl https://api.acmecloud.example/v2/users/me \
+      -H "Authorization: Bearer $ACME_KEY"
+    ```
+  </Tab>
+</Tabs>
+
+## Mixed content
+
+A tab's children can be any block — prose, callouts, code, components.
+
+<Tabs>
+  <Tab title="What it does">
+    The `users.me()` endpoint returns the user record for the API key holder. It's the cheapest way to verify an integration.
+  </Tab>
+  <Tab title="When to use it">
+    Treat it as a health check. Failed `users.me()` from CI means the deploy key is wrong; failed at runtime means the user's session expired.
+  </Tab>
+  <Tab title="What it returns">
+    <Property name="user.id" type="string">The current user's ID.</Property>
+    <Property name="user.email" type="string">The current user's email.</Property>
+    <Property name="user.roles" type="string[]">Roles granted in this project.</Property>
+  </Tab>
+</Tabs>
+
+## Two tabs is fine
+
+<Tabs>
+  <Tab title="Pros">
+    - Static-by-default — no JS until the user clicks
+    - Keyboard accessible
+    - Tab titles double as anchor labels in the URL bar (planned)
+  </Tab>
+  <Tab title="Cons">
+    - Tabs hide content from search-engines unless every panel renders into the page
+    - Don't use for content the reader has to compare side-by-side
+  </Tab>
+</Tabs>
+
+## With a Frame inside
+
+<Tabs>
+  <Tab title="Light">
+    <Frame caption="Dashboard in light mode.">
+      <img src="https://placehold.co/640x320/png?text=Light+mode" alt="Light mode" />
+    </Frame>
+  </Tab>
+  <Tab title="Dark">
+    <Frame caption="Dashboard in dark mode.">
+      <img src="https://placehold.co/640x320/2a2a2a/cccccc/png?text=Dark+mode" alt="Dark mode" />
+    </Frame>
+  </Tab>
+</Tabs>
+
+<Callout type="tip">
+  In the CLI renderer, `<Tabs>` is implemented as an Astro slot wrapper rather than a React component, sidestepping the SSR boundary that prevents React parents from introspecting nested children's props.
+</Callout>

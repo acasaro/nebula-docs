@@ -1,0 +1,48 @@
+---
+title: 'Frame'
+description: 'Bordered surround for screenshots, with an optional caption.'
+icon: 'image'
+---
+
+`<Frame>` wraps a child block (usually an image) in a rounded surround with a subtle dot grid. Use it for screenshots, diagrams, or anything else that benefits from chrome separating it from surrounding prose.
+
+## Plain frame
+
+<Frame>
+  <img src="https://placehold.co/640x360/png?text=Console+screenshot" alt="A placeholder console screenshot." />
+</Frame>
+
+## With a caption
+
+<Frame caption="The AcmeCloud dashboard, with the project switcher open.">
+  <img src="https://placehold.co/640x360/png?text=Project+switcher" alt="A placeholder dashboard screenshot." />
+</Frame>
+
+## With a title
+
+<Frame title="Architecture diagram">
+  <img src="https://placehold.co/640x360/png?text=Architecture" alt="Placeholder architecture diagram." />
+</Frame>
+
+## Wrapping a video
+
+<Frame caption="A short loop of the dashboard at 2x speed.">
+  <video autoPlay loop muted playsInline width="640">
+    <source src="https://placehold.co/video.mp4" type="video/mp4" />
+  </video>
+</Frame>
+
+## Wrapping arbitrary content
+
+<Frame caption="Diagrams work too.">
+  <Mermaid>
+    {`flowchart LR
+      A[Client SDK] --> B[Edge node]
+      B --> C[Region]
+      C --> D[(Storage)]`}
+  </Mermaid>
+</Frame>
+
+<Callout type="tip">
+  `description` is a documented alias for `caption` and `title` is a documented alias for the heading row, kept for back-compat with editor MDX that uses either name.
+</Callout>

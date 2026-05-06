@@ -3,9 +3,16 @@ import mdx from '@astrojs/mdx';
 import react from '@astrojs/react';
 import tailwindcss from '@tailwindcss/vite';
 import { resolve } from 'node:path';
-import { remarkSnippets } from '@nebula-docs/mdx';
 import { fileURLToPath } from 'node:url';
-import { existsSync, readFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
+import { remarkAutoComponentImports } from '@nebula-docs/mdx';
+
+const require = createRequire(import.meta.url);
+
+// Resolve workspace packages to their actual location so MDX files in the
+// tenant repo (which doesn't have these in node_modules) can `import` them
+// via auto-injected import statements.
+const nebulaComponentsEntry = require.resolve('@nebula-docs/components');
 
 const here = fileURLToPath(new URL('.', import.meta.url));
 const tenantRoot = process.env.NEBULA_TENANT_ROOT;
@@ -18,20 +25,68 @@ if (!tenantRoot) {
   );
 }
 
-const snippetsDir = resolve(tenantRoot, 'content', 'snippets');
+/**
+ * Mintlify-style snippets work via standard ES module imports inside MDX:
+ *   `import Disclaimer from "/snippets/disclaimer.mdx";`
+ *   `<Disclaimer />`
+ *
+ * Astro + `@astrojs/mdx` handle imports natively via Vite, so we don't need
+ * a custom remark plugin to resolve the path. The Vite aliases below map
+ * the `/`-rooted import paths Mintlify documents to actual files in the
+ * tenant repo (Mintlify-shaped tenants use `/snippets/foo.mdx`,
+ * Nebula-shaped tenants use `/content/snippets/foo.mdx`).
+ *
+ * `.mdx` and `.jsx` snippets are both supported — `@astrojs/mdx` returns
+ * MDX components for the former; `@astrojs/react` handles the latter.
+ */
+const snippetAliases = [
+  { find: /^\/snippets\/(.+)$/, replacement: resolve(tenantRoot, 'snippets/$1') },
+  { find: /^\/content\/snippets\/(.+)$/, replacement: resolve(tenantRoot, 'content/snippets/$1') },
+  // `/shared/...` mirrors Mintlify's documented alternative location.
+  { find: /^\/shared\/(.+)$/, replacement: resolve(tenantRoot, 'shared/$1') },
+];
 
 /**
- * Snippet resolver — `<Snippet file="..." />` looks up
- * <tenant>/content/snippets/<file>.mdx. The plugin from @nebula-docs/mdx
- * wires both build-time (here) and editor-time (Platform) callers.
+ * Mintlify-style auto-imports: tenants write `<Callout>` or `<Card>` in
+ * any MDX file (page or snippet) without an `import` line; the plugin
+ * walks the AST, collects unimported component-name JSX tags, and
+ * prepends `import { ... } from "@nebula-docs/components"` with a
+ * properly populated `data.estree` (so the MDX→JS compiler emits the
+ * import — `value` alone gets dropped).
  */
-function resolveSnippetFile(spec) {
-  const candidate = spec.endsWith('.mdx')
-    ? resolve(snippetsDir, spec)
-    : resolve(snippetsDir, `${spec}.mdx`);
-  if (!existsSync(candidate)) return undefined;
-  return readFileSync(candidate, 'utf8');
-}
+const NEBULA_COMPONENTS = '@nebula-docs/components';
+const autoImportComponents = {
+  Accordion: NEBULA_COMPONENTS,
+  AccordionGroup: NEBULA_COMPONENTS,
+  Badge: NEBULA_COMPONENTS,
+  Callout: NEBULA_COMPONENTS,
+  Card: NEBULA_COMPONENTS,
+  CardGroup: NEBULA_COMPONENTS,
+  Check: NEBULA_COMPONENTS,
+  CodeBlock: NEBULA_COMPONENTS,
+  CodeGroup: NEBULA_COMPONENTS,
+  Column: NEBULA_COMPONENTS,
+  Columns: NEBULA_COMPONENTS,
+  Danger: NEBULA_COMPONENTS,
+  Expandable: NEBULA_COMPONENTS,
+  Frame: NEBULA_COMPONENTS,
+  Icon: NEBULA_COMPONENTS,
+  Info: NEBULA_COMPONENTS,
+  Mermaid: NEBULA_COMPONENTS,
+  Note: NEBULA_COMPONENTS,
+  ParamField: NEBULA_COMPONENTS,
+  RequestExample: NEBULA_COMPONENTS,
+  ResponseExample: NEBULA_COMPONENTS,
+  ResponseField: NEBULA_COMPONENTS,
+  Step: NEBULA_COMPONENTS,
+  Steps: NEBULA_COMPONENTS,
+  Tab: NEBULA_COMPONENTS,
+  Tabs: NEBULA_COMPONENTS,
+  Tip: NEBULA_COMPONENTS,
+  Tree: NEBULA_COMPONENTS,
+  Update: NEBULA_COMPONENTS,
+  Warning: NEBULA_COMPONENTS,
+};
 
 export default defineConfig({
   root: here,
@@ -40,18 +95,27 @@ export default defineConfig({
   trailingSlash: 'never',
   integrations: [
     mdx({
-      remarkPlugins: [[remarkSnippets, { resolveFile: resolveSnippetFile }]],
+      remarkPlugins: [
+        [remarkAutoComponentImports, { components: autoImportComponents }],
+      ],
     }),
     react(),
   ],
   vite: {
     plugins: [tailwindcss()],
     resolve: {
-      alias: {
+      alias: [
         // tenant-relative absolute paths so MDX `<img src="/assets/...">` and
         // anything that imports from the tenant works under both dev and build.
-        '@tenant': tenantRoot,
-      },
+        { find: '@tenant', replacement: tenantRoot },
+        // Workspace package — MDX files in the tenant repo `import { Callout }
+        // from "@nebula-docs/components"` (auto-injected by the plugin) but
+        // the tenant repo doesn't have node_modules for it. Alias straight to
+        // the workspace package's entry so the resolver finds it regardless
+        // of where the import is declared.
+        { find: '@nebula-docs/components', replacement: nebulaComponentsEntry },
+        ...snippetAliases,
+      ],
     },
     server: {
       fs: {

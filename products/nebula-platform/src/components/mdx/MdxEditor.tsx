@@ -10,8 +10,21 @@ import { MdxCallout } from './MdxCalloutNode';
 import { MdxCard } from './MdxCardNode';
 import { MdxCodeBlock } from './MdxCodeBlockNode';
 import { MdxFrame } from './MdxFrameNode';
+import { MdxAccordion, MdxAccordionGroup } from './MdxAccordionNode';
+import {
+  MdxParamField,
+  MdxRequestExample,
+  MdxResponseExample,
+  MdxResponseField,
+} from './MdxApiNodes';
+import { MdxBadge } from './MdxBadgeNode';
+import { MdxCardGroup, MdxColumn, MdxColumns } from './MdxColumnsNode';
+import { MdxExpandable } from './MdxExpandableNode';
+import { MdxMermaid } from './MdxMermaidNode';
 import { MdxRaw } from './MdxRawNode';
+import { MdxTree, MdxTreeFile, MdxTreeFolder } from './MdxTreeNode';
 import { MdxStep, MdxSteps } from './MdxStepsNode';
+import { MdxTab, MdxTabs } from './MdxTabsNode';
 import { MdxUpdate } from './MdxUpdateNode';
 import { SlashCommand } from './slashCommand';
 
@@ -38,6 +51,23 @@ export function MdxEditor({
       MdxUpdate,
       MdxSteps,
       MdxStep,
+      MdxTabs,
+      MdxTab,
+      MdxAccordionGroup,
+      MdxAccordion,
+      MdxColumns,
+      MdxColumn,
+      MdxCardGroup,
+      MdxExpandable,
+      MdxTree,
+      MdxTreeFolder,
+      MdxTreeFile,
+      MdxParamField,
+      MdxResponseField,
+      MdxRequestExample,
+      MdxResponseExample,
+      MdxMermaid,
+      MdxBadge,
       MdxRaw,
       SlashCommand,
       Placeholder.configure({

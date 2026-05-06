@@ -14,7 +14,7 @@ import type {
   Text,
   ThematicBreak,
 } from 'mdast';
-import type { MdxJsxFlowElement } from 'mdast-util-mdx';
+import type { MdxJsxFlowElement, MdxJsxTextElement } from 'mdast-util-mdx';
 import { parseMdx } from '@nebula-docs/mdx';
 
 const CALLOUT_NAMES = new Set([
@@ -111,6 +111,22 @@ function convertBlock(node: RootContent, source: string): TiptapNode | null {
       if (name === 'Frame') return convertSimpleBlock(jsx, source, 'mdxFrame');
       if (name === 'Update') return convertSimpleBlock(jsx, source, 'mdxUpdate');
       if (name === 'Steps') return convertSteps(jsx, source);
+      if (name === 'Tabs') return convertTabs(jsx, source);
+      if (name === 'Accordion') return convertAccordion(jsx, source);
+      if (name === 'AccordionGroup') return convertAccordionGroup(jsx, source);
+      if (name === 'Columns') return convertColumns(jsx, source);
+      if (name === 'CardGroup') return convertCardGroup(jsx, source);
+      if (name === 'Expandable') return convertExpandable(jsx, source);
+      if (name === 'Tree') return convertTree(jsx, source);
+      if (name === 'ParamField')
+        return convertGenericBlock(jsx, source, 'mdxParamField');
+      if (name === 'ResponseField')
+        return convertGenericBlock(jsx, source, 'mdxResponseField');
+      if (name === 'RequestExample')
+        return convertGenericBlock(jsx, source, 'mdxRequestExample');
+      if (name === 'ResponseExample')
+        return convertGenericBlock(jsx, source, 'mdxResponseExample');
+      if (name === 'Mermaid') return convertMermaid(jsx, source);
       return rawBlock(node, source);
     }
     default:
@@ -160,6 +176,221 @@ function convertSteps(node: MdxJsxFlowElement, source: string): TiptapNode {
     });
   }
   return { type: 'mdxSteps', attrs, content: items };
+}
+
+function convertTabs(node: MdxJsxFlowElement, source: string): TiptapNode {
+  const attrs = extractAttrs(node);
+  const items: TiptapNode[] = [];
+  for (const child of node.children ?? []) {
+    if (
+      child.type === 'mdxJsxFlowElement' &&
+      (child as MdxJsxFlowElement).name === 'Tab'
+    ) {
+      const tabNode = child as MdxJsxFlowElement;
+      const tabAttrs = extractAttrs(tabNode);
+      const tabContent: TiptapNode[] = [];
+      for (const tc of tabNode.children ?? []) {
+        const conv = convertBlock(tc as RootContent, source);
+        if (conv) tabContent.push(conv);
+      }
+      if (tabContent.length === 0) tabContent.push({ type: 'paragraph' });
+      items.push({ type: 'mdxTab', attrs: tabAttrs, content: tabContent });
+    }
+  }
+  if (items.length === 0) {
+    items.push({
+      type: 'mdxTab',
+      attrs: { title: null },
+      content: [{ type: 'paragraph' }],
+    });
+  }
+  return { type: 'mdxTabs', attrs, content: items };
+}
+
+function convertAccordion(node: MdxJsxFlowElement, source: string): TiptapNode {
+  const attrs = extractAttrs(node);
+  const content: TiptapNode[] = [];
+  for (const child of node.children ?? []) {
+    const conv = convertBlock(child as RootContent, source);
+    if (conv) content.push(conv);
+  }
+  if (content.length === 0) content.push({ type: 'paragraph' });
+  return { type: 'mdxAccordion', attrs, content };
+}
+
+function convertAccordionGroup(
+  node: MdxJsxFlowElement,
+  source: string,
+): TiptapNode {
+  const items: TiptapNode[] = [];
+  for (const child of node.children ?? []) {
+    if (
+      child.type === 'mdxJsxFlowElement' &&
+      (child as MdxJsxFlowElement).name === 'Accordion'
+    ) {
+      items.push(convertAccordion(child as MdxJsxFlowElement, source));
+    }
+  }
+  if (items.length === 0) {
+    items.push({
+      type: 'mdxAccordion',
+      attrs: { title: null },
+      content: [{ type: 'paragraph' }],
+    });
+  }
+  return { type: 'mdxAccordionGroup', content: items };
+}
+
+function convertColumns(node: MdxJsxFlowElement, source: string): TiptapNode {
+  const attrs = extractAttrs(node);
+  const items: TiptapNode[] = [];
+  for (const child of node.children ?? []) {
+    if (
+      child.type === 'mdxJsxFlowElement' &&
+      (child as MdxJsxFlowElement).name === 'Column'
+    ) {
+      const colNode = child as MdxJsxFlowElement;
+      const colContent: TiptapNode[] = [];
+      for (const cc of colNode.children ?? []) {
+        const conv = convertBlock(cc as RootContent, source);
+        if (conv) colContent.push(conv);
+      }
+      if (colContent.length === 0) colContent.push({ type: 'paragraph' });
+      items.push({ type: 'mdxColumn', content: colContent });
+    }
+  }
+  if (items.length === 0) {
+    items.push({ type: 'mdxColumn', content: [{ type: 'paragraph' }] });
+  }
+  return { type: 'mdxColumns', attrs, content: items };
+}
+
+function convertCardGroup(node: MdxJsxFlowElement, source: string): TiptapNode {
+  const attrs = extractAttrs(node);
+  const cards: TiptapNode[] = [];
+  for (const child of node.children ?? []) {
+    if (
+      child.type === 'mdxJsxFlowElement' &&
+      (child as MdxJsxFlowElement).name === 'Card'
+    ) {
+      cards.push(convertSimpleBlock(child as MdxJsxFlowElement, source, 'mdxCard'));
+    }
+  }
+  if (cards.length === 0) {
+    cards.push({
+      type: 'mdxCard',
+      attrs: { title: 'Card title' },
+      content: [{ type: 'paragraph' }],
+    });
+  }
+  return { type: 'mdxCardGroup', attrs, content: cards };
+}
+
+function convertExpandable(
+  node: MdxJsxFlowElement,
+  source: string,
+): TiptapNode {
+  const attrs = extractAttrs(node);
+  const content: TiptapNode[] = [];
+  for (const child of node.children ?? []) {
+    const conv = convertBlock(child as RootContent, source);
+    if (conv) content.push(conv);
+  }
+  if (content.length === 0) content.push({ type: 'paragraph' });
+  return { type: 'mdxExpandable', attrs, content };
+}
+
+function convertTree(node: MdxJsxFlowElement, source: string): TiptapNode {
+  const items = collectTreeItems(node, source);
+  return { type: 'mdxTree', content: items };
+}
+
+function convertGenericBlock(
+  node: MdxJsxFlowElement,
+  source: string,
+  type: string,
+): TiptapNode {
+  const attrs = extractAttrs(node);
+  const content: TiptapNode[] = [];
+  for (const child of node.children ?? []) {
+    const conv = convertBlock(child as RootContent, source);
+    if (conv) content.push(conv);
+  }
+  if (content.length === 0) content.push({ type: 'paragraph' });
+  return { type, attrs, content };
+}
+
+function convertMermaid(node: MdxJsxFlowElement, source: string): TiptapNode {
+  const rawAttrs = extractAttrs(node);
+  let chart = '';
+  if (typeof rawAttrs.chart === 'string') {
+    chart = rawAttrs.chart;
+  } else if (
+    rawAttrs.chart &&
+    typeof rawAttrs.chart === 'object' &&
+    '__expression' in rawAttrs.chart &&
+    typeof (rawAttrs.chart as { __expression: unknown }).__expression === 'string'
+  ) {
+    // Try to parse the expression as a JSON-quoted string or a template literal.
+    const raw = (rawAttrs.chart as { __expression: string }).__expression.trim();
+    try {
+      chart = JSON.parse(raw);
+    } catch {
+      // Strip surrounding backticks if a template literal.
+      chart = raw.replace(/^`/, '').replace(/`$/, '');
+    }
+  } else {
+    // No chart attribute — pull text from the JSX body.
+    chart = extractTextChildren(node, source).trim();
+  }
+  return { type: 'mdxMermaid', attrs: { chart } };
+}
+
+function extractTextChildren(
+  node: MdxJsxFlowElement,
+  source: string,
+): string {
+  const parts: string[] = [];
+  for (const child of node.children ?? []) {
+    if (child.type === 'paragraph') {
+      const start = child.position?.start?.offset;
+      const end = child.position?.end?.offset;
+      if (start != null && end != null) {
+        parts.push(source.slice(start, end));
+      }
+    } else if (child.type === 'mdxFlowExpression') {
+      const expr = (child as { value?: string }).value ?? '';
+      try {
+        parts.push(JSON.parse(expr.trim()));
+      } catch {
+        parts.push(expr.replace(/^`/, '').replace(/`$/, ''));
+      }
+    }
+  }
+  return parts.join('\n');
+}
+
+function collectTreeItems(
+  parent: MdxJsxFlowElement,
+  source: string,
+): TiptapNode[] {
+  const items: TiptapNode[] = [];
+  for (const child of parent.children ?? []) {
+    if (child.type !== 'mdxJsxFlowElement') continue;
+    const jsx = child as MdxJsxFlowElement;
+    if (jsx.name === 'Tree.Folder') {
+      const attrs = extractAttrs(jsx);
+      items.push({
+        type: 'mdxTreeFolder',
+        attrs,
+        content: collectTreeItems(jsx, source),
+      });
+    } else if (jsx.name === 'Tree.File') {
+      const attrs = extractAttrs(jsx);
+      items.push({ type: 'mdxTreeFile', attrs });
+    }
+  }
+  return items;
 }
 
 function convertCallout(node: MdxJsxFlowElement, source: string): TiptapNode {
@@ -282,9 +513,31 @@ function convertInlineNode(
       return [{ type: 'text', text: node.value, marks: [...marks, { type: 'code' }] }];
     case 'break':
       return [{ type: 'hardBreak' }];
+    case 'mdxJsxTextElement': {
+      const jsx = node as MdxJsxTextElement;
+      if (jsx.name === 'Badge') return [convertInlineBadge(jsx)];
+      return null;
+    }
     default:
       return null;
   }
+}
+
+function convertInlineBadge(node: MdxJsxTextElement): TiptapNode {
+  const attrs: Record<string, unknown> = {};
+  for (const a of node.attributes ?? []) {
+    if (a.type !== 'mdxJsxAttribute') continue;
+    if (typeof a.value === 'string') attrs[a.name] = a.value;
+    else if (a.value === null) attrs[a.name] = true;
+  }
+  let label = '';
+  for (const child of node.children ?? []) {
+    if (child.type === 'text') label += child.value;
+  }
+  return {
+    type: 'mdxBadge',
+    attrs: { ...attrs, label: label.trim() },
+  };
 }
 
 function textNode(node: Text, marks: TiptapMark[]): TiptapNode {

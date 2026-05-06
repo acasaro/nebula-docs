@@ -135,16 +135,26 @@ export async function createBranch(
   return { name: newBranch, sha: base.object.sha };
 }
 
-export interface FileChange {
-  path: string;
-  /** UTF-8 file content. */
-  content: string;
-}
+export type FileChange =
+  | {
+      path: string;
+      /** UTF-8 file content. */
+      content: string;
+      delete?: false;
+    }
+  | {
+      path: string;
+      /** When true, the path is removed from the tree in this commit. */
+      delete: true;
+    };
 
 /**
  * Commit a batch of file changes to a branch as a single commit. Uses the
  * Git Data API (blobs → tree → commit → updateRef) so all files land
  * together rather than as N individual commits.
+ *
+ * Deletions are expressed by passing a tree entry with `sha: null` against
+ * the base tree — GitHub interprets that as "remove this path".
  */
 export async function commitFiles(
   installationId: number,
@@ -167,23 +177,42 @@ export async function commitFiles(
     repo,
     commit_sha: parentSha,
   });
-  const blobs = await Promise.all(
-    changes.map((c) =>
+
+  const upserts = changes.filter(
+    (c): c is FileChange & { content: string; delete?: false } => c.delete !== true,
+  );
+  const deletions = changes.filter(
+    (c): c is FileChange & { delete: true } => c.delete === true,
+  );
+
+  const upsertBlobs = await Promise.all(
+    upserts.map((c) =>
       oct.git
         .createBlob({ owner, repo, content: c.content, encoding: 'utf-8' })
         .then((res) => ({ path: c.path, sha: res.data.sha })),
     ),
   );
+
+  const treeEntries: Parameters<typeof oct.git.createTree>[0]['tree'] = [
+    ...upsertBlobs.map((b) => ({
+      path: b.path,
+      mode: '100644' as const,
+      type: 'blob' as const,
+      sha: b.sha,
+    })),
+    ...deletions.map((d) => ({
+      path: d.path,
+      mode: '100644' as const,
+      type: 'blob' as const,
+      sha: null,
+    })),
+  ];
+
   const { data: tree } = await oct.git.createTree({
     owner,
     repo,
     base_tree: parentCommit.tree.sha,
-    tree: blobs.map((b) => ({
-      path: b.path,
-      mode: '100644',
-      type: 'blob',
-      sha: b.sha,
-    })),
+    tree: treeEntries,
   });
   const { data: commit } = await oct.git.createCommit({
     owner,

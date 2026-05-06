@@ -1,0 +1,4 @@
+.astro/
+.nebula/
+dist/
+node_modules/

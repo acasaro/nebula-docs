@@ -1,0 +1,83 @@
+---
+import SidebarGroup from './SidebarGroup.astro';
+
+interface NestedGroup {
+  group: string;
+  pages: Array<string | NestedGroup>;
+}
+
+interface NavTab {
+  tab: string;
+  icon?: string;
+  groups?: NestedGroup[];
+}
+
+interface Props {
+  docs: { navigation?: { tabs?: NavTab[] } };
+  currentSlug: string;
+}
+
+const { docs, currentSlug } = Astro.props as Props;
+const tabs = docs.navigation?.tabs ?? [];
+---
+<nav class="nebula-sidebar" aria-label="Documentation">
+  {tabs.map((tab) => (
+    <div class="nebula-sidebar-tab">
+      <h2 class="nebula-sidebar-tab-title">{tab.tab}</h2>
+      {(tab.groups ?? []).map((group) => (
+        <SidebarGroup group={group} currentSlug={currentSlug} />
+      ))}
+    </div>
+  ))}
+</nav>
+
+<style is:global>
+  .nebula-sidebar {
+    font-size: var(--mcoe-font-size-sm);
+  }
+  .nebula-sidebar-tab + .nebula-sidebar-tab {
+    margin-top: var(--mcoe-space-6);
+  }
+  .nebula-sidebar-tab-title {
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-size: var(--mcoe-font-size-xs);
+    color: var(--mcoe-text-secondary);
+    margin: 0 0 var(--mcoe-space-3);
+    font-weight: var(--mcoe-font-weight-bold);
+  }
+  .nebula-sidebar-group-title {
+    font-weight: var(--mcoe-font-weight-medium);
+    color: var(--mcoe-text-primary);
+    margin: var(--mcoe-space-3) 0 var(--mcoe-space-2);
+  }
+  .nebula-sidebar-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    border-left: 1px solid var(--mcoe-border-muted);
+  }
+  .nebula-sidebar-item {
+    margin: 0;
+  }
+  .nebula-sidebar-item a {
+    display: block;
+    padding: var(--mcoe-space-1) var(--mcoe-space-3);
+    margin-left: -1px;
+    color: var(--mcoe-text-secondary);
+    border-left: 2px solid transparent;
+    line-height: 1.5;
+  }
+  .nebula-sidebar-item a:hover {
+    color: var(--mcoe-text-primary);
+    text-decoration: none;
+  }
+  .nebula-sidebar-item a[aria-current='page'] {
+    color: var(--mcoe-brand-primary);
+    border-left-color: var(--mcoe-brand-primary);
+    font-weight: var(--mcoe-font-weight-medium);
+  }
+  .nebula-sidebar-nested {
+    margin-left: var(--mcoe-space-3);
+  }
+</style>

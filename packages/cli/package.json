@@ -1,0 +1,47 @@
+{
+  "name": "@nebula-docs/cli",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Multi-tenant docs renderer + tooling for Nebula Docs. Astro + MDX + React + Tailwind v4.",
+  "bin": {
+    "nebula-docs": "./bin/nebula-docs.mjs"
+  },
+  "files": [
+    "bin",
+    "src",
+    "schemas"
+  ],
+  "exports": {
+    ".": "./src/index.ts",
+    "./schemas/docs": "./schemas/docs.schema.json",
+    "./schemas/theme": "./schemas/theme.schema.json"
+  },
+  "scripts": {
+    "dev": "node --import tsx ./bin/nebula-docs.mjs dev",
+    "build": "node --import tsx ./bin/nebula-docs.mjs build",
+    "preview": "node --import tsx ./bin/nebula-docs.mjs preview",
+    "validate": "node --import tsx ./bin/nebula-docs.mjs validate",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@astrojs/mdx": "^5.0.4",
+    "@astrojs/react": "^5.0.4",
+    "@nebula-docs/components": "workspace:*",
+    "@nebula-docs/mdx": "workspace:*",
+    "@nebula-docs/schemas": "workspace:*",
+    "@nebula-docs/theme": "workspace:*",
+    "@tailwindcss/vite": "^4.2.4",
+    "astro": "^6.2.2",
+    "react": "^19.2.3",
+    "react-dom": "^19.2.3",
+    "tailwindcss": "^4.2.4"
+  },
+  "devDependencies": {
+    "@types/node": "^25.0.1",
+    "@types/react": "^19.2.7",
+    "@types/react-dom": "^19.2.3",
+    "tsx": "^4.20.0",
+    "typescript": "^5.9.3"
+  }
+}

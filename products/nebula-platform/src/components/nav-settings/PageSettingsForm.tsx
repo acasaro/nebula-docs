@@ -9,41 +9,34 @@ import {
   Tag,
   Type,
 } from 'lucide-react';
-import { useState } from 'react';
 import type { IconValue } from '@/components/IconField';
 import { SelectRow, TextRow, ToggleRow } from './FormRow';
 import { IconRow } from './IconRow';
 import { KeywordsRow } from './KeywordsRow';
 
-interface PageSettingsState {
-  title: string;
-  slug: string;
+export interface PageConfigValues {
   externalUrl: string;
-  description: string;
   icon: IconValue;
   sidebarTitle: string;
-  ogImage: string;
-  tagEnabled: boolean;
   tag: string;
   hidden: boolean;
+}
+
+export interface PageFrontmatterValues {
+  title: string;
+  description: string;
+  ogImage: string;
   keywords: string[];
   mode: string;
 }
 
-const INITIAL_STATE: PageSettingsState = {
-  title: '',
-  slug: '',
-  externalUrl: '',
-  description: '',
-  icon: {},
-  sidebarTitle: '',
-  ogImage: '',
-  tagEnabled: false,
-  tag: '',
-  hidden: false,
-  keywords: [],
-  mode: 'default',
-};
+interface PageSettingsFormProps {
+  slug: string;
+  configValues: PageConfigValues;
+  frontmatterValues: PageFrontmatterValues;
+  onConfigChange: (patch: Partial<PageConfigValues>) => void;
+  onFrontmatterChange: (patch: Partial<PageFrontmatterValues>) => void;
+}
 
 const MODE_OPTIONS = [
   { value: 'default', label: 'Default' },
@@ -52,90 +45,101 @@ const MODE_OPTIONS = [
 ] as const;
 
 /**
- * Page settings form — 11 fields drawn from `docs.json`'s page-object entry
- * and the MDX file's frontmatter. Phase A is local-state only; Phase B will
- * hydrate from the two sources and Phase C will write back.
+ * Page settings form — fields split between `docs.json` page-object entries
+ * (icon, sidebarTitle, externalUrl, tag, hidden) and the file's MDX
+ * frontmatter (title, description, ogImage, keywords, mode). The parent
+ * routes patches by field destination.
  */
-export function PageSettingsForm() {
-  const [state, setState] = useState<PageSettingsState>(INITIAL_STATE);
-  const set = <K extends keyof PageSettingsState>(key: K, value: PageSettingsState[K]) =>
-    setState((prev) => ({ ...prev, [key]: value }));
+export function PageSettingsForm({
+  slug,
+  configValues,
+  frontmatterValues,
+  onConfigChange,
+  onFrontmatterChange,
+}: PageSettingsFormProps) {
+  const tagEnabled = configValues.tag.length > 0;
 
   return (
     <div className="flex flex-col gap-5">
       <TextRow
         label="Title"
         icon={Type}
-        value={state.title}
-        onChange={(v) => set('title', v)}
+        value={frontmatterValues.title}
+        onChange={(v) => onFrontmatterChange({ title: v })}
         placeholder="Page title"
       />
       <TextRow
         label="Slug"
         icon={LinkIcon}
-        value={state.slug}
-        onChange={(v) => set('slug', v)}
+        value={slug}
+        onChange={() => undefined}
         placeholder="path/to/page"
       />
       <TextRow
         label="External URL"
         icon={ExternalLink}
         type="url"
-        value={state.externalUrl}
-        onChange={(v) => set('externalUrl', v)}
+        value={configValues.externalUrl}
+        onChange={(v) => onConfigChange({ externalUrl: v })}
         placeholder="https://…"
       />
       <TextRow
         label="Description"
         icon={AlignLeft}
-        value={state.description}
-        onChange={(v) => set('description', v)}
+        value={frontmatterValues.description}
+        onChange={(v) => onFrontmatterChange({ description: v })}
         placeholder="Short summary"
       />
-      <IconRow value={state.icon} onChange={(v) => set('icon', v)} />
+      <IconRow
+        value={configValues.icon}
+        onChange={(v) => onConfigChange({ icon: v })}
+      />
       <TextRow
         label="Sidebar title"
         icon={PanelLeft}
-        value={state.sidebarTitle}
-        onChange={(v) => set('sidebarTitle', v)}
+        value={configValues.sidebarTitle}
+        onChange={(v) => onConfigChange({ sidebarTitle: v })}
         placeholder="Shown in the sidebar"
       />
       <TextRow
         label="OG Image URL"
         icon={ImageIcon}
         type="url"
-        value={state.ogImage}
-        onChange={(v) => set('ogImage', v)}
+        value={frontmatterValues.ogImage}
+        onChange={(v) => onFrontmatterChange({ ogImage: v })}
         placeholder="https://…"
       />
       <ToggleRow
         label="Tag"
         icon={Tag}
-        checked={state.tagEnabled}
-        onChange={(v) => set('tagEnabled', v)}
+        checked={tagEnabled}
+        onChange={(v) => onConfigChange({ tag: v ? configValues.tag || ' ' : '' })}
       />
-      {state.tagEnabled ? (
+      {tagEnabled ? (
         <TextRow
           label="Tag value"
           icon={Tag}
-          value={state.tag}
-          onChange={(v) => set('tag', v)}
+          value={configValues.tag}
+          onChange={(v) => onConfigChange({ tag: v })}
           placeholder="NEW, BETA, …"
         />
       ) : null}
       <ToggleRow
         label="Hidden"
         icon={EyeOff}
-        checked={state.hidden}
-        onChange={(v) => set('hidden', v)}
+        checked={configValues.hidden}
+        onChange={(v) => onConfigChange({ hidden: v })}
         labels={['Yes', 'No']}
       />
-      <KeywordsRow value={state.keywords} onChange={(v) => set('keywords', v)} />
+      <KeywordsRow
+        value={frontmatterValues.keywords}
+        onChange={(v) => onFrontmatterChange({ keywords: v })}
+      />
       <SelectRow
         label="Mode"
         icon={Settings2}
-        value={state.mode}
-        onChange={(v) => set('mode', v)}
+        value={frontmatterValues.mode}
+        onChange={(v) => onFrontmatterChange({ mode: v })}
         options={MODE_OPTIONS}
         placeholder="Default"
       />

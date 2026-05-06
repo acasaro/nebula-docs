@@ -7,9 +7,21 @@ import {
   Heading1,
   Heading2,
   Heading3,
+  ArrowDownLeft,
+  ArrowUpRight,
+  Columns2,
+  FolderTree,
+  GitGraph,
   Image,
   Info,
+  LayoutGrid,
+  LayoutPanelTop,
   Lightbulb,
+  Maximize2,
+  PanelTopOpen,
+  ShieldCheck,
+  Sliders,
+  Tag as TagIcon,
   ListOrdered,
   List as ListUnordered,
   Minus,
@@ -333,6 +345,276 @@ export const SLASH_ITEMS: SlashItem[] = [
           type: 'mdxFrame',
           attrs: {},
           content: [{ type: 'paragraph' }],
+        })
+        .run();
+    },
+  },
+  {
+    id: 'columns',
+    label: 'Columns',
+    description: 'Side-by-side content layout',
+    Icon: Columns2,
+    keywords: ['columns', 'column', 'grid', 'layout'],
+    command: ({ editor, range }) => {
+      editor
+        .chain()
+        .focus()
+        .deleteRange(range)
+        .insertContent({
+          type: 'mdxColumns',
+          attrs: { cols: 2 },
+          content: [
+            { type: 'mdxColumn', content: [{ type: 'paragraph' }] },
+            { type: 'mdxColumn', content: [{ type: 'paragraph' }] },
+          ],
+        })
+        .run();
+    },
+  },
+  {
+    id: 'card-group',
+    label: 'Card group',
+    description: 'Grid of cards',
+    Icon: LayoutGrid,
+    keywords: ['cards', 'group', 'grid', 'cardgroup'],
+    command: ({ editor, range }) => {
+      editor
+        .chain()
+        .focus()
+        .deleteRange(range)
+        .insertContent({
+          type: 'mdxCardGroup',
+          attrs: { cols: 2 },
+          content: [
+            {
+              type: 'mdxCard',
+              attrs: { title: 'Card title' },
+              content: [{ type: 'paragraph' }],
+            },
+            {
+              type: 'mdxCard',
+              attrs: { title: 'Card title' },
+              content: [{ type: 'paragraph' }],
+            },
+          ],
+        })
+        .run();
+    },
+  },
+  {
+    id: 'param-field',
+    label: 'Param field',
+    description: 'API request parameter',
+    Icon: Sliders,
+    keywords: ['param', 'parameter', 'api', 'field'],
+    command: ({ editor, range }) => {
+      editor
+        .chain()
+        .focus()
+        .deleteRange(range)
+        .insertContent({
+          type: 'mdxParamField',
+          attrs: { path: 'name', type: 'string' },
+          content: [{ type: 'paragraph' }],
+        })
+        .run();
+    },
+  },
+  {
+    id: 'response-field',
+    label: 'Response field',
+    description: 'API response field',
+    Icon: ShieldCheck,
+    keywords: ['response', 'api', 'field'],
+    command: ({ editor, range }) => {
+      editor
+        .chain()
+        .focus()
+        .deleteRange(range)
+        .insertContent({
+          type: 'mdxResponseField',
+          attrs: { name: 'name', type: 'string' },
+          content: [{ type: 'paragraph' }],
+        })
+        .run();
+    },
+  },
+  {
+    id: 'request-example',
+    label: 'Request example',
+    description: 'API request code sample',
+    Icon: ArrowUpRight,
+    keywords: ['request', 'example', 'api', 'sample'],
+    command: ({ editor, range }) => {
+      editor
+        .chain()
+        .focus()
+        .deleteRange(range)
+        .insertContent({
+          type: 'mdxRequestExample',
+          attrs: {},
+          content: [
+            {
+              type: 'codeBlock',
+              attrs: { language: 'bash' },
+              content: [{ type: 'text', text: 'curl https://api.example.com' }],
+            },
+          ],
+        })
+        .run();
+    },
+  },
+  {
+    id: 'response-example',
+    label: 'Response example',
+    description: 'API response code sample',
+    Icon: ArrowDownLeft,
+    keywords: ['response', 'example', 'api', 'sample'],
+    command: ({ editor, range }) => {
+      editor
+        .chain()
+        .focus()
+        .deleteRange(range)
+        .insertContent({
+          type: 'mdxResponseExample',
+          attrs: {},
+          content: [
+            {
+              type: 'codeBlock',
+              attrs: { language: 'json' },
+              content: [{ type: 'text', text: '{}' }],
+            },
+          ],
+        })
+        .run();
+    },
+  },
+  {
+    id: 'badge',
+    label: 'Badge',
+    description: 'Inline pill/tag label',
+    Icon: TagIcon,
+    keywords: ['badge', 'pill', 'tag', 'label'],
+    command: ({ editor, range }) => {
+      editor
+        .chain()
+        .focus()
+        .deleteRange(range)
+        .insertContent({
+          type: 'mdxBadge',
+          attrs: { label: 'Badge', color: 'gray' },
+        })
+        .run();
+    },
+  },
+  {
+    id: 'mermaid',
+    label: 'Mermaid diagram',
+    description: 'Flowchart or graph',
+    Icon: GitGraph,
+    keywords: ['mermaid', 'diagram', 'flowchart', 'graph'],
+    command: ({ editor, range }) => {
+      editor
+        .chain()
+        .focus()
+        .deleteRange(range)
+        .insertContent({
+          type: 'mdxMermaid',
+          attrs: { chart: 'graph TD;\n  A-->B;' },
+        })
+        .run();
+    },
+  },
+  {
+    id: 'tree',
+    label: 'File tree',
+    description: 'Folder/file hierarchy diagram',
+    Icon: FolderTree,
+    keywords: ['tree', 'file', 'folder', 'hierarchy'],
+    command: ({ editor, range }) => {
+      editor
+        .chain()
+        .focus()
+        .deleteRange(range)
+        .insertContent({
+          type: 'mdxTree',
+          content: [
+            {
+              type: 'mdxTreeFolder',
+              attrs: { name: 'src' },
+              content: [
+                { type: 'mdxTreeFile', attrs: { name: 'index.ts' } },
+              ],
+            },
+          ],
+        })
+        .run();
+    },
+  },
+  {
+    id: 'expandable',
+    label: 'Expandable',
+    description: 'Show/hide content section',
+    Icon: Maximize2,
+    keywords: ['expandable', 'collapse', 'show', 'hide'],
+    command: ({ editor, range }) => {
+      editor
+        .chain()
+        .focus()
+        .deleteRange(range)
+        .insertContent({
+          type: 'mdxExpandable',
+          attrs: { title: 'details' },
+          content: [{ type: 'paragraph' }],
+        })
+        .run();
+    },
+  },
+  {
+    id: 'accordion',
+    label: 'Accordion',
+    description: 'Collapsible disclosure',
+    Icon: PanelTopOpen,
+    keywords: ['accordion', 'disclosure', 'collapse', 'expand'],
+    command: ({ editor, range }) => {
+      editor
+        .chain()
+        .focus()
+        .deleteRange(range)
+        .insertContent({
+          type: 'mdxAccordion',
+          attrs: { title: 'Accordion title' },
+          content: [{ type: 'paragraph' }],
+        })
+        .run();
+    },
+  },
+  {
+    id: 'tabs',
+    label: 'Tabs',
+    description: 'Switchable content panels',
+    Icon: LayoutPanelTop,
+    keywords: ['tabs', 'tab'],
+    command: ({ editor, range }) => {
+      editor
+        .chain()
+        .focus()
+        .deleteRange(range)
+        .insertContent({
+          type: 'mdxTabs',
+          attrs: {},
+          content: [
+            {
+              type: 'mdxTab',
+              attrs: { title: 'First tab' },
+              content: [{ type: 'paragraph' }],
+            },
+            {
+              type: 'mdxTab',
+              attrs: { title: 'Second tab' },
+              content: [{ type: 'paragraph' }],
+            },
+          ],
         })
         .run();
     },

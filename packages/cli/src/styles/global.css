@@ -1,0 +1,110 @@
+@import "tailwindcss";
+
+/* Composed at startup by prepareAstroEnv (src/cli/prepareAstro.mjs):
+     globalTokens + base theme + tenant theme.json overrides → CSS vars.
+   Generated to packages/cli/.nebula/tokens.css; gitignored. */
+@import "../../.nebula/tokens.css";
+
+:root {
+  color-scheme: light;
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  font-family: var(--mcoe-font-family, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif);
+  color: var(--mcoe-text-primary);
+  background: var(--mcoe-bg-primary);
+}
+
+body {
+  min-height: 100vh;
+  font-size: var(--mcoe-font-size-base);
+  line-height: 1.6;
+}
+
+a {
+  color: var(--mcoe-text-link);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+/* Default content styling — Tailwind utilities still take precedence. */
+.nebula-prose h1 {
+  font-size: var(--mcoe-font-size-3xl);
+  font-weight: var(--mcoe-font-weight-bold);
+  color: var(--mcoe-text-heading);
+  margin: 0 0 var(--mcoe-space-5);
+  letter-spacing: -0.02em;
+}
+
+.nebula-prose h2 {
+  font-size: var(--mcoe-font-size-2xl);
+  font-weight: var(--mcoe-font-weight-bold);
+  color: var(--mcoe-text-heading);
+  margin: var(--mcoe-space-7) 0 var(--mcoe-space-4);
+  letter-spacing: -0.01em;
+}
+
+.nebula-prose h3 {
+  font-size: var(--mcoe-font-size-xl);
+  font-weight: var(--mcoe-font-weight-bold);
+  color: var(--mcoe-text-heading);
+  margin: var(--mcoe-space-6) 0 var(--mcoe-space-3);
+}
+
+.nebula-prose p {
+  margin: 0 0 var(--mcoe-space-4);
+  color: var(--mcoe-text-primary);
+}
+
+.nebula-prose ul,
+.nebula-prose ol {
+  margin: 0 0 var(--mcoe-space-4);
+  padding-left: var(--mcoe-space-6);
+}
+
+.nebula-prose li {
+  margin: var(--mcoe-space-2) 0;
+}
+
+.nebula-prose code {
+  font-family: var(--mcoe-font-family-mono);
+  font-size: 0.875em;
+  background: var(--mcoe-bg-tertiary);
+  padding: 0.15em 0.4em;
+  border-radius: var(--mcoe-radius-sm);
+  border: 1px solid var(--mcoe-border-muted);
+}
+
+.nebula-prose pre {
+  font-family: var(--mcoe-font-family-mono);
+  background: var(--mcoe-code-background);
+  color: var(--mcoe-code-plain-text);
+  padding: var(--mcoe-space-4);
+  border-radius: var(--mcoe-radius);
+  overflow-x: auto;
+  margin: 0 0 var(--mcoe-space-4);
+}
+
+.nebula-prose pre code {
+  background: transparent;
+  border: 0;
+  padding: 0;
+  color: inherit;
+}
+
+.nebula-prose blockquote {
+  border-left: 3px solid var(--mcoe-border-default);
+  padding-left: var(--mcoe-space-4);
+  margin: 0 0 var(--mcoe-space-4);
+  color: var(--mcoe-text-secondary);
+}

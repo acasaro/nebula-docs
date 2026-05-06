@@ -130,14 +130,28 @@ GitHub webhook handler that writes events to Firestore for the SPA to consume.
 
 Multi-tenant Astro-based static site generator. Design doc: [nebula-cli.md](nebula-cli.md). All architectural decisions there are locked.
 
-**PLANNED**
+**DONE — Phase 0 (skeleton) + Phase 1 (synthetic tenant renders)**
 
-- `packages/cli/` Phase 0 bootstrap: Astro 5 + `@astrojs/mdx` + `@astrojs/react` + Tailwind v4, workspace deps wired up, `pnpm --filter @nebula-docs/cli dev` renders a "Hello Nebula Docs" page on `localhost:4321`. Stubs at `bin/nebula-docs.ts` (`init` / `dev` / `build` / `preview` / `validate` / `upgrade`) and `schemas/{docs,theme}.schema.json`.
-- A separate chat is starting on this. Coordinate via this doc (and `nebula-cli.md`) before changing the design.
+- `packages/cli/` bootstrapped: Astro 6 + `@astrojs/mdx` 5 + `@astrojs/react` 5 + Tailwind v4 (via `@tailwindcss/vite`). Workspace deps wired (`@nebula-docs/{components,mdx,schemas,theme}`).
+- `bin/nebula-docs.mjs` thin dispatcher → `src/cli/{commands/*,resolveTenant.mjs,prepareAstro.mjs,paths.mjs}`. Subcommands: `dev`, `build`, `preview`, `validate` are functional; `init` and `upgrade` are signature-stubs with a help message pointing at the planned scaffold.
+- `pnpm --filter @nebula-docs/cli dev tenants/example-docs` boots Astro on `localhost:4321` rendering the synthetic tenant. `INIT_CWD` propagation in `resolveTenant.mjs` makes the relative-path arg work from the monorepo root (pnpm runs lifecycle scripts from the package dir, so naive `resolve(cwd, arg)` would fail).
+- `pnpm --filter @nebula-docs/cli build tenants/example-docs` emits `tenants/example-docs/dist/{index.html, getting-started/installation/index.html, components/{cards,tabs}/index.html, api/users/index.html}` plus the `_astro/` bundle.
+- File-routed pages via Astro 5 content collections: `src/content.config.ts` defines a `docs` collection with `glob({ pattern: ['**/*.mdx', '!snippets/**'], base: <tenant>/content })`. `src/pages/[...slug].astro` does `getStaticPaths` over the collection, mapping `entry.id === 'index'` → `/` and everything else to its id.
+- Token composition: `src/cli/prepareAstro.mjs` reads tenant `docs.json` + `theme.json`, deep-merges `theme.json.tokens` over `getThemeById(theme.base)`, and emits `packages/cli/.nebula/tokens.css` via `@nebula-docs/theme`'s `generateTokensCss`. The CLI's `src/styles/global.css` `@import`s that file. Output verified: brand-primary CSS var resolves correctly on the rendered pages.
+- Snippet resolution: `astro.config.mjs` registers `@nebula-docs/mdx`'s `remarkSnippets` plugin with a filesystem `resolveFile` that reads `<tenant>/content/snippets/<file>.mdx`. Verified end-to-end with the fixture's `<Snippet file="disclaimer" />` inlining the disclaimer Callout.
+- Layout chrome: `src/layouts/DocsLayout.astro` + `src/components/{Navbar,Sidebar,SidebarGroup,Footer}.astro` consume `docs.json` for tabs/groups/pages, navbar primary + links, footer columns + copyright. Sidebar marks the current page via `aria-current="page"`.
+- JSON Schemas published as Phase 0 stubs at `packages/cli/schemas/{docs,theme}.schema.json`. Authoritative shape will be generated from `@nebula-docs/schemas` Zod definitions in Phase 3.
+- Component map at `src/runtime/components/registry.tsx` exposes the full `@nebula-docs/components` surface to MDX. Includes `CalloutShim` that accepts both `type` (Mintlify-style) and `variant` (our component API).
+
+**OPEN — Phase 1 follow-ups**
+
+- **SSR limitation: Tabs/Steps introspection.** Astro's MDX-React pipeline pre-renders nested React components to strings before passing them to the parent, so a parent that does `Children.toArray(children).filter(isValidElement)` to read each child's props sees an empty array. Affects `Tabs`, `Steps`, `Accordion`. Phase-1 workaround: `registry.tsx` ships static-only shims (`TabsShim`, `TabShim`, `StepsShim`, `StepShim`) that bypass introspection — every panel/step renders, no interactivity, step numbers come from the Step's own marker rather than auto-incremented by Steps. Phase 3 fix: replace the shims with Astro+React island wrappers using `client:load` so React owns the full subtree.
+- **Distribution build.** The bin runs via `node --import tsx ./bin/nebula-docs.mjs` so workspace TS deps load without compilation. For npm-published consumption, Phase 6 needs to bundle (tsup/esbuild) the CLI + its workspace deps into shippable JS so `npx nebula-docs` works without tsx in the consumer's environment.
+- **Snippet path convention.** `<Snippet file="disclaimer" />` resolves to `content/snippets/disclaimer.mdx` (the file value is relative to the snippets dir, not the content dir). The fixture had `file="snippets/disclaimer"` originally; corrected. Worth a doc note in Phase 6 once the published JSON Schema enforces the convention.
 
 **DESIGN**
 
-- Phases 0–6 sequenced in `nebula-cli.md`. Phase 4 is "MCOE migration" — once the CLI is buildable for a synthetic tenant, MCOE moves off Docusaurus and becomes tenant zero.
+- Phases 2–6 sequenced in `nebula-cli.md`. Phase 4 is "MCOE migration" — now that the CLI builds for the synthetic tenant, MCOE can move off Docusaurus.
 
 ---
 

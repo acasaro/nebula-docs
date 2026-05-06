@@ -1,0 +1,211 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nebula-docs.uhg.com/docs.schema.json",
+  "title": "Nebula Docs — docs.json",
+  "description": "The contract between the Platform editor and the CLI renderer. This is a Phase 0 stub: shape only, no exhaustive validation. The authoritative schema is generated from @nebula-docs/schemas Zod definitions in Phase 3.",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["name", "navigation"],
+  "properties": {
+    "$schema": { "type": "string", "format": "uri" },
+    "name": { "type": "string", "minLength": 1 },
+    "description": { "type": "string" },
+    "favicon": { "type": "string" },
+    "logo": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "light": { "type": "string" },
+        "dark": { "type": "string" },
+        "href": { "type": "string" }
+      }
+    },
+    "theme": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "base": { "type": "string" },
+        "extends": { "type": "string" },
+        "switcherEnabled": { "type": "boolean" },
+        "switcherOptions": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "navigation": {
+      "type": "object",
+      "required": ["tabs"],
+      "properties": {
+        "tabs": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/tab" }
+        },
+        "anchors": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["anchor", "href"],
+            "properties": {
+              "anchor": { "type": "string" },
+              "href": { "type": "string" },
+              "icon": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "navbar": {
+      "type": "object",
+      "properties": {
+        "primary": {
+          "type": "object",
+          "required": ["type", "label", "href"],
+          "properties": {
+            "type": { "type": "string" },
+            "label": { "type": "string" },
+            "href": { "type": "string" }
+          }
+        },
+        "links": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["label", "href"],
+            "properties": {
+              "label": { "type": "string" },
+              "href": { "type": "string" },
+              "icon": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "footer": {
+      "type": "object",
+      "properties": {
+        "columns": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["label", "links"],
+            "properties": {
+              "label": { "type": "string" },
+              "links": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": ["label", "href"],
+                  "properties": {
+                    "label": { "type": "string" },
+                    "href": { "type": "string" }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "socials": {
+          "type": "object",
+          "additionalProperties": { "type": "string" }
+        },
+        "copyright": { "type": "string" }
+      }
+    },
+    "blog": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "path": { "type": "string" },
+        "label": { "type": "string" },
+        "icon": { "type": "string" },
+        "rss": { "type": "boolean" }
+      }
+    },
+    "search": {
+      "type": "object",
+      "properties": {
+        "provider": { "type": "string", "enum": ["pagefind"] },
+        "scopeBy": { "type": "string", "enum": ["tab", "page", "none"] }
+      }
+    },
+    "analytics": {
+      "type": "object",
+      "properties": {
+        "providers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["type"],
+            "properties": {
+              "type": { "type": "string" },
+              "config": { "type": "object" }
+            }
+          }
+        },
+        "events": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "array",
+            "items": { "type": "number" }
+          }
+        }
+      }
+    },
+    "redirects": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["from", "to"],
+        "properties": {
+          "from": { "type": "string" },
+          "to": { "type": "string" },
+          "permanent": { "type": "boolean" }
+        }
+      }
+    },
+    "errors": {
+      "type": "object",
+      "properties": {
+        "404": {
+          "type": "object",
+          "properties": {
+            "title": { "type": "string" },
+            "description": { "type": "string" }
+          }
+        }
+      }
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": true
+    }
+  },
+  "$defs": {
+    "tab": {
+      "type": "object",
+      "required": ["tab"],
+      "properties": {
+        "tab": { "type": "string" },
+        "icon": { "type": "string" },
+        "groups": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/group" }
+        }
+      }
+    },
+    "group": {
+      "type": "object",
+      "required": ["group", "pages"],
+      "properties": {
+        "group": { "type": "string" },
+        "pages": {
+          "type": "array",
+          "items": {
+            "anyOf": [
+              { "type": "string" },
+              { "$ref": "#/$defs/group" }
+            ]
+          }
+        }
+      }
+    }
+  }
+}

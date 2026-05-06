@@ -70,6 +70,38 @@ function serializeBlock(node: TiptapNode): string {
       return serializeSteps(node);
     case 'mdxStep':
       return serializeJsxBlock(node, 'Step');
+    case 'mdxTabs':
+      return serializeTabs(node);
+    case 'mdxTab':
+      return serializeJsxBlock(node, 'Tab');
+    case 'mdxAccordion':
+      return serializeJsxBlock(node, 'Accordion');
+    case 'mdxAccordionGroup':
+      return serializeAccordionGroup(node);
+    case 'mdxColumns':
+      return serializeColumns(node);
+    case 'mdxColumn':
+      return serializeJsxBlock(node, 'Column');
+    case 'mdxCardGroup':
+      return serializeCardGroup(node);
+    case 'mdxExpandable':
+      return serializeJsxBlock(node, 'Expandable');
+    case 'mdxTree':
+      return serializeTree(node);
+    case 'mdxTreeFolder':
+      return serializeTreeFolder(node);
+    case 'mdxTreeFile':
+      return serializeTreeFile(node);
+    case 'mdxParamField':
+      return serializeJsxBlock(node, 'ParamField');
+    case 'mdxResponseField':
+      return serializeJsxBlock(node, 'ResponseField');
+    case 'mdxRequestExample':
+      return serializeJsxBlock(node, 'RequestExample');
+    case 'mdxResponseExample':
+      return serializeJsxBlock(node, 'ResponseExample');
+    case 'mdxMermaid':
+      return serializeMermaid(node);
     case 'hardBreak':
       return '  \n';
     default:
@@ -129,6 +161,88 @@ function serializeSteps(node: TiptapNode): string {
   return `<Steps${attrs}>\n${stepBlocks}\n</Steps>`;
 }
 
+function serializeMermaid(node: TiptapNode): string {
+  const chart = (node.attrs?.chart as string | undefined) ?? '';
+  // JSON.stringify gives us a quoted string with escaped newlines and quotes.
+  // Wrapping it in `{ ... }` makes it a JSX expression, which `mdx-js` parses
+  // back as the original string.
+  return `<Mermaid chart={${JSON.stringify(chart)}} />`;
+}
+
+function serializeTree(node: TiptapNode): string {
+  const body = (node.content ?? [])
+    .map((child) => {
+      if (child.type === 'mdxTreeFolder') return serializeTreeFolder(child);
+      if (child.type === 'mdxTreeFile') return serializeTreeFile(child);
+      return '';
+    })
+    .filter(Boolean)
+    .join('\n');
+  return `<Tree>\n${body}\n</Tree>`;
+}
+
+function serializeTreeFolder(node: TiptapNode): string {
+  const attrs = serializeAttrs(node.attrs);
+  const body = (node.content ?? [])
+    .map((child) => {
+      if (child.type === 'mdxTreeFolder') return serializeTreeFolder(child);
+      if (child.type === 'mdxTreeFile') return serializeTreeFile(child);
+      return '';
+    })
+    .filter(Boolean)
+    .join('\n');
+  if (body) return `<Tree.Folder${attrs}>\n${body}\n</Tree.Folder>`;
+  return `<Tree.Folder${attrs} />`;
+}
+
+function serializeTreeFile(node: TiptapNode): string {
+  const attrs = serializeAttrs(node.attrs);
+  return `<Tree.File${attrs} />`;
+}
+
+function serializeColumns(node: TiptapNode): string {
+  const attrs = serializeAttrs(node.attrs);
+  const body = (node.content ?? [])
+    .map((child) =>
+      child.type === 'mdxColumn' ? serializeJsxBlock(child, 'Column') : '',
+    )
+    .filter(Boolean)
+    .join('\n\n');
+  return `<Columns${attrs}>\n${body}\n</Columns>`;
+}
+
+function serializeCardGroup(node: TiptapNode): string {
+  const attrs = serializeAttrs(node.attrs);
+  const body = (node.content ?? [])
+    .map((child) =>
+      child.type === 'mdxCard' ? serializeJsxBlock(child, 'Card') : '',
+    )
+    .filter(Boolean)
+    .join('\n\n');
+  return `<CardGroup${attrs}>\n${body}\n</CardGroup>`;
+}
+
+function serializeAccordionGroup(node: TiptapNode): string {
+  const body = (node.content ?? [])
+    .map((child) =>
+      child.type === 'mdxAccordion' ? serializeJsxBlock(child, 'Accordion') : '',
+    )
+    .filter(Boolean)
+    .join('\n\n');
+  return `<AccordionGroup>\n${body}\n</AccordionGroup>`;
+}
+
+function serializeTabs(node: TiptapNode): string {
+  const attrs = serializeAttrs(node.attrs);
+  const tabBlocks = (node.content ?? [])
+    .map((child) =>
+      child.type === 'mdxTab' ? serializeJsxBlock(child, 'Tab') : '',
+    )
+    .filter(Boolean)
+    .join('\n\n');
+  return `<Tabs${attrs}>\n${tabBlocks}\n</Tabs>`;
+}
+
 function serializeCallout(node: TiptapNode): string {
   const variant = (node.attrs?.variant as string | undefined) ?? 'note';
   const body = (node.content ?? [])
@@ -160,6 +274,7 @@ function serializeInline(content?: TiptapNode[]): string {
 
 function serializeInlineNode(node: TiptapNode): string {
   if (node.type === 'hardBreak') return '  \n';
+  if (node.type === 'mdxBadge') return serializeBadge(node);
   if (node.type !== 'text') return '';
   let text = node.text ?? '';
   const marks = sortMarks(node.marks ?? []);
@@ -167,6 +282,15 @@ function serializeInlineNode(node: TiptapNode): string {
     text = applyMark(text, mark);
   }
   return text;
+}
+
+function serializeBadge(node: TiptapNode): string {
+  const { label, ...rest } = (node.attrs ?? {}) as Record<string, unknown> & {
+    label?: string;
+  };
+  const attrStr = serializeAttrs(rest);
+  const text = (label ?? '').trim();
+  return `<Badge${attrStr}>${text}</Badge>`;
 }
 
 function sortMarks(marks: TiptapMark[]): TiptapMark[] {

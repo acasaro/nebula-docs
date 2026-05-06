@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nebula-docs.uhg.com/theme.schema.json",
+  "title": "Nebula Docs — theme.json",
+  "description": "JSON Patch over a base theme. Tenants pick a base ('mcoe-default' | 'uhc' | 'optum' | <id>) and override individual tokens. The token shape mirrors ThemeTokens from @nebula-docs/theme. Phase 0 stub — full token enumeration arrives with the published schema.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string", "format": "uri" },
+    "extends": {
+      "type": "string",
+      "description": "ID of the base theme to layer on (mcoe-default | uhc | optum | <tenant-id>)."
+    },
+    "tokens": {
+      "type": "object",
+      "description": "Subset of ThemeTokens to override. Any unset tokens fall through to the base theme.",
+      "additionalProperties": true,
+      "properties": {
+        "brandPrimary": { "type": "string" },
+        "brandPrimaryDark": { "type": "string" },
+        "brandPrimaryLight": { "type": "string" },
+        "brandAccent": { "type": "string" },
+        "bgPrimary": { "type": "string" },
+        "bgSecondary": { "type": "string" },
+        "bgTertiary": { "type": "string" },
+        "textLink": { "type": "string" },
+        "borderDefault": { "type": "string" },
+        "borderMuted": { "type": "string" },
+        "heroGradient": { "type": "string" },
+        "darkMode": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      }
+    },
+    "fonts": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "body": { "$ref": "#/$defs/font" },
+        "mono": { "$ref": "#/$defs/font" }
+      }
+    }
+  },
+  "$defs": {
+    "font": {
+      "type": "object",
+      "required": ["family"],
+      "properties": {
+        "family": { "type": "string" },
+        "url": { "type": "string", "format": "uri" }
+      }
+    }
+  }
+}

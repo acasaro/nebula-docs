@@ -9,6 +9,15 @@
         "source ~/.nvm/nvm.sh && nvm use 22 >/dev/null && exec pnpm --filter @nebula-docs/platform dev"
       ],
       "port": 8081
+    },
+    {
+      "name": "nebula-cli-example-docs",
+      "runtimeExecutable": "/bin/bash",
+      "runtimeArgs": [
+        "-lc",
+        "source ~/.nvm/nvm.sh && nvm use 22 >/dev/null && exec pnpm --filter @nebula-docs/cli dev tenants/example-docs"
+      ],
+      "port": 4321
     }
   ]
 }

@@ -1,0 +1,51 @@
+---
+interface NestedGroup {
+  group: string;
+  pages: Array<string | NestedGroup>;
+}
+
+interface Props {
+  group: NestedGroup;
+  currentSlug: string;
+  depth?: number;
+}
+
+const { group, currentSlug, depth = 0 } = Astro.props as Props;
+
+function pageHref(slug: string): string {
+  if (slug === 'index' || slug === '/') return '/';
+  return `/${slug}`;
+}
+
+function pageLabel(slug: string): string {
+  // Last segment, hyphens → spaces, title-cased.
+  const last = slug.split('/').pop() ?? slug;
+  return last
+    .split('-')
+    .map((s) => (s.length ? s[0]!.toUpperCase() + s.slice(1) : s))
+    .join(' ');
+}
+---
+<div class={depth === 0 ? 'nebula-sidebar-group' : 'nebula-sidebar-nested'}>
+  <p class="nebula-sidebar-group-title">{group.group}</p>
+  <ul class="nebula-sidebar-list">
+    {group.pages.map((page) => {
+      if (typeof page === 'string') {
+        const href = pageHref(page);
+        const isCurrent = page === currentSlug;
+        return (
+          <li class="nebula-sidebar-item">
+            <a href={href} aria-current={isCurrent ? 'page' : undefined}>
+              {pageLabel(page)}
+            </a>
+          </li>
+        );
+      }
+      return (
+        <li class="nebula-sidebar-item">
+          <Astro.self group={page} currentSlug={currentSlug} depth={depth + 1} />
+        </li>
+      );
+    })}
+  </ul>
+</div>

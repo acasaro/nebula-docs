@@ -1,0 +1,74 @@
+---
+interface FooterColumn {
+  label: string;
+  links: Array<{ label: string; href: string }>;
+}
+
+interface Props {
+  docs: {
+    footer?: {
+      columns?: FooterColumn[];
+      copyright?: string;
+    };
+  };
+}
+
+const { docs } = Astro.props as Props;
+const footer = docs.footer;
+if (!footer) return null;
+---
+<footer class="nebula-footer">
+  <div class="nebula-footer-inner">
+    {footer.columns && footer.columns.length > 0 && (
+      <div class="nebula-footer-columns">
+        {footer.columns.map((column) => (
+          <div class="nebula-footer-column">
+            <h3>{column.label}</h3>
+            <ul>
+              {column.links.map((link) => (
+                <li><a href={link.href}>{link.label}</a></li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </div>
+    )}
+    {footer.copyright && (
+      <p class="nebula-footer-copyright">{footer.copyright}</p>
+    )}
+  </div>
+</footer>
+
+<style>
+  .nebula-footer {
+    margin-top: var(--mcoe-space-9);
+    border-top: 1px solid var(--mcoe-border-default);
+    padding-top: var(--mcoe-space-6);
+    font-size: var(--mcoe-font-size-sm);
+    color: var(--mcoe-text-secondary);
+  }
+  .nebula-footer-columns {
+    display: flex;
+    gap: var(--mcoe-space-7);
+    flex-wrap: wrap;
+  }
+  .nebula-footer-column h3 {
+    font-size: var(--mcoe-font-size-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--mcoe-text-heading);
+    margin: 0 0 var(--mcoe-space-3);
+  }
+  .nebula-footer-column ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .nebula-footer-column li {
+    margin: var(--mcoe-space-1) 0;
+  }
+  .nebula-footer-copyright {
+    margin-top: var(--mcoe-space-5);
+    color: var(--mcoe-text-secondary);
+  }
+</style>

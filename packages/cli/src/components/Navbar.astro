@@ -1,0 +1,77 @@
+---
+interface Props {
+  docs: {
+    name: string;
+    logo?: { light?: string; dark?: string; href?: string };
+    navbar?: {
+      primary?: { type: string; label: string; href: string };
+      links?: Array<{ label: string; href: string; icon?: string }>;
+    };
+  };
+}
+
+const { docs } = Astro.props as Props;
+const logoHref = docs.logo?.href ?? '/';
+---
+<header class="nebula-navbar">
+  <div class="nebula-navbar-inner">
+    <a class="nebula-brand" href={logoHref}>{docs.name}</a>
+    <nav class="nebula-navbar-links" aria-label="Primary">
+      {(docs.navbar?.links ?? []).map((link) => (
+        <a href={link.href}>{link.label}</a>
+      ))}
+      {docs.navbar?.primary && (
+        <a class="nebula-navbar-primary" href={docs.navbar.primary.href}>
+          {docs.navbar.primary.label}
+        </a>
+      )}
+    </nav>
+  </div>
+</header>
+
+<style>
+  .nebula-navbar {
+    border-bottom: 1px solid var(--mcoe-border-default);
+    background: var(--mcoe-bg-secondary);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+  .nebula-navbar-inner {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: var(--mcoe-space-3) var(--mcoe-space-6);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--mcoe-space-5);
+  }
+  .nebula-brand {
+    font-weight: var(--mcoe-font-weight-bold);
+    color: var(--mcoe-text-heading);
+    font-size: var(--mcoe-font-size-md);
+  }
+  .nebula-navbar-links {
+    display: flex;
+    align-items: center;
+    gap: var(--mcoe-space-5);
+  }
+  .nebula-navbar-links a {
+    color: var(--mcoe-text-secondary);
+    font-size: var(--mcoe-font-size-sm);
+  }
+  .nebula-navbar-links a:hover {
+    color: var(--mcoe-text-primary);
+    text-decoration: none;
+  }
+  .nebula-navbar-primary {
+    background: var(--mcoe-brand-primary);
+    color: var(--mcoe-text-inverse) !important;
+    padding: var(--mcoe-space-2) var(--mcoe-space-4);
+    border-radius: var(--mcoe-radius);
+    font-weight: var(--mcoe-font-weight-medium);
+  }
+  .nebula-navbar-primary:hover {
+    background: var(--mcoe-brand-primary-dark);
+  }
+</style>

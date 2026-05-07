@@ -10,8 +10,11 @@ export {
   applyVisualBranding,
   readThemeColors,
   applyThemeColors,
+  readCodeBlockThemes,
+  applyCodeBlockThemes,
   type VisualBrandingValues,
   type ThemeColorValues,
+  type CodeBlockThemeValues,
 } from './VisualBrandingSection';
 export {
   HeaderSection,

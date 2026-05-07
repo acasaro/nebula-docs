@@ -13,6 +13,7 @@ export * from './frame';
 export * from './hero';
 export * from './icon';
 export * from './mermaid';
+export * from './profile';
 export * from './property';
 export * from './step';
 export * from './steps';

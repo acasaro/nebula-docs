@@ -4,10 +4,12 @@ import {
   CheckCircle,
   Code2,
   FileText,
+  Film,
   Frame,
   Heading1,
   Heading2,
   Heading3,
+  Layers,
   ArrowDownLeft,
   ArrowUpRight,
   Columns2,
@@ -25,6 +27,7 @@ import {
   ShieldCheck,
   Sliders,
   Tag as TagIcon,
+  User as UserIcon,
   ListOrdered,
   List as ListUnordered,
   Minus,
@@ -48,16 +51,18 @@ export interface SlashItem {
 }
 
 /**
- * Asks the host (MdxEditor) to open the image picker. The host's onPick
+ * Asks the host (MdxEditor) to open the media picker. The host's onPick
  * callback is responsible for inserting the resulting node at `range`.
+ * Mode picks both the asset filter (image vs video) and which Tiptap node
+ * gets inserted on success.
  */
-export interface ImagePickerRequest {
-  mode: 'image' | 'figure';
+export interface MediaPickerRequest {
+  mode: 'image' | 'figure' | 'video';
   editor: Editor;
   range: { from: number; to: number };
 }
 
-export type OpenImagePicker = (req: ImagePickerRequest) => void;
+export type OpenMediaPicker = (req: MediaPickerRequest) => void;
 
 export const SLASH_ITEMS: SlashItem[] = [
   {
@@ -347,8 +352,59 @@ export const SLASH_ITEMS: SlashItem[] = [
     Icon: Image,
     keywords: ['image', 'img', 'picture', 'media', 'photo', 'screenshot'],
     command: () => {
-      // Same story as Figure — replaced by buildSlashItems when an image
+      // Same story as Figure — replaced by buildSlashItems when a media
       // picker is wired.
+    },
+  },
+  {
+    id: 'video',
+    label: 'Video',
+    description: 'Insert a video from your library or upload',
+    Icon: Film,
+    keywords: ['video', 'mp4', 'movie', 'clip', 'media', 'loop'],
+    command: () => {
+      // Same story as Figure / Image — replaced by buildSlashItems when a
+      // media picker is wired.
+    },
+  },
+  {
+    id: 'hero',
+    label: 'Hero',
+    description: 'Marketing banner with title, subtitle, and CTAs',
+    Icon: Layers,
+    keywords: ['hero', 'banner', 'landing', 'cta', 'jumbotron', 'splash'],
+    command: ({ editor, range }) => {
+      editor
+        .chain()
+        .focus()
+        .deleteRange(range)
+        .insertContent({
+          type: 'mdxHero',
+          attrs: {
+            variant: 'banner',
+            title: 'Headline',
+            description: 'Supporting copy beneath the title.',
+          },
+        })
+        .run();
+    },
+  },
+  {
+    id: 'profile',
+    label: 'Profile',
+    description: 'Person tile — circular photo, name, and role',
+    Icon: UserIcon,
+    keywords: ['profile', 'person', 'team', 'member', 'avatar', 'headshot'],
+    command: ({ editor, range }) => {
+      editor
+        .chain()
+        .focus()
+        .deleteRange(range)
+        .insertContent({
+          type: 'mdxProfile',
+          attrs: { name: 'New profile' },
+        })
+        .run();
     },
   },
   {
@@ -699,7 +755,7 @@ export const SLASH_ITEMS: SlashItem[] = [
  */
 export function buildSlashItems(
   catalog: readonly SnippetCatalogEntry[],
-  openImagePicker?: OpenImagePicker,
+  openMediaPicker?: OpenMediaPicker,
 ): SlashItem[] {
   const snippetItems: SlashItem[] = catalog.map((entry) => ({
     id: `snippet:${entry.importPath}`,
@@ -722,20 +778,27 @@ export function buildSlashItems(
         .run();
     },
   }));
-  const items: SlashItem[] = openImagePicker
+  const items: SlashItem[] = openMediaPicker
     ? SLASH_ITEMS.map((item) => {
         if (item.id === 'image') {
           return {
             ...item,
             command: ({ editor, range }: { editor: Editor; range: { from: number; to: number } }) =>
-              openImagePicker({ mode: 'image', editor, range }),
+              openMediaPicker({ mode: 'image', editor, range }),
           };
         }
         if (item.id === 'frame') {
           return {
             ...item,
             command: ({ editor, range }: { editor: Editor; range: { from: number; to: number } }) =>
-              openImagePicker({ mode: 'figure', editor, range }),
+              openMediaPicker({ mode: 'figure', editor, range }),
+          };
+        }
+        if (item.id === 'video') {
+          return {
+            ...item,
+            command: ({ editor, range }: { editor: Editor; range: { from: number; to: number } }) =>
+              openMediaPicker({ mode: 'video', editor, range }),
           };
         }
         return item;

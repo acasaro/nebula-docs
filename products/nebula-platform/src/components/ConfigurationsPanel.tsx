@@ -6,16 +6,19 @@ import {
   HeaderSection,
   OverviewSection,
   VisualBrandingSection,
+  applyCodeBlockThemes,
   applyFooter,
   applyHeader,
   applyOverview,
   applyVisualBranding,
   applyThemeColors,
+  readCodeBlockThemes,
   readFooter,
   readHeader,
   readOverview,
   readThemeColors,
   readVisualBranding,
+  type CodeBlockThemeValues,
   type FooterValues,
   type HeaderValues,
   type OverviewValues,
@@ -128,12 +131,17 @@ function SectionBody({
     const colors = readThemeColors(themeConfig);
     const onColorChange = (patch: Partial<ThemeColorValues>) =>
       onThemeChange((c) => applyThemeColors(c, patch));
+    const codeBlockThemes = readCodeBlockThemes(themeConfig);
+    const onCodeBlockThemeChange = (patch: Partial<CodeBlockThemeValues>) =>
+      onThemeChange((c) => applyCodeBlockThemes(c, patch));
     return (
       <VisualBrandingSection
         values={values}
         onChange={onChange}
         colors={colors}
         onColorChange={onColorChange}
+        codeBlockThemes={codeBlockThemes}
+        onCodeBlockThemeChange={onCodeBlockThemeChange}
       />
     );
   }

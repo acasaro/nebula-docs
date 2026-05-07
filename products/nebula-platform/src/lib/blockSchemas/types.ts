@@ -1,5 +1,6 @@
 import type { LucideIcon } from 'lucide-react';
 import type { IconLibrary, IconType } from '@nebula-docs/components';
+import type { AssetCategory } from '@/lib/assets';
 
 export type BlockAttrs = Record<string, unknown>;
 
@@ -18,9 +19,18 @@ export type AttrField =
       placeholder?: string;
       type?: 'text' | 'url' | 'email';
       /** When true, the field renders an Upload button that opens the
-       *  asset picker / uploader. The picked image's `downloadUrl` is
+       *  asset picker / uploader. The picked asset's `downloadUrl` is
        *  written into this field's key. */
       upload?: boolean;
+      /** Asset category to surface in the picker. Defaults to `image`. */
+      uploadCategory?: AssetCategory;
+    })
+  | (BaseField & {
+      kind: 'number';
+      placeholder?: string;
+      min?: number;
+      max?: number;
+      step?: number;
     })
   | (BaseField & {
       kind: 'toggle';

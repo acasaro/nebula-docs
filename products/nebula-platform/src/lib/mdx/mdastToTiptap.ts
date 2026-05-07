@@ -208,6 +208,15 @@ function convertBlock(node: RootContent, ctx: ConvertCtx): TiptapNode | null {
         // mergeAdjacentLightDarkImgs pre-pass).
         return convertJsxImg(jsx);
       }
+      if (name === 'Video' || name === 'VideoLoop') {
+        return convertVideo(jsx);
+      }
+      if (name === 'Profile') {
+        return convertProfile(jsx);
+      }
+      if (name === 'Hero') {
+        return convertHero(jsx);
+      }
       return rawBlock(node, source);
     }
     default:
@@ -904,6 +913,80 @@ function convertStandaloneInlineBadge(node: MdxJsxFlowElement): TiptapNode {
   return {
     type: 'mdxBadge',
     attrs: { ...attrs, label: label.trim() },
+  };
+}
+
+function convertHero(node: MdxJsxFlowElement): TiptapNode {
+  const raw = extractAttrs(node);
+  const str = (key: string): string | null =>
+    typeof raw[key] === 'string' ? (raw[key] as string) : null;
+  const num = (key: string): number | null =>
+    typeof raw[key] === 'number' && Number.isFinite(raw[key])
+      ? (raw[key] as number)
+      : null;
+  // Variant must be one of the known values; anything else falls back to
+  // banner so the editor preview doesn't crash on a typo.
+  const rawVariant = str('variant');
+  const variant =
+    rawVariant === 'banner' || rawVariant === 'compact' || rawVariant === 'split'
+      ? rawVariant
+      : null;
+  return {
+    type: 'mdxHero',
+    attrs: {
+      variant,
+      eyebrow: str('eyebrow'),
+      title: str('title'),
+      accent: str('accent'),
+      description: str('description'),
+      background: str('background'),
+      textColor: str('textColor'),
+      accentColor: str('accentColor'),
+      secondaryTitle: str('secondaryTitle'),
+      secondaryDescription: str('secondaryDescription'),
+      sideImage: str('sideImage'),
+      sideImageAlt: str('sideImageAlt'),
+      interval: num('interval'),
+      // Slides come in as a JSX expression — preserve as-is so the
+      // serializer can re-emit them unchanged.
+      slides: raw.slides ?? null,
+    },
+  };
+}
+
+function convertProfile(node: MdxJsxFlowElement): TiptapNode {
+  const raw = extractAttrs(node);
+  const str = (key: string): string | null =>
+    typeof raw[key] === 'string' ? (raw[key] as string) : null;
+  return {
+    type: 'mdxProfile',
+    attrs: {
+      name: str('name') ?? 'New profile',
+      title: str('title'),
+      photo: str('photo'),
+      href: str('href'),
+      initials: str('initials'),
+      accent: str('accent'),
+    },
+  };
+}
+
+function convertVideo(node: MdxJsxFlowElement): TiptapNode {
+  const raw = extractAttrs(node);
+  const src = typeof raw.src === 'string' ? raw.src : '';
+  const caption = typeof raw.caption === 'string' ? raw.caption : null;
+  // `extractAttrs` resolves `<Video loop />` (presence) to true and `loop={true}`
+  // (JSX expression) to true via JSON.parse. The string form `loop="true"` is
+  // historical but cheap to keep accepting.
+  const loop =
+    raw.loop === true || raw.loop === 'true' ? true : false;
+  const maxLoops =
+    typeof raw.maxLoops === 'number' && Number.isFinite(raw.maxLoops)
+      ? raw.maxLoops
+      : null;
+  return {
+    type: 'mdxVideo',
+    attrs: { src, caption, loop, maxLoops },
   };
 }
 

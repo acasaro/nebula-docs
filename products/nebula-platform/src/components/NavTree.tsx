@@ -349,8 +349,11 @@ function TabSection({
             </>
           }
         >
-          <Chevron expanded={expanded} />
-          <NavIcon icon={tab.icon} fallback="tab" />
+          <CollapseToggleIcon
+            icon={tab.icon}
+            fallback="tab"
+            expanded={expanded}
+          />
           <Title>{tab.tab}</Title>
         </Row>
       </DragRow>
@@ -477,8 +480,11 @@ function GroupSection({
             </>
           }
         >
-          <Chevron expanded={expanded} />
-          <NavIcon icon={group.icon} fallback="folder" />
+          <CollapseToggleIcon
+            icon={group.icon}
+            fallback="folder"
+            expanded={expanded}
+          />
           <Title>{group.group}</Title>
         </Row>
       </DragRow>
@@ -683,6 +689,35 @@ function Chevron({ expanded }: { expanded: boolean }) {
       )}
       aria-hidden="true"
     />
+  );
+}
+
+/**
+ * Icon slot for collapsible nav rows (tabs, groups). Default state shows
+ * the configured icon (or fallback). On row hover, the icon fades out
+ * and the expand/collapse chevron fades in — same square stays in the
+ * same column so the row label doesn't shift. Click target is the whole
+ * row (handled by the parent `Row`'s onClick), so the chevron is purely
+ * a visual affordance for what hovering will do.
+ */
+function CollapseToggleIcon({
+  icon,
+  fallback,
+  expanded,
+}: {
+  icon: IconValue | undefined;
+  fallback: 'folder' | 'tab';
+  expanded: boolean;
+}) {
+  return (
+    <span className="relative inline-flex size-3.5 shrink-0 items-center justify-center">
+      <span className="absolute inset-0 inline-flex items-center justify-center transition-opacity group-hover/nav-row:opacity-0">
+        <NavIcon icon={icon} fallback={fallback} />
+      </span>
+      <span className="absolute inset-0 inline-flex items-center justify-center opacity-0 transition-opacity group-hover/nav-row:opacity-100">
+        <Chevron expanded={expanded} />
+      </span>
+    </span>
   );
 }
 

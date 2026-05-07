@@ -83,8 +83,8 @@ const HeroImage = styled("img", {
   right: 0,
   top: "50%",
   transform: "translateY(-50%)",
-  width: "500px",
-  height: "420px",
+  width: "400px",
+  height: "auto",
   objectFit: "contain",
   pointerEvents: "auto",
   border: "none",
@@ -280,7 +280,7 @@ export function DeveloperLanding() {
       <HeroOuter>
         <HeroImageAnchor>
           <HeroImage
-            src=''
+            src='/images/illustrations/shuttle.png'
             alt='Developer documentation illustration'
           />
         </HeroImageAnchor>
@@ -302,13 +302,9 @@ export function DeveloperLanding() {
       </HeroOuter>
       <PageBody>
         <Content>
-          <CardsGrid data-analytics-surface="landing.developers">
+          <CardsGrid data-analytics-surface='landing.developers'>
             {categories.map((cat, i) => (
-              <Card
-                key={cat.title}
-                data-analytics-category={cat.title}
-                data-analytics-position={i}
-              >
+              <Card key={cat.title} data-analytics-category={cat.title} data-analytics-position={i}>
                 <CardHeader>
                   <CardIconBox style={{ background: cat.color, color: cat.iconColor }}>
                     <CardIconImg

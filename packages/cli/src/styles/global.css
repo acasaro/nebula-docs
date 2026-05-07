@@ -69,6 +69,25 @@
 .dark,
 [data-theme="dark"] {
   color-scheme: dark;
+
+  /* Stone-style dark palette overrides — applied at the CLI consumer
+   * level so the frozen `packages/theme/` tokens stay untouched. The
+   * frozen dark values bottom out at #1c1e26 bg / #8b91a0 secondary text,
+   * which reads as murky low-contrast gray. Tailwind's `stone-*` scale
+   * (warm neutral) lifts secondary text into legible territory and gives
+   * surfaces a Mintlify-style warmth. Brand tokens are intentionally
+   * NOT overridden — tenants' theme.json brand color still drives links
+   * + accents. */
+  --mcoe-bg-primary: #0c0a09;        /* stone-950 — page bg */
+  --mcoe-bg-secondary: #1c1917;      /* stone-900 — cards, popovers, sidebar */
+  --mcoe-bg-tertiary: #292524;       /* stone-800 — inline code, raised surfaces */
+  --mcoe-text-primary: #f5f5f4;      /* stone-100 — body text (was #e6e8ed) */
+  --mcoe-text-heading: #fafaf9;      /* stone-50 — headings */
+  --mcoe-text-secondary: #d6d3d1;    /* stone-300 — descriptions, captions
+                                        (was #8b91a0 — the main culprit) */
+  --mcoe-text-link: var(--mcoe-brand-primary);
+  --mcoe-border-default: #44403c;    /* stone-700 — clearly visible borders */
+  --mcoe-border-muted: #292524;      /* stone-800 — subtle dividers */
 }
 
 /* Tailwind v4 wiring: expose the shadcn tokens above as Tailwind color
@@ -317,49 +336,11 @@ body {
   color: var(--mcoe-text-secondary);
 }
 
-/* Hero block — full-bleed in `mode: custom` pages via `data-fullbleed`.
-   The outer section breaks out to viewport width through the layout's
-   `> [data-fullbleed]` rule; this re-applies the same 80rem container as
-   the surrounding `.nebula-custom-container` so internal content lines
-   up with whatever sits above and below. */
-.nebula-hero {
-  display: block;
-  position: relative;
-}
-.nebula-hero-inner {
-  max-width: 64rem;
-  margin: 0 auto;
-  padding: 0 1.5rem;
-}
-.nebula-hero-inner--padded {
-  padding-top: clamp(2.5rem, 6vw, 5rem);
-  padding-bottom: clamp(2.5rem, 6vw, 5rem);
-}
-.nebula-hero-eyebrow {
-  font-size: var(--mcoe-font-size-xs);
-  font-weight: var(--mcoe-font-weight-medium);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  margin: 0 0 var(--mcoe-space-3);
-  opacity: 0.75;
-}
-.nebula-hero-title {
-  font-size: clamp(2rem, 4vw, 3rem);
-  line-height: 1.1;
-  font-weight: var(--mcoe-font-weight-medium);
-  letter-spacing: -0.025em;
-  margin: 0;
-}
-.nebula-hero-description {
-  margin: var(--mcoe-space-4) 0 0;
-  font-size: var(--mcoe-font-size-md);
-  line-height: 1.6;
-  max-width: 42rem;
-  opacity: 0.85;
-}
-.nebula-hero-children {
-  margin-top: var(--mcoe-space-6);
-}
+/* Hero is full-bleed via `data-fullbleed` on `mode: custom` pages. The
+   outer section breaks out to viewport width through the layout's
+   `> [data-fullbleed]` rule; the component itself re-applies a 80rem
+   inner container with Tailwind utilities so its content stays aligned
+   with whatever sits above and below. */
 
 /* Typography for MDX content — applied uniformly across both consumers
  * (the Platform's read-only renderer + Tiptap surface, AND this CLI build).

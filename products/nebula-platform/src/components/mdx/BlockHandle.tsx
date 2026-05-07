@@ -24,12 +24,14 @@ import {
 } from 'lucide-react';
 import {
   DndContext,
+  DragOverlay,
   PointerSensor,
   useDraggable,
   useSensor,
   useSensors,
   type DragEndEvent,
   type DragMoveEvent,
+  type DragStartEvent,
 } from '@dnd-kit/core';
 import * as Popover from '@radix-ui/react-popover';
 import type { Editor } from '@tiptap/react';
@@ -127,11 +129,35 @@ export function EditorWithBlockHandle({
     setEditing(null);
   };
 
+  // Distance-based activation (no delay) so dragging starts immediately on
+  // intent. The previous `delay: 200` made the handle feel laggy — users
+  // would mash the grip and assume it wasn't responding. 4px tolerance is
+  // tight enough that a single-click on the grip still passes through to
+  // the kebab menu without spuriously starting a drag.
   const sensors = useSensors(
     useSensor(PointerSensor, {
-      activationConstraint: { delay: 200, tolerance: 5 },
+      activationConstraint: { distance: 4 },
     }),
   );
+
+  // Track the currently-dragging block so the DragOverlay can render a
+  // ghost preview that follows the cursor. Without this, the user only
+  // sees the row dim to 0.4 opacity in place — no visual feedback that
+  // they're actually carrying anything.
+  const [overlayHTML, setOverlayHTML] = useState<{
+    html: string;
+    width: number;
+  } | null>(null);
+
+  const handleDragStart = (e: DragStartEvent) => {
+    if (!editor) return;
+    const sourcePos = e.active?.id;
+    if (typeof sourcePos !== 'number') return;
+    const dom = editor.view.nodeDOM(sourcePos);
+    if (!(dom instanceof HTMLElement)) return;
+    const rect = dom.getBoundingClientRect();
+    setOverlayHTML({ html: dom.outerHTML, width: rect.width });
+  };
 
   useEffect(() => {
     if (!editor) return;
@@ -248,6 +274,7 @@ export function EditorWithBlockHandle({
     const sourceId = e.active?.id;
     const target = dropTarget;
     setDropTarget(null);
+    setOverlayHTML(null);
     if (typeof sourceId !== 'number' || !target || !editor) return;
     const sourcePos = sourceId;
     const sourceNode = editor.view.state.doc.nodeAt(sourcePos);
@@ -278,9 +305,13 @@ export function EditorWithBlockHandle({
   return (
     <DndContext
       sensors={sensors}
+      onDragStart={handleDragStart}
       onDragMove={handleDragMove}
       onDragEnd={handleDragEnd}
-      onDragCancel={() => setDropTarget(null)}
+      onDragCancel={() => {
+        setDropTarget(null);
+        setOverlayHTML(null);
+      }}
     >
       <div ref={containerRef} className={cn('relative', className)}>
         {children}
@@ -300,6 +331,19 @@ export function EditorWithBlockHandle({
           <DropIndicator dropTarget={dropTarget} containerRef={containerRef} />
         ) : null}
       </div>
+      <DragOverlay dropAnimation={null}>
+        {overlayHTML ? (
+          <div
+            // Render the dragged block's HTML as a ghost that follows the
+            // cursor. It's a static clone (no event handlers, no Tiptap
+            // state), so it renders fine even though the live block is
+            // dimmed in place.
+            className="pointer-events-none rounded-md border border-border/60 bg-background/95 px-3 py-2 text-sm shadow-xl ring-1 ring-primary/30 backdrop-blur-sm"
+            style={{ width: overlayHTML.width }}
+            dangerouslySetInnerHTML={{ __html: overlayHTML.html }}
+          />
+        ) : null}
+      </DragOverlay>
       {editing && editor ? (
         <AttributesPopover
           open={!!editing}
@@ -359,7 +403,11 @@ function BlockHandleUI({
   if (!containerRect) return null;
 
   const top = block.rect.top - containerRect.top;
-  const HANDLE_W = 56;
+  // Two size-7 buttons (28px) + 2px gap = 58px, plus 6px slack so the
+  // handle doesn't crowd the block. Bumped from size-6 / 56px so the
+  // grip is easier to land on — the previous ~24px target was the main
+  // source of "missed grabs" when the user reached for it.
+  const HANDLE_W = 64;
   const ideal = block.rect.left - containerRect.left - HANDLE_W;
   const left = Math.max(ideal, 0);
   const rightLeft = block.rect.right - containerRect.left + 8;
@@ -403,7 +451,7 @@ function BlockHandleUI({
         <button
           type="button"
           aria-label="Insert paragraph below"
-          className="flex size-6 items-center justify-center rounded hover:bg-accent hover:text-foreground"
+          className="flex size-7 items-center justify-center rounded hover:bg-accent hover:text-foreground"
           onClick={insertBelow}
         >
           <Plus className="size-4" />
@@ -418,7 +466,7 @@ function BlockHandleUI({
               tabIndex={0}
               aria-label="Drag or open block menu"
               className={cn(
-                'flex size-6 cursor-grab select-none items-center justify-center rounded outline-none',
+                'flex size-7 cursor-grab select-none items-center justify-center rounded outline-none',
                 'hover:bg-accent hover:text-foreground active:cursor-grabbing',
               )}
               onClick={handleGripClick}

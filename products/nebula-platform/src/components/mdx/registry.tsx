@@ -13,6 +13,7 @@ import {
   Danger,
   Expandable,
   Frame,
+  Hero,
   Icon,
   Info,
   Mermaid,
@@ -20,6 +21,7 @@ import {
   Step,
   Steps,
   ParamField,
+  Profile,
   Property,
   RequestExample,
   ResponseExample,
@@ -29,6 +31,8 @@ import {
   Tip,
   Tree,
   Update,
+  Video,
+  VideoLoop,
   Warning,
 } from '@nebula-docs/components';
 
@@ -49,6 +53,7 @@ export type MdxComponent = ComponentType<Record<string, unknown>>;
 export const componentRegistry: Record<string, MdxComponent> = {
   Badge: Badge as unknown as MdxComponent,
   Frame: Frame as unknown as MdxComponent,
+  Hero: Hero as unknown as MdxComponent,
   Callout: Callout as unknown as MdxComponent,
   Note: Note as unknown as MdxComponent,
   Tip: Tip as unknown as MdxComponent,
@@ -73,12 +78,15 @@ export const componentRegistry: Record<string, MdxComponent> = {
   'Tree.File': Tree.File as unknown as MdxComponent,
   Update: Update as unknown as MdxComponent,
   ParamField: ParamField as unknown as MdxComponent,
+  Profile: Profile as unknown as MdxComponent,
   Property: Property as unknown as MdxComponent,
   ResponseField: ResponseField as unknown as MdxComponent,
   RequestExample: RequestExample as unknown as MdxComponent,
   ResponseExample: ResponseExample as unknown as MdxComponent,
   Mermaid: Mermaid as unknown as MdxComponent,
   Icon: Icon as unknown as MdxComponent,
+  Video: Video as unknown as MdxComponent,
+  VideoLoop: VideoLoop as unknown as MdxComponent,
 };
 
 export function registerComponent(name: string, Component: MdxComponent): void {

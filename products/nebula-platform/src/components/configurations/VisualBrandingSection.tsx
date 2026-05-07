@@ -16,10 +16,55 @@ export interface ThemeColorValues {
   dark: string;
 }
 
+export interface CodeBlockThemeValues {
+  light: string;
+  dark: string;
+}
+
 const THEME_OPTIONS = [
   { value: 'mcoe-default', label: 'MCOE default' },
   { value: 'optum', label: 'Optum' },
   { value: 'uhc', label: 'UHC' },
+] as const;
+
+// Sentinel used in the SelectCard `value` slot to represent "no override —
+// fall back to the renderer's built-in default." Radix Select rejects
+// empty-string values, so we round-trip through this token at the form
+// edge and translate back to `undefined` in apply*. Any value matching
+// this sentinel is treated as "unset" everywhere downstream.
+const CODE_BLOCK_THEME_DEFAULT = '__default__';
+
+// Curated subset of Shiki's bundled themes. Each entry's `value` is the
+// exact Shiki theme ID consumed by `<CodeBlock lightTheme={...} />` and by
+// the CLI's astro.config.mjs at build time.
+const SHIKI_LIGHT_OPTIONS = [
+  { value: CODE_BLOCK_THEME_DEFAULT, label: 'Default (GitHub Light)' },
+  { value: 'github-light', label: 'GitHub Light' },
+  { value: 'github-light-default', label: 'GitHub Light (default)' },
+  { value: 'light-plus', label: 'VS Light+' },
+  { value: 'vitesse-light', label: 'Vitesse Light' },
+  { value: 'min-light', label: 'Min Light' },
+  { value: 'one-light', label: 'One Light' },
+  { value: 'catppuccin-latte', label: 'Catppuccin Latte' },
+  { value: 'material-theme-lighter', label: 'Material Lighter' },
+  { value: 'slack-ochin', label: 'Slack Ochin' },
+  { value: 'snazzy-light', label: 'Snazzy Light' },
+] as const;
+
+const SHIKI_DARK_OPTIONS = [
+  { value: CODE_BLOCK_THEME_DEFAULT, label: 'Default (GitHub Dark)' },
+  { value: 'github-dark', label: 'GitHub Dark' },
+  { value: 'github-dark-default', label: 'GitHub Dark (default)' },
+  { value: 'github-dark-dimmed', label: 'GitHub Dark Dimmed' },
+  { value: 'dark-plus', label: 'VS Dark+' },
+  { value: 'vitesse-dark', label: 'Vitesse Dark' },
+  { value: 'dracula', label: 'Dracula' },
+  { value: 'monokai', label: 'Monokai' },
+  { value: 'one-dark-pro', label: 'One Dark Pro' },
+  { value: 'nord', label: 'Nord' },
+  { value: 'material-theme-ocean', label: 'Material Ocean' },
+  { value: 'catppuccin-mocha', label: 'Catppuccin Mocha' },
+  { value: 'night-owl', label: 'Night Owl' },
 ] as const;
 
 export function readVisualBranding(config: DocsConfig): VisualBrandingValues {
@@ -98,11 +143,54 @@ export function applyThemeColors(
   return next;
 }
 
+export function readCodeBlockThemes(
+  themeConfig: ThemeConfig | null,
+): CodeBlockThemeValues {
+  // Translate "no override" to the sentinel so the Select stays valid
+  // (Radix rejects empty strings).
+  return {
+    light: themeConfig?.codeBlock?.light ?? CODE_BLOCK_THEME_DEFAULT,
+    dark: themeConfig?.codeBlock?.dark ?? CODE_BLOCK_THEME_DEFAULT,
+  };
+}
+
+export function applyCodeBlockThemes(
+  themeConfig: ThemeConfig,
+  patch: Partial<CodeBlockThemeValues>,
+): ThemeConfig {
+  const next: ThemeConfig = {
+    ...themeConfig,
+    codeBlock: { ...(themeConfig.codeBlock ?? {}) },
+  };
+  const cb = next.codeBlock!;
+  // The default sentinel (and the empty string, defensively) means
+  // "fall back to the renderer default" — drop the key so theme.json
+  // doesn't carry an empty override forward.
+  const isUnset = (v: string | undefined) =>
+    v === undefined || v === '' || v === CODE_BLOCK_THEME_DEFAULT;
+  if (patch.light !== undefined) {
+    if (isUnset(patch.light)) delete cb.light;
+    else cb.light = patch.light;
+  }
+  if (patch.dark !== undefined) {
+    if (isUnset(patch.dark)) delete cb.dark;
+    else cb.dark = patch.dark;
+  }
+  // If both values are unset, drop the codeBlock object entirely so the
+  // serialized theme.json stays clean.
+  if (cb.light === undefined && cb.dark === undefined) {
+    delete next.codeBlock;
+  }
+  return next;
+}
+
 interface VisualBrandingSectionProps {
   values: VisualBrandingValues;
   onChange: (patch: Partial<VisualBrandingValues>) => void;
   colors: ThemeColorValues;
   onColorChange: (patch: Partial<ThemeColorValues>) => void;
+  codeBlockThemes: CodeBlockThemeValues;
+  onCodeBlockThemeChange: (patch: Partial<CodeBlockThemeValues>) => void;
 }
 
 export function VisualBrandingSection({
@@ -110,6 +198,8 @@ export function VisualBrandingSection({
   onChange,
   colors,
   onColorChange,
+  codeBlockThemes,
+  onCodeBlockThemeChange,
 }: VisualBrandingSectionProps) {
   return (
     <div className="flex flex-col gap-3">
@@ -136,6 +226,18 @@ export function VisualBrandingSection({
         value={colors.dark}
         onChange={(v) => onColorChange({ dark: v })}
         placeholder="#3d4eac"
+      />
+      <SelectCard
+        label="Code block — light theme"
+        value={codeBlockThemes.light}
+        onChange={(v) => onCodeBlockThemeChange({ light: v })}
+        options={SHIKI_LIGHT_OPTIONS}
+      />
+      <SelectCard
+        label="Code block — dark theme"
+        value={codeBlockThemes.dark}
+        onChange={(v) => onCodeBlockThemeChange({ dark: v })}
+        options={SHIKI_DARK_OPTIONS}
       />
       <TextCard
         label="Light logo"

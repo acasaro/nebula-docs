@@ -5,7 +5,7 @@ import { SlashMenu, type SlashMenuRef } from './SlashMenu';
 import {
   buildSlashItems,
   filterSlashItems,
-  type OpenImagePicker,
+  type OpenMediaPicker,
   type SlashItem,
 } from './slashItems';
 import type { SnippetCatalogEntry } from '@/lib/mdx/snippetResolver';
@@ -16,9 +16,10 @@ interface SlashCommandOptions {
   /** Snapshot getter for the snippet catalog. Read fresh each time the
    *  menu opens so newly-fetched snippets show up without a remount. */
   getSnippetCatalog?: () => readonly SnippetCatalogEntry[];
-  /** Asks the host to open the image picker. When omitted, the Image and
-   *  Figure entries no-op (host is responsible for rendering the dialog). */
-  openImagePicker?: OpenImagePicker;
+  /** Asks the host to open the media picker. When omitted, the Image,
+   *  Figure, and Video entries no-op (host is responsible for rendering
+   *  the dialog). */
+  openMediaPicker?: OpenMediaPicker;
 }
 
 interface SuggestionProps {
@@ -34,7 +35,7 @@ export const SlashCommand = Extension.create<SlashCommandOptions>({
   name: 'slashCommand',
 
   addOptions() {
-    return { getSnippetCatalog: undefined, openImagePicker: undefined };
+    return { getSnippetCatalog: undefined, openMediaPicker: undefined };
   },
 
   addProseMirrorPlugins() {
@@ -52,7 +53,7 @@ export const SlashCommand = Extension.create<SlashCommandOptions>({
           const catalog = this.options.getSnippetCatalog?.() ?? [];
           return filterSlashItems(
             query,
-            buildSlashItems(catalog, this.options.openImagePicker),
+            buildSlashItems(catalog, this.options.openMediaPicker),
           );
         },
         render: () => {

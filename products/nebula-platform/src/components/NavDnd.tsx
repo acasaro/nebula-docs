@@ -67,6 +67,7 @@ export function DragRow({
   return (
     <div
       ref={setNodeRef}
+      data-dnd-id={id}
       style={{
         transform: CSS.Transform.toString(transform),
         transition,

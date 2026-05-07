@@ -5,8 +5,8 @@ import Placeholder from '@tiptap/extension-placeholder';
 import type { ImportSpec } from '@nebula-docs/mdx';
 import {
   AssetUploadProgress,
-  ImagePickerDialog,
-  type PickedImage,
+  MediaPickerDialog,
+  type PickedMedia,
 } from '@/components/assets';
 import { useAssetUpload } from '@/lib/assets';
 import { parseMdxForEditor } from '@/lib/mdx/mdastToTiptap';
@@ -19,6 +19,7 @@ import { MdxCallout } from './MdxCalloutNode';
 import { MdxCard } from './MdxCardNode';
 import { MdxCodeBlock } from './MdxCodeBlockNode';
 import { MdxFrame } from './MdxFrameNode';
+import { MdxHero } from './MdxHeroNode';
 import { MdxImage } from './MdxImageNode';
 import {
   MdxTable,
@@ -38,13 +39,16 @@ import { MdxCardGroup, MdxColumn, MdxColumns } from './MdxColumnsNode';
 import { MdxCodeGroup } from './MdxCodeGroupNode';
 import { MdxExpandable } from './MdxExpandableNode';
 import { MdxMermaid } from './MdxMermaidNode';
+import { MdxProfile } from './MdxProfileNode';
 import { MdxRaw } from './MdxRawNode';
 import { MdxSnippet } from './MdxSnippetNode';
 import { MdxTree, MdxTreeFile, MdxTreeFolder } from './MdxTreeNode';
 import { MdxStep, MdxSteps } from './MdxStepsNode';
 import { MdxTab, MdxTabs } from './MdxTabsNode';
 import { MdxUpdate } from './MdxUpdateNode';
+import { MdxVideo } from './MdxVideoNode';
 import { SlashCommand } from './slashCommand';
+import { SlashHint } from './slashHint';
 
 interface MdxEditorProps {
   source: string;
@@ -83,13 +87,15 @@ export function MdxEditor({
     snippetCatalogRef.current = snippetCatalog;
   }, [snippetCatalog]);
 
-  // Image picker state. The slash menu, drag/drop, and paste handlers all
+  // Media picker state. The slash menu, drag/drop, and paste handlers all
   // funnel through `pickerState` so a single dialog instance owns the flow.
+  // The mode determines what node gets inserted on pick AND which asset
+  // category the picker filters to.
   type PickerState =
     | { open: false }
     | {
         open: true;
-        mode: 'image' | 'figure';
+        mode: 'image' | 'figure' | 'video';
         editor: Editor;
         range: { from: number; to: number };
       };
@@ -135,12 +141,12 @@ export function MdxEditor({
     [],
   );
 
-  const insertImage = useCallback(
+  const insertMedia = useCallback(
     (
       editor: Editor,
       range: { from: number; to: number },
-      image: { src: string; alt: string; width: number | null; height: number | null },
-      mode: 'image' | 'figure',
+      media: PickedMedia,
+      mode: 'image' | 'figure' | 'video',
     ) => {
       if (mode === 'figure') {
         editor
@@ -150,12 +156,27 @@ export function MdxEditor({
           .insertContent({
             type: 'mdxFrame',
             attrs: {
-              src: image.src,
-              alt: image.alt,
-              width: image.width,
-              height: image.height,
+              src: media.src,
+              alt: media.alt,
+              width: media.width,
+              height: media.height,
             },
             content: [{ type: 'paragraph' }],
+          })
+          .run();
+      } else if (mode === 'video') {
+        editor
+          .chain()
+          .focus()
+          .deleteRange(range)
+          .insertContent({
+            type: 'mdxVideo',
+            attrs: {
+              src: media.src,
+              caption: null,
+              loop: false,
+              maxLoops: null,
+            },
           })
           .run();
       } else {
@@ -166,10 +187,10 @@ export function MdxEditor({
           .insertContent({
             type: 'mdxImage',
             attrs: {
-              src: image.src,
-              alt: image.alt,
-              width: image.width,
-              height: image.height,
+              src: media.src,
+              alt: media.alt,
+              width: media.width,
+              height: media.height,
             },
           })
           .run();
@@ -207,6 +228,9 @@ export function MdxEditor({
       MdxMermaid,
       MdxBadge,
       MdxImage,
+      MdxVideo,
+      MdxProfile,
+      MdxHero,
       MdxTable,
       MdxTableRow,
       MdxTableHeader,
@@ -233,10 +257,11 @@ export function MdxEditor({
       MdxRaw,
       SlashCommand.configure({
         getSnippetCatalog: () => snippetCatalogRef.current,
-        openImagePicker: ({ mode, editor, range }) => {
+        openMediaPicker: ({ mode, editor, range }) => {
           setPickerState({ open: true, mode, editor, range });
         },
       }),
+      SlashHint,
       Placeholder.configure({
         placeholder: ({ editor, node, pos }) => {
           if (node.type.name !== 'paragraph') return '';
@@ -361,17 +386,18 @@ export function MdxEditor({
         </div>
       </EditorWithBlockHandle>
 
-      <ImagePickerDialog
+      <MediaPickerDialog
         open={pickerState.open}
+        category={pickerState.open && pickerState.mode === 'video' ? 'video' : 'image'}
         onOpenChange={(open) => {
           if (!open) setPickerState({ open: false });
         }}
-        onPick={(image: PickedImage) => {
+        onPick={(media: PickedMedia) => {
           if (!pickerState.open) return;
-          insertImage(
+          insertMedia(
             pickerState.editor,
             pickerState.range,
-            image,
+            media,
             pickerState.mode,
           );
           setPickerState({ open: false });

@@ -141,9 +141,14 @@ export default defineConfig({
       // root. Without this, fenced code blocks ship with a single theme's
       // hardcoded background color and look out of place when the page
       // is in the opposite theme.
+      //
+      // The tenant's theme.json `codeBlock.light` / `codeBlock.dark` pick
+      // is surfaced via env vars set in prepareAstro.mjs. Falls back to
+      // github-{light,dark} when unset so existing tenants render the
+      // same as before.
       themes: {
-        light: 'github-light',
-        dark: 'github-dark',
+        light: process.env.NEBULA_SHIKI_LIGHT || 'github-light',
+        dark: process.env.NEBULA_SHIKI_DARK || 'github-dark',
       },
       defaultColor: false,
       transformers: [shikiCodeMetaTransformer],

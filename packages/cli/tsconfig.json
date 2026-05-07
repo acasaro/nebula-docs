@@ -5,9 +5,8 @@
     "outDir": "./dist",
     "noEmit": true,
     "types": ["node", "astro/client"],
-    "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": ["./src/*"]
     }
   },
   "include": ["src/**/*", "bin/**/*", "astro.config.mjs", "src/env.d.ts"]

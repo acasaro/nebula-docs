@@ -36,27 +36,37 @@ const SUPPORTED_LANGUAGES: BundledLanguage[] = [
   'yaml',
 ];
 
-const LIGHT_THEME: BundledTheme = 'github-light';
-const DARK_THEME: BundledTheme = 'github-dark';
+const DEFAULT_LIGHT_THEME: BundledTheme = 'github-light';
+const DEFAULT_DARK_THEME: BundledTheme = 'github-dark';
 
 type ShikiInstance = HighlighterCore & {
   getLoadedLanguages: () => string[];
 };
 
-let highlighterPromise: Promise<ShikiInstance> | null = null;
+// One highlighter per (light, dark) pair. Switching themes via theme.json
+// is rare (settings change, not per-render), so a Map keyed by the theme
+// combo avoids reloading shiki when the same pair is reused across many
+// CodeBlock instances on a page.
+const highlighterCache = new Map<string, Promise<ShikiInstance>>();
 
-function getHighlighter(): Promise<ShikiInstance> {
-  if (!highlighterPromise) {
-    highlighterPromise = (async () => {
+function getHighlighter(
+  light: BundledTheme,
+  dark: BundledTheme,
+): Promise<ShikiInstance> {
+  const key = `${light}::${dark}`;
+  let p = highlighterCache.get(key);
+  if (!p) {
+    p = (async () => {
       const { createHighlighter } = await import('shiki');
       const hl = await createHighlighter({
-        themes: [LIGHT_THEME, DARK_THEME],
+        themes: [light, dark],
         langs: SUPPORTED_LANGUAGES,
       });
       return hl as ShikiInstance;
     })();
+    highlighterCache.set(key, p);
   }
-  return highlighterPromise;
+  return p;
 }
 
 export interface CodeBlockProps {
@@ -71,6 +81,18 @@ export interface CodeBlockProps {
    * provide the theme context.
    */
   fixedTheme?: 'light' | 'dark';
+  /**
+   * Override the default Shiki theme used in light mode. Driven by
+   * `theme.json.codeBlock.light` at the consumer level so tenants can swap
+   * the highlighter theme without forking this component. Defaults to
+   * github-light.
+   */
+  lightTheme?: BundledTheme;
+  /**
+   * Override the default Shiki theme used in dark mode. Driven by
+   * `theme.json.codeBlock.dark`. Defaults to github-dark.
+   */
+  darkTheme?: BundledTheme;
 }
 
 function resolveLanguage(input?: string): string {
@@ -86,20 +108,29 @@ function resolveLanguage(input?: string): string {
   return 'text';
 }
 
-export function CodeBlock({ code, language, className, fixedTheme }: CodeBlockProps) {
+export function CodeBlock({
+  code,
+  language,
+  className,
+  fixedTheme,
+  lightTheme,
+  darkTheme,
+}: CodeBlockProps) {
   const [html, setHtml] = useState<{ light: string; dark: string } | null>(null);
   const lastRequestRef = useRef(0);
+  const resolvedLight = lightTheme ?? DEFAULT_LIGHT_THEME;
+  const resolvedDark = darkTheme ?? DEFAULT_DARK_THEME;
 
   useEffect(() => {
     const requestId = ++lastRequestRef.current;
     let cancelled = false;
     const lang = resolveLanguage(language);
-    getHighlighter()
+    getHighlighter(resolvedLight, resolvedDark)
       .then((hl) => {
         if (cancelled || lastRequestRef.current !== requestId) return;
         const safeLang = hl.getLoadedLanguages().includes(lang) ? lang : 'text';
-        const light = hl.codeToHtml(code, { lang: safeLang, theme: LIGHT_THEME });
-        const dark = hl.codeToHtml(code, { lang: safeLang, theme: DARK_THEME });
+        const light = hl.codeToHtml(code, { lang: safeLang, theme: resolvedLight });
+        const dark = hl.codeToHtml(code, { lang: safeLang, theme: resolvedDark });
         setHtml({ light, dark });
       })
       .catch(() => {
@@ -108,7 +139,7 @@ export function CodeBlock({ code, language, className, fixedTheme }: CodeBlockPr
     return () => {
       cancelled = true;
     };
-  }, [code, language]);
+  }, [code, language, resolvedLight, resolvedDark]);
 
   if (!html) {
     return (

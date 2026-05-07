@@ -4,6 +4,8 @@ export * from './text';
 export * from './callout';
 export * from './icon';
 export * from './frame';
+export * from './hero';
+export * from './profile';
 export * from './video';
 export * from './step';
 export * from './steps';

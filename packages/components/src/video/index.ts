@@ -1,1 +1,1 @@
-export { Video, VideoLoop, type VideoNaturalProps } from './Video';
+export { Video, VideoLoop, type VideoProps } from './Video';

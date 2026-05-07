@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ImagePlus, Search, Upload } from 'lucide-react';
+import { FileVideo, ImagePlus, Search, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -14,10 +14,12 @@ import {
   useAssetUpload,
   useAssets,
   type Asset,
+  type AssetCategory,
 } from '@/lib/assets';
 import { cn } from '@/lib/utils';
+import { VideoThumbnail } from './VideoThumbnail';
 
-export interface PickedImage {
+export interface PickedMedia {
   src: string;
   alt: string;
   width: number | null;
@@ -25,26 +27,55 @@ export interface PickedImage {
   asset: Asset;
 }
 
-interface ImagePickerDialogProps {
+interface MediaPickerDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onPick: (image: PickedImage) => void;
-  /** When true, restrict to image-category assets. Defaults to true. */
-  imagesOnly?: boolean;
+  onPick: (media: PickedMedia) => void;
+  /** Asset category to surface. Drives the filter, the upload accept hint,
+   *  the dialog title, and whether tiles render with image vs video preview. */
+  category?: AssetCategory;
 }
 
-export function ImagePickerDialog({
+const COPY: Record<
+  AssetCategory,
+  { title: string; empty: string; search: string; drop: string; emptyIcon: typeof Upload }
+> = {
+  image: {
+    title: 'Insert image',
+    empty: 'No images uploaded yet',
+    search: 'Search images',
+    drop: 'Drop images here',
+    emptyIcon: ImagePlus,
+  },
+  video: {
+    title: 'Insert video',
+    empty: 'No videos uploaded yet',
+    search: 'Search videos',
+    drop: 'Drop videos here',
+    emptyIcon: FileVideo,
+  },
+  file: {
+    title: 'Insert file',
+    empty: 'No files uploaded yet',
+    search: 'Search files',
+    drop: 'Drop files here',
+    emptyIcon: Upload,
+  },
+};
+
+export function MediaPickerDialog({
   open,
   onOpenChange,
   onPick,
-  imagesOnly = true,
-}: ImagePickerDialogProps) {
+  category = 'image',
+}: MediaPickerDialogProps) {
   const state = useAssets();
   const upload = useAssetUpload();
   const [search, setSearch] = useState('');
   const [tab, setTab] = useState<'library' | 'upload'>('library');
   const [dropActive, setDropActive] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const copy = COPY[category];
 
   useEffect(() => {
     if (!open) {
@@ -57,11 +88,11 @@ export function ImagePickerDialog({
     if (state.status !== 'ready') return [];
     const q = search.trim().toLowerCase();
     return state.assets.filter((a) => {
-      if (imagesOnly && a.category !== 'image') return false;
+      if (a.category !== category) return false;
       if (q && !a.displayName.toLowerCase().includes(q)) return false;
       return true;
     });
-  }, [imagesOnly, search, state]);
+  }, [category, search, state]);
 
   const choose = useCallback(
     (asset: Asset) => {
@@ -79,22 +110,31 @@ export function ImagePickerDialog({
 
   const handleFiles = useCallback(
     async (files: File[]) => {
-      const filtered = imagesOnly
-        ? files.filter((f) => f.type.startsWith('image/'))
+      // Browsers report MIME type per the file's binary signature, so the
+      // category match here is the same one the upload pipeline applies on
+      // the server side via `categoryFromMime`.
+      const mimePrefix =
+        category === 'image' ? 'image/' : category === 'video' ? 'video/' : '';
+      const filtered = mimePrefix
+        ? files.filter((f) => f.type.startsWith(mimePrefix))
         : files;
       if (filtered.length === 0) return;
       const results = await upload.uploadFiles(filtered);
       const first = results.find((r) => r.asset);
       if (first?.asset) choose(first.asset);
     },
-    [choose, imagesOnly, upload],
+    [category, choose, upload],
   );
+
+  const accept =
+    category === 'image' ? 'image/*' : category === 'video' ? 'video/*' : undefined;
+  const EmptyIcon = copy.emptyIcon;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className='max-w-3xl p-0'>
         <DialogHeader className='px-6 pb-3 pt-6'>
-          <DialogTitle>Insert image</DialogTitle>
+          <DialogTitle>{copy.title}</DialogTitle>
         </DialogHeader>
 
         <Tabs value={tab} onValueChange={(v) => setTab(v as typeof tab)}>
@@ -113,7 +153,7 @@ export function ImagePickerDialog({
                   autoFocus
                   value={search}
                   onChange={(e) => setSearch(e.currentTarget.value)}
-                  placeholder='Search images'
+                  placeholder={copy.search}
                   className='pl-8'
                 />
               </div>
@@ -127,10 +167,10 @@ export function ImagePickerDialog({
               ) : items.length === 0 ? (
                 <div className='flex flex-col items-center gap-3 py-12 text-center'>
                   <div className='flex size-10 items-center justify-center rounded-full bg-muted text-muted-foreground'>
-                    <ImagePlus className='size-5' />
+                    <EmptyIcon className='size-5' />
                   </div>
                   <div className='text-sm font-medium'>
-                    {search ? 'No matches' : 'No images uploaded yet'}
+                    {search ? 'No matches' : copy.empty}
                   </div>
                   {!search ? (
                     <Button size='sm' onClick={() => setTab('upload')}>
@@ -179,7 +219,7 @@ export function ImagePickerDialog({
               <div className='flex size-12 items-center justify-center rounded-full bg-primary/10 text-primary'>
                 <Upload className='size-6' />
               </div>
-              <div className='text-sm font-medium'>Drop images here</div>
+              <div className='text-sm font-medium'>{copy.drop}</div>
               <div className='text-xs text-muted-foreground'>
                 or click below to browse
               </div>
@@ -188,7 +228,7 @@ export function ImagePickerDialog({
                 hidden
                 type='file'
                 multiple
-                accept={imagesOnly ? 'image/*' : undefined}
+                accept={accept}
                 onChange={(e) => {
                   const files = Array.from(e.currentTarget.files ?? []);
                   void handleFiles(files);
@@ -243,9 +283,11 @@ function PickerTile({ asset, onClick }: PickerTileProps) {
       type='button'
       onClick={onClick}
       className='group flex flex-col overflow-hidden rounded-lg border bg-card text-left text-card-foreground transition-all hover:border-primary hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary'>
-      <div className='flex aspect-square w-full items-center justify-center overflow-hidden bg-muted/40'>
+      <div className='relative flex aspect-square w-full items-center justify-center overflow-hidden bg-muted/40'>
         {broken ? (
           <div className='text-xs text-muted-foreground'>Unavailable</div>
+        ) : asset.category === 'video' ? (
+          <VideoThumbnail src={asset.downloadUrl} hoverPreview={false} />
         ) : (
           <img
             src={asset.downloadUrl}

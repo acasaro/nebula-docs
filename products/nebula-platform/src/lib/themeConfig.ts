@@ -4,6 +4,10 @@ import { fetchFileContent } from '@/lib/content';
 export interface ThemeConfig {
   extends?: string;
   tokens?: ThemeTokens;
+  /** Shiki theme overrides for fenced code blocks. Both keys are optional;
+   *  unset values fall back to the renderer's defaults (github-light /
+   *  github-dark). Values must be Shiki bundled theme IDs. */
+  codeBlock?: CodeBlockThemes;
 }
 
 export interface ThemeTokens {
@@ -11,6 +15,11 @@ export interface ThemeTokens {
   brandPrimaryLight?: string;
   brandPrimaryDark?: string;
   [key: string]: unknown;
+}
+
+export interface CodeBlockThemes {
+  light?: string;
+  dark?: string;
 }
 
 interface UseThemeConfigArgs {

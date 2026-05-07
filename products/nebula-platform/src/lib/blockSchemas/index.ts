@@ -7,8 +7,10 @@ import { cardGroupSchema } from './cardGroup';
 import { columnsSchema } from './columns';
 import { expandableSchema } from './expandable';
 import { frameSchema } from './frame';
+import { heroSchema } from './hero';
 import { imageSchema } from './image';
 import { paramFieldSchema } from './paramField';
+import { profileSchema } from './profile';
 import { requestExampleSchema } from './requestExample';
 import { responseExampleSchema } from './responseExample';
 import { responseFieldSchema } from './responseField';
@@ -16,6 +18,7 @@ import { stepSchema } from './step';
 import { stepsSchema } from './steps';
 import { tabSchema } from './tab';
 import { updateSchema } from './update';
+import { videoSchema } from './video';
 
 const REGISTRY: Record<string, BlockAttrSchema> = {
   [accordionSchema.blockType]: accordionSchema,
@@ -26,8 +29,10 @@ const REGISTRY: Record<string, BlockAttrSchema> = {
   [columnsSchema.blockType]: columnsSchema,
   [expandableSchema.blockType]: expandableSchema,
   [frameSchema.blockType]: frameSchema,
+  [heroSchema.blockType]: heroSchema,
   [imageSchema.blockType]: imageSchema,
   [paramFieldSchema.blockType]: paramFieldSchema,
+  [profileSchema.blockType]: profileSchema,
   [requestExampleSchema.blockType]: requestExampleSchema,
   [responseExampleSchema.blockType]: responseExampleSchema,
   [responseFieldSchema.blockType]: responseFieldSchema,
@@ -35,6 +40,7 @@ const REGISTRY: Record<string, BlockAttrSchema> = {
   [stepsSchema.blockType]: stepsSchema,
   [tabSchema.blockType]: tabSchema,
   [updateSchema.blockType]: updateSchema,
+  [videoSchema.blockType]: videoSchema,
 };
 
 export function getBlockSchema(blockType: string): BlockAttrSchema | null {

@@ -20,6 +20,17 @@ export async function prepareAstroEnv({ tenant }) {
     ? JSON.parse(readFileSync(themeJsonPath, 'utf8'))
     : null;
 
+  // Surface the tenant's Shiki theme picks to astro.config.mjs via env
+  // vars. Both are optional — astro.config falls back to the renderer's
+  // defaults (github-light / github-dark) when unset. Driven by the
+  // editor's Visual Branding > "Code block — light/dark theme" selects.
+  const cbLight = themeOverrides?.codeBlock?.light;
+  const cbDark = themeOverrides?.codeBlock?.dark;
+  if (typeof cbLight === 'string' && cbLight)
+    process.env.NEBULA_SHIKI_LIGHT = cbLight;
+  if (typeof cbDark === 'string' && cbDark)
+    process.env.NEBULA_SHIKI_DARK = cbDark;
+
   const baseId = docs.theme?.base ?? themeOverrides?.extends ?? 'mcoe-default';
   const css = await composeTokensCss({ baseId, overrides: themeOverrides });
 

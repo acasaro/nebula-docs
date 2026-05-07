@@ -4,17 +4,19 @@
 {
   "extends": "@docusaurus/tsconfig",
   "compilerOptions": {
-    "baseUrl": ".",
+    // The base config (@docusaurus/tsconfig) still sets `baseUrl: "."`,
+    // which TS 5.7 deprecated. Silence the warning until Docusaurus
+    // ships a config without it.
     "ignoreDeprecations": "6.0",
     "jsx": "react-jsx",
     "strict": true,
     "paths": {
       "@site/*": ["./*"],
-      "@components/*": ["src/components/*"],
-      "@hooks/*": ["src/hooks/*"],
-      "@lib/*": ["src/lib/*"],
-      "@theme/*": ["src/theme/*"],
-      "@types/*": ["src/types/*"]
+      "@components/*": ["./src/components/*"],
+      "@hooks/*": ["./src/hooks/*"],
+      "@lib/*": ["./src/lib/*"],
+      "@theme/*": ["./src/theme/*"],
+      "@types/*": ["./src/types/*"]
     }
   },
   "include": ["src/**/*"],

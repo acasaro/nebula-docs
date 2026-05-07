@@ -5,11 +5,14 @@ import { useHeaderLeading, useHeaderSlot } from "@/components/HeaderSlot";
 import { MdxEditor, normalizeMdx } from "@/components/mdx/MdxEditor";
 import { NavSettingsPanel } from "@/components/NavSettingsPanel";
 import { HoverProvider, type DropSide, type HoverState } from "@/components/NavDnd";
+import { EditorSurfaceSkeleton } from "@/components/EditorSurfaceSkeleton";
+import { FileTreeSkeleton } from "@/components/FileTreeSkeleton";
 import { NavTreeSkeleton } from "@/components/NavTreeSkeleton";
 import { OrphanedPages, ORPHAN_ID_PREFIX } from "@/components/OrphanedPages";
 import { SourceEditor } from "@/components/SourceEditor";
 import {
   DndContext,
+  DragOverlay,
   PointerSensor,
   useSensor,
   useSensors,
@@ -24,7 +27,6 @@ import {
   type OpenNavSettings,
 } from "@/components/NavTree";
 import { PublishMenu, type PublishChange } from "@/components/PublishMenu";
-import { InlineSpinner } from "@/components/ui/NebulaLoader";
 import { PageLoader } from "@/components/ui/PageLoader";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -256,11 +258,7 @@ function FileViewer({
     );
   }
   if (loading) {
-    return (
-      <div className='flex h-full items-center justify-center p-8'>
-        <PageLoader ringStyle='crisp' />
-      </div>
-    );
+    return <EditorSurfaceSkeleton />;
   }
   if (error) {
     return (
@@ -324,12 +322,7 @@ function FileTreePanel({
   hideExtensions,
 }: FileTreePanelProps) {
   if (loading) {
-    return (
-      <p className='flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground'>
-        <InlineSpinner size={14} />
-        Loading tree…
-      </p>
-    );
+    return <FileTreeSkeleton />;
   }
   if (error) {
     return <p className='px-3 py-2 text-sm text-destructive'>{error}</p>;
@@ -592,14 +585,26 @@ export function RepoBrowser() {
   }, [liveDocsConfig, resolvePagePath, orphanedPagePaths]);
 
   // Drag-and-drop state. `hover` drives the drop-line indicator on whichever
-  // row is currently the over target — overId + side. Cleared on drop.
+  // row is currently the over target — overId + side. `dragOverlay` carries
+  // a snapshot of the row being dragged so DragOverlay can render a ghost
+  // preview that follows the cursor; without it the user only sees the
+  // source row dim in place, which reads as "nothing's happening." Both
+  // cleared on drop / cancel.
   const [hover, setHover] = useState<HoverState>({ overId: null, side: null });
+  const [dragOverlay, setDragOverlay] = useState<{ id: string; html: string; width: number } | null>(null);
   const dndSensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
   );
 
-  const handleDragStart = useCallback((_e: DragStartEvent) => {
+  const handleDragStart = useCallback((e: DragStartEvent) => {
     setHover({ overId: null, side: null });
+    const id = e.active?.id;
+    if (typeof id !== 'string') return;
+    const ref = document.querySelector(`[data-dnd-id="${CSS.escape(id)}"]`);
+    if (ref instanceof HTMLElement) {
+      const rect = ref.getBoundingClientRect();
+      setDragOverlay({ id, html: ref.outerHTML, width: rect.width });
+    }
   }, []);
 
   const handleDragOver = useCallback((e: DragOverEvent) => {
@@ -662,6 +667,7 @@ export function RepoBrowser() {
       const overId = over ? String(over.id) : null;
       const side = hover.side;
       setHover({ overId: null, side: null });
+      setDragOverlay(null);
 
       if (!overId || !liveDocsConfig) return;
       if (overId === activeId) return;
@@ -950,6 +956,11 @@ export function RepoBrowser() {
       });
     return () => {
       cancelled = true;
+      // Drop the in-flight marker on cleanup. Otherwise React StrictMode's
+      // dev-only double-mount cancels the first fetch and bails the second
+      // because `fetchedPathsRef.has(...)` is already true → `setFiles` never
+      // runs and the file panel renders blank on initial deep-link loads.
+      fetchedPathsRef.current.delete(selectedPath);
     };
   }, [active, selectedPath, currentBranch]);
 
@@ -1279,6 +1290,10 @@ export function RepoBrowser() {
                 onDragStart={handleDragStart}
                 onDragOver={handleDragOver}
                 onDragEnd={handleDragEnd}
+                onDragCancel={() => {
+                  setHover({ overId: null, side: null });
+                  setDragOverlay(null);
+                }}
               >
                 <SortableContext items={navDragIds} strategy={verticalListSortingStrategy}>
                   <HoverProvider hover={hover}>
@@ -1303,6 +1318,15 @@ export function RepoBrowser() {
                     />
                   </HoverProvider>
                 </SortableContext>
+                <DragOverlay dropAnimation={null}>
+                  {dragOverlay ? (
+                    <div
+                      className='pointer-events-none rounded-xl border border-border/60 bg-background/95 px-2 py-1 shadow-lg ring-1 ring-primary/40 backdrop-blur-sm'
+                      style={{ width: dragOverlay.width }}
+                      dangerouslySetInnerHTML={{ __html: dragOverlay.html }}
+                    />
+                  ) : null}
+                </DragOverlay>
               </DndContext>
             ) : (
               <FileTreePanel

@@ -144,6 +144,12 @@ function serializeBlock(node: TiptapNode): string {
       return serializeCodeGroup(node);
     case 'mdxImage':
       return serializeImage(node);
+    case 'mdxVideo':
+      return serializeVideo(node);
+    case 'mdxProfile':
+      return serializeProfile(node);
+    case 'mdxHero':
+      return serializeHero(node);
     case 'table':
       return serializeTable(node);
     case 'mdxImportedSnippet':
@@ -288,6 +294,68 @@ interface ImgAttrs {
   noZoom?: boolean;
   width?: number | string | null;
   height?: number | string | null;
+}
+
+function serializeHero(node: TiptapNode): string {
+  // Hero attrs are a flat blob: drop nulls/empties, hand the rest to
+  // `serializeAttrs` so it formats strings, numbers, and the preserved
+  // `slides` expression consistently with every other JSX block.
+  const a = (node.attrs ?? {}) as Record<string, unknown>;
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(a)) {
+    if (v == null) continue;
+    if (typeof v === 'string' && v.length === 0) continue;
+    out[k] = v;
+  }
+  return `<Hero${serializeAttrs(out)} />`;
+}
+
+function serializeProfile(node: TiptapNode): string {
+  const a = (node.attrs ?? {}) as {
+    name?: string;
+    title?: string | null;
+    photo?: string | null;
+    href?: string | null;
+    initials?: string | null;
+    accent?: string | null;
+  };
+  const parts: string[] = [];
+  parts.push(`name="${escapeJsxAttr(String(a.name ?? ''))}"`);
+  if (typeof a.title === 'string' && a.title.length > 0) {
+    parts.push(`title="${escapeJsxAttr(a.title)}"`);
+  }
+  if (typeof a.photo === 'string' && a.photo.length > 0) {
+    parts.push(`photo="${escapeJsxAttr(a.photo)}"`);
+  }
+  if (typeof a.href === 'string' && a.href.length > 0) {
+    parts.push(`href="${escapeJsxAttr(a.href)}"`);
+  }
+  if (typeof a.initials === 'string' && a.initials.length > 0) {
+    parts.push(`initials="${escapeJsxAttr(a.initials)}"`);
+  }
+  if (typeof a.accent === 'string' && a.accent.length > 0) {
+    parts.push(`accent="${escapeJsxAttr(a.accent)}"`);
+  }
+  return `<Profile ${parts.join(' ')} />`;
+}
+
+function serializeVideo(node: TiptapNode): string {
+  const a = (node.attrs ?? {}) as {
+    src?: string;
+    caption?: string | null;
+    loop?: boolean;
+    maxLoops?: number | null;
+  };
+  const parts: string[] = [];
+  parts.push(`src="${escapeJsxAttr(String(a.src ?? ''))}"`);
+  if (typeof a.caption === 'string' && a.caption.length > 0) {
+    parts.push(`caption="${escapeJsxAttr(a.caption)}"`);
+  }
+  if (a.loop === true) parts.push('loop');
+  if (typeof a.maxLoops === 'number' && Number.isFinite(a.maxLoops)) {
+    parts.push(`maxLoops={${a.maxLoops}}`);
+  }
+  return `<Video ${parts.join(' ')} />`;
 }
 
 function jsxImg(a: ImgAttrs): string {

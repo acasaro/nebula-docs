@@ -399,6 +399,17 @@
   border-top-right-radius: 0 !important;
 }
 
+/* Ghost "Type to search" hint shown after the "/" when the slash menu is
+ * about to open — see SlashHint extension. Mirrors the placeholder color
+ * exactly so it reads as ambient hint text, not real content. */
+.mdx-slash-hint {
+  color: var(--muted-foreground);
+  opacity: 0.55;
+  pointer-events: none;
+  user-select: none;
+  margin-left: 0.25em;
+}
+
 /* Tiptap editor surface — keep the focus ring off the contenteditable. */
 .mdx-prose .ProseMirror {
   outline: none;

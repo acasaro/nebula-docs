@@ -5,7 +5,65 @@ import { fetchFileContent } from '@/lib/content';
 // (page paths without `.mdx`) or nested groups / page-object entries.
 
 export interface DocsConfig {
-  navigation?: { tabs?: Tab[] };
+  navigation?: {
+    /** Top-level tabs — Mintlify's primary organizational pattern. When
+     *  present, the sidebar mirrors the active tab's children. */
+    tabs?: Tab[];
+    /** Root-level pages alongside tabs/groups (Mintlify allows root pages
+     *  without a tabs wrapper). When tabs are also present, root pages and
+     *  groups render after the active tab's tree in the sidebar. */
+    pages?: PageEntry[];
+    /** Root-level groups (Mintlify allows root groups without a tabs
+     *  wrapper). Same render rules as `pages`. */
+    groups?: Group[];
+    /** Persistent items above the sidebar groups. Each anchor either holds
+     *  child pages/groups (collapsible section) or has `href` (link). */
+    anchors?: Anchor[];
+    /** Expandable dropdown items at the top of the sidebar. Same shape as
+     *  anchors but rendered as a different visual (Mintlify spec). */
+    dropdowns?: Dropdown[];
+    /** Anchors shown on every page regardless of section — useful for
+     *  tenant-wide links (changelog, blog, etc.). */
+    global?: {
+      anchors?: Anchor[];
+    };
+  };
+  /** Page-level styling overrides. */
+  styling?: {
+    /** Eyebrow rendered above the page title. `breadcrumbs` shows the full
+     *  navigation path; `section` only shows the parent section. */
+    eyebrows?: 'breadcrumbs' | 'section';
+  };
+}
+
+export interface Anchor {
+  anchor: string;
+  icon?: IconValue;
+  hidden?: boolean;
+  href?: string;
+  pages?: PageEntry[];
+  groups?: Group[];
+}
+
+export interface Dropdown {
+  dropdown: string;
+  icon?: IconValue;
+  hidden?: boolean;
+  href?: string;
+  pages?: PageEntry[];
+  groups?: Group[];
+}
+
+/** Mintlify menu item — used inside `tab.menu`. Each item is a labeled
+ *  entry that holds nested groups/pages or an external href. */
+export interface MenuItem {
+  item: string;
+  icon?: IconValue;
+  description?: string;
+  hidden?: boolean;
+  href?: string;
+  pages?: PageEntry[];
+  groups?: Group[];
 }
 
 export interface Tab {
@@ -16,6 +74,16 @@ export interface Tab {
   /** Mintlify-style direct pages under a tab (no group wrapper). Mixed with
    *  `groups` they render together — pages first by convention. */
   pages?: PageEntry[];
+  /** Mintlify `tab.menu`: dropdown items rendered when the tab is active,
+   *  letting one tab branch into multiple sub-sections without occupying
+   *  more navbar real estate. */
+  menu?: MenuItem[];
+  /** Optional override URL — when set, the tab's navbar entry links here
+   *  instead of the inferred first page. */
+  href?: string;
+  /** Mintlify `tab.directory`: when set, the renderer auto-renders a
+   *  directory listing on root pages within this tab. */
+  directory?: 'none' | 'accordion' | 'card';
 }
 
 export interface Group {

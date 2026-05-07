@@ -170,10 +170,10 @@ const showSecondaryRow = tabs.length > 0 || navbarLinks.length > 0 || primary;
     gap: 1rem;
   }
   .nebula-navbar-row--top .nebula-navbar-row-inner {
-    height: 3.25rem;
+    height: 3.5rem;
   }
   .nebula-navbar-row--bottom .nebula-navbar-row-inner {
-    height: 2.5rem;
+    height: 2.75rem;
   }
   .nebula-navbar-brand {
     display: flex;
@@ -192,8 +192,9 @@ const showSecondaryRow = tabs.length > 0 || navbarLinks.length > 0 || primary;
     text-decoration: none;
   }
   .nebula-brand-name {
-    font-size: 1rem;
-    letter-spacing: -0.01em;
+    font-size: 1.0625rem;
+    font-weight: 600;
+    letter-spacing: -0.015em;
   }
   .nebula-logo {
     height: 1.5rem;
@@ -232,15 +233,15 @@ const showSecondaryRow = tabs.length > 0 || navbarLinks.length > 0 || primary;
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    height: 2rem;
-    padding: 0 0.5rem 0 0.625rem;
+    height: 2.125rem;
+    padding: 0 0.5rem 0 0.75rem;
     border: 1px solid var(--mcoe-border-default);
     border-radius: 0.5rem;
     background: color-mix(in srgb, var(--mcoe-text-heading) 3%, transparent);
     color: var(--mcoe-text-secondary);
-    font-size: 0.8125rem;
+    font-size: 0.875rem;
     cursor: pointer;
-    min-width: 12rem;
+    min-width: 13rem;
     transition: border-color 0.1s, background-color 0.1s;
   }
   .nebula-search-btn:hover {
@@ -312,9 +313,9 @@ const showSecondaryRow = tabs.length > 0 || navbarLinks.length > 0 || primary;
     align-items: center;
     gap: 0.5rem;
     height: 100%;
-    padding: 0 0.625rem;
+    padding: 0 0.75rem;
     color: var(--mcoe-text-secondary);
-    font-size: 0.8125rem;
+    font-size: 0.9375rem;
     font-weight: 500;
     border-bottom: 2px solid transparent;
     margin-bottom: -1px; /* overlap parent border-bottom */
@@ -342,12 +343,12 @@ const showSecondaryRow = tabs.length > 0 || navbarLinks.length > 0 || primary;
     display: inline-flex;
     align-items: center;
     gap: 0.4rem;
-    height: 1.75rem;
-    padding: 0 0.625rem;
+    height: 1.875rem;
+    padding: 0 0.75rem;
     border: 1px solid var(--mcoe-border-default);
     border-radius: 0.4375rem;
     color: var(--mcoe-text-primary);
-    font-size: 0.8125rem;
+    font-size: 0.875rem;
     font-weight: 500;
     line-height: 1;
     transition: background-color 0.1s, border-color 0.1s;
@@ -359,12 +360,12 @@ const showSecondaryRow = tabs.length > 0 || navbarLinks.length > 0 || primary;
   .nebula-navbar-primary {
     display: inline-flex;
     align-items: center;
-    height: 1.75rem;
-    padding: 0 0.75rem;
+    height: 1.875rem;
+    padding: 0 0.875rem;
     border-radius: 0.4375rem;
     background: var(--mcoe-brand-primary);
     color: var(--mcoe-text-inverse);
-    font-size: 0.8125rem;
+    font-size: 0.875rem;
     font-weight: 500;
     line-height: 1;
     transition: background-color 0.1s;

@@ -278,6 +278,9 @@ export function MdxEditor({
           if (parentName === 'mdxCard') {
             return 'Card description…';
           }
+          if (parentName === 'mdxColumn') {
+            return 'Type or press "/" for commands';
+          }
           // Top-level paragraphs and step bodies share the same hint.
           if (parentName === 'doc' || parentName === 'mdxStep') {
             return 'Start typing something or press "/" for commands';

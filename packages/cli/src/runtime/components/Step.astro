@@ -15,44 +15,64 @@ const { title } = Astro.props as Props;
     counter-increment: nebula-step;
     position: relative;
     padding-left: 2.75rem;
-    padding-bottom: var(--mcoe-space-5);
+    padding-bottom: 1.5rem;
   }
+  /* Numbered circle. Uses color-mix from `--mcoe-text-heading` so the fill
+   * sits a tasteful step darker than the page bg in light mode and a step
+   * lighter in dark mode — derived from one source so it tracks any token
+   * shift without separate light/dark blocks. Mintlify-aligned contrast. */
   .nebula-step::before {
     content: counter(nebula-step);
     position: absolute;
     left: 0;
-    top: 0.1em;
+    top: 0.125rem;
     width: 1.75rem;
     height: 1.75rem;
     border-radius: 50%;
-    background: var(--mcoe-bg-tertiary);
+    background: color-mix(in srgb, var(--mcoe-text-heading) 6%, var(--mcoe-bg-primary));
     color: var(--mcoe-text-heading);
-    font-weight: var(--mcoe-font-weight-bold);
-    font-size: var(--mcoe-font-size-xs);
+    font-weight: 600;
+    font-size: 0.8125rem;
     display: flex;
     align-items: center;
     justify-content: center;
-    border: 1px solid var(--mcoe-border-default);
+    border: 1px solid color-mix(in srgb, var(--mcoe-text-heading) 14%, transparent);
     z-index: 1;
     line-height: 1;
   }
+  /* Connector line between circles. Sits under the circle column with a
+   * small gap on both ends so it doesn't kiss the circle borders. The line
+   * extends a hair past the step's padding-bottom so it visually meets the
+   * next step's circle without a seam. */
   .nebula-step::after {
     content: '';
     position: absolute;
     left: calc(0.875rem - 0.5px);
-    top: 1.85rem;
-    bottom: 0;
+    top: 2.125rem;
+    bottom: -0.25rem;
     width: 1px;
     background: var(--mcoe-border-muted);
   }
+  /* Last step: fade the line into transparent instead of hard-cutting at
+   * the circle's bottom. Mintlify pattern — the trail tapers off, signalling
+   * "end of sequence" without a sudden stop. */
   .nebula-step:last-child::after {
-    display: none;
+    bottom: auto;
+    height: 2.25rem;
+    background: linear-gradient(
+      to bottom,
+      var(--mcoe-border-muted) 0%,
+      var(--mcoe-border-muted) 35%,
+      transparent 100%
+    );
   }
   .nebula-step-title {
-    font-weight: var(--mcoe-font-weight-bold);
+    font-weight: 600;
     color: var(--mcoe-text-heading);
-    margin: 0 0 var(--mcoe-space-2);
-    font-size: var(--mcoe-font-size-md);
+    margin: 0 0 0.5rem;
+    font-size: 1rem;
+    line-height: 1.4;
+    letter-spacing: -0.01em;
   }
   .nebula-step-content > :first-child {
     margin-top: 0;

@@ -4,6 +4,9 @@ import type { OpenNavSettings } from '@/components/NavTree';
 import {
   GroupSettingsForm,
   type GroupConfigValues,
+  type PagePickerOption,
+  NavItemSettingsForm,
+  type NavItemConfigValues,
   PageSettingsForm,
   type PageFrontmatterValues,
   TabSettingsForm,
@@ -27,13 +30,24 @@ import {
 import {
   splitFrontmatter,
 } from '@/lib/frontmatter';
-import type { DocsConfig, Group, PageObject, Tab } from '@/lib/docsConfig';
+import type {
+  Anchor,
+  DocsConfig,
+  Dropdown,
+  Group,
+  MenuItem,
+  PageObject,
+  Tab,
+} from '@/lib/docsConfig';
 import type { IconValue as FormIconValue } from '@/components/IconField';
 
 const PANEL_TITLE: Record<OpenNavSettings['kind'], string> = {
   page: 'Page settings',
   group: 'Group settings',
   tab: 'Tab settings',
+  anchor: 'Anchor settings',
+  dropdown: 'Dropdown settings',
+  'menu-item': 'Menu item settings',
 };
 
 interface NavSettingsPanelProps {
@@ -190,6 +204,7 @@ function SettingsBody({
       align: (tab.align as string | undefined) ?? 'start',
       directory: (tab.directory as string | undefined) ?? 'none',
     };
+    const availablePages = collectTabPages(tab);
     const onChange = (patch: Partial<TabConfigValues>) => {
       onConfigChange((config) =>
         replaceResolvedEntry(
@@ -201,7 +216,13 @@ function SettingsBody({
         ),
       );
     };
-    return <TabSettingsForm values={values} onChange={onChange} />;
+    return (
+      <TabSettingsForm
+        values={values}
+        onChange={onChange}
+        availablePages={availablePages}
+      />
+    );
   }
 
   if (resolved.kind === 'group') {
@@ -214,7 +235,9 @@ function SettingsBody({
       expanded: group.expanded ?? true,
       openapi: (group.openapi as string | undefined) ?? '',
       asyncapi: (group.asyncapi as string | undefined) ?? '',
+      root: (group.root as string | undefined) ?? '',
     };
+    const availablePages = collectGroupPages(group);
     const onChange = (patch: Partial<GroupConfigValues>) => {
       onConfigChange((config) =>
         replaceResolvedEntry(
@@ -226,7 +249,75 @@ function SettingsBody({
         ),
       );
     };
-    return <GroupSettingsForm values={values} onChange={onChange} />;
+    return (
+      <GroupSettingsForm
+        values={values}
+        onChange={onChange}
+        availablePages={availablePages}
+      />
+    );
+  }
+
+  if (
+    resolved.kind === 'anchor' ||
+    resolved.kind === 'dropdown' ||
+    resolved.kind === 'menu-item'
+  ) {
+    const kind = resolved.kind;
+    let label = '';
+    let icon: unknown;
+    let hidden = false;
+    let href = '';
+    let description = '';
+    let availablePages: PagePickerOption[] = [];
+    if (kind === 'anchor') {
+      const a = resolved.anchor as Anchor & Record<string, unknown>;
+      label = a.anchor ?? '';
+      icon = a.icon;
+      hidden = !!a.hidden;
+      href = (a.href as string | undefined) ?? '';
+      availablePages = collectChildPages(a.pages, a.groups);
+    } else if (kind === 'dropdown') {
+      const d = resolved.dropdown as Dropdown & Record<string, unknown>;
+      label = d.dropdown ?? '';
+      icon = d.icon;
+      hidden = !!d.hidden;
+      href = (d.href as string | undefined) ?? '';
+      availablePages = collectChildPages(d.pages, d.groups);
+    } else {
+      const m = resolved.item as MenuItem & Record<string, unknown>;
+      label = m.item ?? '';
+      icon = m.icon;
+      hidden = !!m.hidden;
+      href = (m.href as string | undefined) ?? '';
+      description = (m.description as string | undefined) ?? '';
+      availablePages = collectChildPages(m.pages, m.groups);
+    }
+    const values: NavItemConfigValues = {
+      title: label,
+      icon: docsIconToForm(icon as Parameters<typeof docsIconToForm>[0]),
+      hidden,
+      href,
+      description,
+    };
+    const onChange = (patch: Partial<NavItemConfigValues>) => {
+      onConfigChange((config) =>
+        replaceResolvedEntry(
+          config,
+          settingsKey,
+          (e) => mergeNavItem(e, patch),
+          resolveCtx,
+        ),
+      );
+    };
+    return (
+      <NavItemSettingsForm
+        kind={kind}
+        values={values}
+        onChange={onChange}
+        availablePages={availablePages}
+      />
+    );
   }
 
   // page — Mintlify model: every page setting lives in frontmatter; docs.json
@@ -274,6 +365,123 @@ function SettingsBody({
     onFrontmatterChange(pageDraft.path, out);
   };
   return <PageSettingsForm slug={slug} values={values} onChange={onPatch} />;
+}
+
+/**
+ * Walk a tab's pages + groups to collect every reachable page slug, in nav
+ * order. Used by `TabSettingsForm` to populate the href page-picker so the
+ * tab's tree of pages is one click away — without forcing the user to type
+ * the slug. External-URL pages are skipped (they're not navigable docs
+ * pages within this tenant).
+ */
+function collectTabPages(tab: Tab): PagePickerOption[] {
+  const out: PagePickerOption[] = [];
+  const seen = new Set<string>();
+  const push = (slug: string, label: string) => {
+    if (seen.has(slug)) return;
+    seen.add(slug);
+    out.push({ slug, label });
+  };
+  const prettify = (slug: string): string => {
+    const last = slug.split('/').pop() ?? slug;
+    return last
+      .replace(/[-_]+/g, ' ')
+      .replace(/^(.)/, (c) => c.toUpperCase());
+  };
+  const walkEntry = (entry: unknown): void => {
+    if (typeof entry === 'string') {
+      push(entry, prettify(entry));
+      return;
+    }
+    if (!entry || typeof entry !== 'object') return;
+    const e = entry as Record<string, unknown>;
+    if ('group' in e && Array.isArray(e.pages)) {
+      for (const child of e.pages) walkEntry(child);
+      return;
+    }
+    if (typeof e.externalUrl === 'string') return;
+    const slug =
+      typeof e.slug === 'string'
+        ? e.slug
+        : typeof e.page === 'string'
+          ? e.page
+          : null;
+    if (!slug) return;
+    const label =
+      (typeof e.sidebarTitle === 'string' && e.sidebarTitle) || prettify(slug);
+    push(slug, label);
+  };
+  for (const entry of tab.pages ?? []) walkEntry(entry);
+  for (const group of tab.groups ?? []) {
+    for (const entry of group.pages ?? []) walkEntry(entry);
+  }
+  return out;
+}
+
+/**
+ * Walk a pages array + a groups array (the shape anchors/dropdowns/menu-items
+ * carry) to collect every reachable page slug. Same logic as
+ * `collectGroupPages` but factored to accept the raw arrays so callers don't
+ * need a synthetic Group wrapper.
+ */
+function collectChildPages(
+  pages: unknown[] | undefined,
+  groups: unknown[] | undefined,
+): PagePickerOption[] {
+  const synthetic: Group = {
+    group: '',
+    pages: ([
+      ...(pages ?? []),
+      ...((groups as unknown as Group[]) ?? []),
+    ] as unknown[]) as Group['pages'],
+  };
+  return collectGroupPages(synthetic);
+}
+
+/**
+ * Walk a group's pages (recursing into nested groups) to collect every
+ * reachable page slug, in nav order. Used by `GroupSettingsForm` to
+ * populate the root page-picker.
+ */
+function collectGroupPages(group: Group): PagePickerOption[] {
+  const out: PagePickerOption[] = [];
+  const seen = new Set<string>();
+  const push = (slug: string, label: string) => {
+    if (seen.has(slug)) return;
+    seen.add(slug);
+    out.push({ slug, label });
+  };
+  const prettify = (slug: string): string => {
+    const last = slug.split('/').pop() ?? slug;
+    return last
+      .replace(/[-_]+/g, ' ')
+      .replace(/^(.)/, (c) => c.toUpperCase());
+  };
+  const walkEntry = (entry: unknown): void => {
+    if (typeof entry === 'string') {
+      push(entry, prettify(entry));
+      return;
+    }
+    if (!entry || typeof entry !== 'object') return;
+    const e = entry as Record<string, unknown>;
+    if ('group' in e && Array.isArray(e.pages)) {
+      for (const child of e.pages) walkEntry(child);
+      return;
+    }
+    if (typeof e.externalUrl === 'string') return;
+    const slug =
+      typeof e.slug === 'string'
+        ? e.slug
+        : typeof e.page === 'string'
+          ? e.page
+          : null;
+    if (!slug) return;
+    const label =
+      (typeof e.sidebarTitle === 'string' && e.sidebarTitle) || prettify(slug);
+    push(slug, label);
+  };
+  for (const entry of group.pages ?? []) walkEntry(entry);
+  return out;
 }
 
 function stringValue(v: unknown): string | null {
@@ -336,6 +544,45 @@ function mergeTab(tab: Tab, patch: Partial<TabConfigValues>): Tab {
   return next;
 }
 
+/**
+ * Merge a NavItem patch back onto its underlying anchor/dropdown/menu-item.
+ * Returns the replacement entry the resolver-level mutator should write.
+ * Each kind has a different label key — `anchor.anchor` / `dropdown.dropdown`
+ * / `menu-item.item` — but the rest of the field set is shared.
+ */
+function mergeNavItem(
+  resolved: ResolvedEntry,
+  patch: Partial<NavItemConfigValues>,
+): unknown {
+  if (resolved.kind === 'anchor') {
+    const next: Anchor & Record<string, unknown> = { ...resolved.anchor };
+    if (patch.title !== undefined) next.anchor = patch.title;
+    if (patch.icon !== undefined) next.icon = formIconToDocs(patch.icon);
+    if (patch.hidden !== undefined) next.hidden = patch.hidden || undefined;
+    if (patch.href !== undefined) next.href = patch.href ? patch.href : undefined;
+    return next;
+  }
+  if (resolved.kind === 'dropdown') {
+    const next: Dropdown & Record<string, unknown> = { ...resolved.dropdown };
+    if (patch.title !== undefined) next.dropdown = patch.title;
+    if (patch.icon !== undefined) next.icon = formIconToDocs(patch.icon);
+    if (patch.hidden !== undefined) next.hidden = patch.hidden || undefined;
+    if (patch.href !== undefined) next.href = patch.href ? patch.href : undefined;
+    return next;
+  }
+  if (resolved.kind === 'menu-item') {
+    const next: MenuItem & Record<string, unknown> = { ...resolved.item };
+    if (patch.title !== undefined) next.item = patch.title;
+    if (patch.icon !== undefined) next.icon = formIconToDocs(patch.icon);
+    if (patch.hidden !== undefined) next.hidden = patch.hidden || undefined;
+    if (patch.href !== undefined) next.href = patch.href ? patch.href : undefined;
+    if (patch.description !== undefined)
+      next.description = patch.description ? patch.description : undefined;
+    return next;
+  }
+  return resolved as unknown;
+}
+
 function mergeGroup(group: Group, patch: Partial<GroupConfigValues>): Group {
   const next: Group & Record<string, unknown> = { ...group };
   if (patch.title !== undefined) next.group = patch.title;
@@ -347,6 +594,8 @@ function mergeGroup(group: Group, patch: Partial<GroupConfigValues>): Group {
     next.openapi = patch.openapi ? patch.openapi : undefined;
   if (patch.asyncapi !== undefined)
     next.asyncapi = patch.asyncapi ? patch.asyncapi : undefined;
+  if (patch.root !== undefined)
+    next.root = patch.root ? patch.root : undefined;
   return next;
 }
 

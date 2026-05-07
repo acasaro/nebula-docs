@@ -73,8 +73,14 @@ function prettifySlug(slug) {
     .join(' ');
 }
 
-/** First reachable page slug in a group (recurses into nested sub-groups). */
+/** First reachable page slug in a group. Honors `group.root` (Mintlify
+ *  pattern: when set, the group title navigates to that page) — root wins
+ *  over walking children, since the author has explicitly designated the
+ *  group's landing. Falls through to the first child if root is unset. */
 export function firstPageInGroup(group) {
+  if (typeof group.root === 'string' && group.root.length > 0) {
+    return group.root;
+  }
   for (const page of group.pages ?? []) {
     if (isHidden(page)) continue;
     if (typeof page === 'string') return page;
@@ -90,18 +96,43 @@ export function firstPageInGroup(group) {
   return null;
 }
 
-/** First reachable page slug in a tab (across all its groups). */
+/** First reachable page slug in a tab. Walks `tab.pages` first (Mintlify lets
+ *  a tab carry direct pages alongside groups), then falls through to
+ *  `tab.groups`. */
 export function firstPageInTab(tab) {
+  for (const page of tab.pages ?? []) {
+    if (isHidden(page)) continue;
+    if (typeof page === 'string') return page;
+    if (page && typeof page === 'object') {
+      if ('group' in page) {
+        const nested = firstPageInGroup(page);
+        if (nested) return nested;
+      } else if (page.slug || page.page) {
+        return page.slug || page.page;
+      }
+    }
+  }
   for (const group of tab.groups ?? []) {
+    if (isHidden(group)) continue;
     const first = firstPageInGroup(group);
     if (first) return first;
   }
   return null;
 }
 
-/** Whether a tab contains the given slug anywhere in its tree. */
+/** Whether a tab contains the given slug anywhere in its tree. Walks
+ *  `tab.pages` and `tab.groups` (and recurses into nested groups via
+ *  `groupContainsSlug`). */
 export function tabContainsSlug(tab, slug) {
   if (!slug) return false;
+  for (const page of tab.pages ?? []) {
+    if (typeof page === 'string') {
+      if (page === slug) return true;
+    } else if (page && typeof page === 'object') {
+      if ('group' in page && groupContainsSlug(page, slug)) return true;
+      if ((page.slug || page.page) === slug) return true;
+    }
+  }
   for (const group of tab.groups ?? []) {
     if (groupContainsSlug(group, slug)) return true;
   }

@@ -5,7 +5,11 @@ import Navbar from '../components/Navbar.astro';
 import Footer from '../components/Footer.astro';
 import TocSidebar from '../components/TocSidebar.astro';
 import Lightbox from '../runtime/components/Lightbox.astro';
-import { loadDocsConfig, findGroupForSlug } from '../runtime/lib/loadDocsConfig.mjs';
+import {
+  loadDocsConfig,
+  findGroupForSlug,
+  findBreadcrumbsForSlug,
+} from '../runtime/lib/loadDocsConfig.mjs';
 
 interface Heading {
   depth: number;
@@ -22,7 +26,16 @@ interface Props {
 
 const { title, description, currentSlug, headings = [] } = Astro.props as Props;
 const docs = loadDocsConfig();
-const eyebrow = findGroupForSlug(docs, currentSlug);
+
+// Eyebrow rendering — Mintlify `styling.eyebrows`. `"section"` (default)
+// shows the deepest group's name; `"breadcrumbs"` shows the full nav path
+// from tab → group → subgroup. When unset, we use the current "section"
+// behavior so existing tenants don't change.
+const eyebrowMode = docs.styling?.eyebrows ?? 'section';
+const breadcrumbs =
+  eyebrowMode === 'breadcrumbs' ? findBreadcrumbsForSlug(docs, currentSlug) : [];
+const sectionEyebrow =
+  eyebrowMode === 'breadcrumbs' ? null : findGroupForSlug(docs, currentSlug);
 const tocHeadings = headings.filter((h) => h.depth === 2 || h.depth === 3);
 const hasToc = tocHeadings.length > 0;
 ---
@@ -66,7 +79,21 @@ const hasToc = tocHeadings.length > 0;
         <main class="nebula-main">
           <article>
             <header class="nebula-page-header">
-              {eyebrow && <p class="nebula-eyebrow">{eyebrow}</p>}
+              {sectionEyebrow && <p class="nebula-eyebrow">{sectionEyebrow}</p>}
+              {breadcrumbs.length > 0 && (
+                <nav class="nebula-eyebrow nebula-breadcrumbs" aria-label="Breadcrumbs">
+                  {breadcrumbs.map((b: any, i: number) => (
+                    <>
+                      {i > 0 && <span class="nebula-breadcrumb-sep" aria-hidden="true">›</span>}
+                      {b.href ? (
+                        <a class="nebula-breadcrumb-link" href={b.href}>{b.label}</a>
+                      ) : (
+                        <span>{b.label}</span>
+                      )}
+                    </>
+                  ))}
+                </nav>
+              )}
               <h1 class="nebula-page-title">{title}</h1>
               {description && (
                 <p class="nebula-page-description">{description}</p>
@@ -145,16 +172,16 @@ const hasToc = tocHeadings.length > 0;
         gap: 4rem;
         padding: 1.5rem 2rem;
       }
-      /* Sticky offset = navbar (top row 53px + bottom row 41px = 94px) +
+      /* Sticky offset = navbar (top row 56px + bottom row 44px = 100px) +
          24px breathing room. The Navbar is the sticky element above us, so
          our sticky top has to clear it; otherwise the asides hide behind it
          and only their bottom slice is visible. */
       .nebula-aside,
       .nebula-toc-aside {
         position: sticky;
-        top: calc(94px + 1.5rem);
+        top: calc(100px + 1.5rem);
         align-self: flex-start;
-        max-height: calc(100vh - 94px - 3rem);
+        max-height: calc(100vh - 100px - 3rem);
         overflow-y: auto;
       }
       .nebula-aside {
@@ -171,14 +198,16 @@ const hasToc = tocHeadings.length > 0;
          viewport (50vw - half its own width) and subtracts the sidebar's
          offset-from-viewport (16rem sidebar + 2rem shell padding + 4rem gap
          = 22rem) since `.nebula-main` is positioned relative to the
-         content-area, not the viewport. Below ~1400px the calc clamps to 0
-         and the article falls back to the start of the content area. */
+         content-area, not the viewport. Below the calc breakpoint the result
+         clamps to 0 and the article falls back to the start of the content
+         area. Width chosen so 60–80 char prose lines hit at a 16px body
+         font-size — the comfortable-reading sweet spot. */
       .nebula-main {
         flex: 0 1 auto;
         width: 100%;
-        max-width: 696px;
+        max-width: 880px;
         min-width: 0;
-        margin-left: max(0px, calc(50vw - 348px - 22rem));
+        margin-left: max(0px, calc(50vw - 440px - 22rem));
         padding: 1.5rem 1.5rem 4rem;
       }
       .nebula-main .mdx-prose {
@@ -187,10 +216,10 @@ const hasToc = tocHeadings.length > 0;
       .nebula-toc-aside {
         flex: 0 0 12rem;
       }
-      /* TOC needs sidebar(20rem) + main(696px) + gap(5rem) + toc(12rem) +
-         right-padding(2rem) = ~1340px to fit without overflow. Hide it
+      /* TOC needs sidebar(20rem) + main(880px) + gap(5rem) + toc(12rem) +
+         right-padding(2rem) = ~1500px to fit without overflow. Hide it
          below that. */
-      @media (max-width: 1340px) {
+      @media (max-width: 1500px) {
         .nebula-toc-aside {
           display: none;
         }

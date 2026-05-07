@@ -295,8 +295,12 @@ body {
 
 body {
   min-height: 100vh;
-  font-size: var(--mcoe-font-size-base);
-  line-height: 1.6;
+  /* 16px base — the comfortable-reading default for documentation. Frozen
+     theme tokens still expose `--mcoe-font-size-base: 14px`; we deliberately
+     don't read it here so the renderer's typographic baseline stays locked
+     across tenants regardless of token-shape changes. */
+  font-size: 1rem;
+  line-height: 1.65;
   letter-spacing: -0.0125rem;
   /* Sticky-footer pattern. Body is a flex column with the footer's
      `margin-top: auto` (set in Footer.astro) absorbing all leftover
@@ -322,29 +326,53 @@ body {
 }
 
 .nebula-eyebrow {
-  font-size: var(--mcoe-font-size-xs);
-  font-weight: var(--mcoe-font-weight-medium);
+  font-size: 0.8125rem;
+  font-weight: 500;
   color: var(--mcoe-brand-primary);
   text-transform: capitalize;
   letter-spacing: normal;
-  margin: 0 0 var(--mcoe-space-2);
-  line-height: 1.2;
+  margin: 0 0 0.625rem;
+  line-height: 1.3;
+}
+
+.nebula-breadcrumbs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.nebula-breadcrumb-link {
+  color: inherit;
+  text-decoration: none;
+  transition: color 0.1s;
+}
+
+.nebula-breadcrumb-link:hover {
+  color: var(--mcoe-text-heading);
+  text-decoration: underline;
+}
+
+.nebula-breadcrumb-sep {
+  color: var(--mcoe-text-secondary);
+  opacity: 0.7;
 }
 
 .nebula-page-title {
-  font-size: 1.875rem;
-  line-height: 2.25rem;
-  font-weight: var(--mcoe-font-weight-medium);
+  font-size: 2.25rem;
+  line-height: 1.15;
+  font-weight: 600;
   color: var(--mcoe-text-heading);
-  letter-spacing: -0.03125rem;
+  letter-spacing: -0.035em;
   margin: 0;
 }
 
 .nebula-page-description {
-  margin: var(--mcoe-space-3) 0 0;
-  font-size: var(--mcoe-font-size-md);
-  line-height: 1.6;
+  margin: 0.625rem 0 0;
+  font-size: 1.125rem;
+  line-height: 1.55;
   color: var(--mcoe-text-secondary);
+  letter-spacing: -0.01em;
 }
 
 /* Hero is full-bleed via `data-fullbleed` on `mode: custom` pages. The
@@ -390,41 +418,54 @@ astro-island {
  * applied via their local tokens. The next durable fix is extracting
  * this block into `@nebula-docs/styles` and importing from both. */
 @layer base {
+/* Locked typographic scale for documentation prose. Sized at a 16px body
+ * (`body { font-size: 1rem }`); rems below resolve from that, so a tenant
+ * that shrinks the root font would reflow proportionally. Heading and
+ * paragraph rhythm tuned for 60–80 char lines at the 880px content width
+ * the layout sets. Keep this in sync with the Platform's editor prose. */
 :where(.mdx-prose) :is(h1, h2, h3, h4, h5, h6) {
   font-weight: 600;
   letter-spacing: -0.025em;
   color: var(--mcoe-text-heading);
 }
-:where(.mdx-prose) h1 { font-size: 1.875rem; line-height: 2.25rem; margin: 2.5rem 0 1rem; }
-:where(.mdx-prose) h2 { font-size: 1.5rem;   line-height: 2rem;     margin: 2rem 0 0.75rem; }
-:where(.mdx-prose) h3 { font-size: 1.25rem;  line-height: 1.75rem;  margin: 1.5rem 0 0.5rem; }
-:where(.mdx-prose) h4 { font-size: 1.125rem; line-height: 1.75rem;  margin: 1rem 0 0.5rem; }
-:where(.mdx-prose) h5 { font-size: 1rem;     line-height: 1.5rem;   margin: 0.75rem 0 0.25rem; }
-:where(.mdx-prose) h6 { font-size: 0.875rem; line-height: 1.25rem;  margin: 0.75rem 0 0.25rem; }
+:where(.mdx-prose) h1 { font-size: 2.25rem;  line-height: 1.2;  margin: 2.5rem 0 1rem;     letter-spacing: -0.035em; }
+:where(.mdx-prose) h2 { font-size: 1.625rem; line-height: 1.3;  margin: 2.25rem 0 0.875rem; letter-spacing: -0.025em; }
+:where(.mdx-prose) h3 { font-size: 1.25rem;  line-height: 1.4;  margin: 1.75rem 0 0.625rem; }
+:where(.mdx-prose) h4 { font-size: 1.0625rem; line-height: 1.5; margin: 1.25rem 0 0.5rem; }
+:where(.mdx-prose) h5 { font-size: 0.9375rem; line-height: 1.5; margin: 1rem 0 0.375rem;    text-transform: uppercase; letter-spacing: 0.04em; }
+:where(.mdx-prose) h6 { font-size: 0.875rem;  line-height: 1.5; margin: 1rem 0 0.375rem;    color: var(--mcoe-text-secondary); }
 
-:where(.mdx-prose) p { margin: 1rem 0; line-height: 1.625; color: var(--mcoe-text-primary); }
+:where(.mdx-prose) p {
+  margin: 1.125rem 0;
+  font-size: 1rem;
+  line-height: 1.7;
+  color: var(--mcoe-text-primary);
+}
 
-:where(.mdx-prose) ul { margin: 1rem 0; list-style: disc; padding-left: 1.5rem; }
-:where(.mdx-prose) ol { margin: 1rem 0; list-style: decimal; padding-left: 1.5rem; }
-:where(.mdx-prose) ol > li::marker { color: rgb(107 114 128); }
-:where(.mdx-prose) li { margin: 0.25rem 0; }
+:where(.mdx-prose) ul { margin: 1.125rem 0; list-style: disc; padding-left: 1.5rem; font-size: 1rem; line-height: 1.7; }
+:where(.mdx-prose) ol { margin: 1.125rem 0; list-style: decimal; padding-left: 1.5rem; font-size: 1rem; line-height: 1.7; }
+:where(.mdx-prose) ol > li::marker { color: var(--mcoe-text-secondary); }
+:where(.mdx-prose) li { margin: 0.375rem 0; }
+:where(.mdx-prose) li > :is(p, ul, ol) { margin: 0.5rem 0; }
 
 :where(.mdx-prose) blockquote {
-  margin: 1rem 0;
-  border-left: 2px solid var(--mcoe-border-default);
-  padding-left: 1rem;
+  margin: 1.25rem 0;
+  border-left: 3px solid var(--mcoe-border-default);
+  padding: 0.25rem 0 0.25rem 1.125rem;
   color: var(--mcoe-text-secondary);
+  font-size: 1rem;
+  line-height: 1.65;
 }
 
 :where(.mdx-prose) pre {
-  margin: 1rem 0;
+  margin: 1.25rem 0;
   overflow-x: auto;
-  border-radius: 0.375rem;
+  border-radius: 0.5rem;
   border: 1px solid var(--mcoe-border-default);
-  padding: 1rem;
+  padding: 1rem 1.125rem;
   font-family: var(--nebula-font-mono);
-  font-size: 0.75rem;
-  line-height: 1.625;
+  font-size: 0.8125rem;
+  line-height: 1.65;
   background: transparent;
 }
 :where(.mdx-prose) pre code {
@@ -432,14 +473,16 @@ astro-island {
   border: 0;
   padding: 0;
   color: inherit;
+  font-size: inherit;
 }
 
 :where(.mdx-prose) :not(pre) > code {
-  border-radius: 0.25rem;
+  border-radius: 0.3125rem;
   background: var(--mcoe-bg-tertiary);
-  padding: 0.125rem 0.375rem;
+  padding: 0.125rem 0.4375rem;
   font-family: var(--nebula-font-mono);
-  font-size: 0.85em;
+  font-size: 0.875em;
+  font-weight: 500;
 }
 
 :where(.mdx-prose) hr {
@@ -477,12 +520,13 @@ astro-island {
 }
 
 :where(.mdx-prose) table {
-  margin: 1rem 0;
+  margin: 1.5rem 0;
   width: 100%;
   overflow-x: auto;
-  border-radius: 0.375rem;
+  border-radius: 0.5rem;
   border: 1px solid var(--mcoe-border-default);
-  font-size: 0.875rem;
+  font-size: 0.9375rem;
+  line-height: 1.55;
   border-collapse: collapse;
 }
 :where(.mdx-prose) thead { background: var(--mcoe-bg-tertiary); }
@@ -490,8 +534,8 @@ astro-island {
   border-bottom: 1px solid var(--mcoe-border-muted);
 }
 :where(.mdx-prose) tr:last-child { border-bottom: 0; }
-:where(.mdx-prose) :is(th, td) { padding: 0.5rem 0.75rem; vertical-align: top; }
-:where(.mdx-prose) th { text-align: left; font-weight: 600; }
+:where(.mdx-prose) :is(th, td) { padding: 0.625rem 0.875rem; vertical-align: top; }
+:where(.mdx-prose) th { text-align: left; font-weight: 600; color: var(--mcoe-text-heading); }
 } /* end @layer base for .mdx-prose */
 
 /* Inside Callout components, zero out the default block margins so the

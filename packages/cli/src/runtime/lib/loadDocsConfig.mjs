@@ -126,3 +126,46 @@ function walk(group, slug) {
   }
   return deepest;
 }
+
+/**
+ * Walk the navigation tree and return the chain of ancestor labels leading
+ * to a slug — Tab → Group → SubGroup → … (excluding the slug's own page
+ * label, which the page header renders as the title). Used by
+ * `styling.eyebrows: "breadcrumbs"`. Each entry has a `label` and, where
+ * applicable, an `href` (the tab's first page or the group's `root`).
+ */
+export function findBreadcrumbsForSlug(docs, slug) {
+  if (!slug) return [];
+  const tabs = docs.navigation?.tabs ?? [];
+  for (const tab of tabs) {
+    const trail = walkBreadcrumbs(tab.groups ?? [], slug, []);
+    if (trail) return [{ label: tab.tab }, ...trail];
+    // Tab direct pages
+    for (const page of tab.pages ?? []) {
+      if (typeof page === 'string' && page === slug) return [{ label: tab.tab }];
+      if (page && typeof page === 'object' && !('group' in page) && (page.slug || page.page) === slug) {
+        return [{ label: tab.tab }];
+      }
+    }
+  }
+  return [];
+}
+
+function walkBreadcrumbs(groups, slug, parents) {
+  for (const group of groups) {
+    const here = [...parents, { label: group.group, href: group.root ? `/${group.root}` : undefined }];
+    for (const page of group.pages ?? []) {
+      if (typeof page === 'string') {
+        if (page === slug) return here;
+      } else if (page && typeof page === 'object') {
+        if ('group' in page) {
+          const nested = walkBreadcrumbs([page], slug, here);
+          if (nested) return nested;
+        } else if ((page.slug || page.page) === slug) {
+          return here;
+        }
+      }
+    }
+  }
+  return null;
+}

@@ -10,6 +10,12 @@
   "navigation": {
     "tabs": [
       {
+        "tab": "Overview",
+        "pages": [
+          "index"
+        ]
+      },
+      {
         "tab": "Developers",
         "icon": "code",
         "groups": [
@@ -67,7 +73,11 @@
           },
           {
             "group": "Bitrise Platform",
-            "pages": ["developers/bitrise-platform", "developers/bitrise-platform/bitrise-access"]
+            "pages": [
+              "developers/bitrise-platform",
+              "developers/bitrise-platform/bitrise-access",
+              "developers/bitrise-platform/onboarding"
+            ]
           },
           {
             "group": "Contributing",
@@ -78,13 +88,15 @@
             ]
           }
         ],
-        "pages": ["developers"]
+        "pages": [
+          "developers"
+        ]
       },
       {
         "tab": "Resources",
         "icon": "book",
         "pages": [
-          "resources/overview",
+          "resources",
           "resources/guides",
           "resources/glossary",
           "resources/library",
@@ -95,16 +107,16 @@
       {
         "tab": "Product",
         "icon": "shapes",
-        "pages": ["product/overview"]
+        "pages": [
+          "product"
+        ]
       },
       {
         "tab": "About ",
         "icon": "info",
-        "pages": ["about/overview"]
-      },
-      {
-        "tab": "Overview",
-        "pages": ["overview/index"]
+        "pages": [
+          "about"
+        ]
       }
     ]
   },

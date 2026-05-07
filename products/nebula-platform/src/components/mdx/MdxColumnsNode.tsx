@@ -209,13 +209,21 @@ function MdxColumnsView({
   );
 }
 
-function MdxColumnView({ selected }: NodeViewProps) {
+function MdxColumnView({ selected, editor }: NodeViewProps) {
+  // Editing-mode chrome: dashed border + min-height makes the column box
+  // findable when its contents are sparse or empty. The border is muted by
+  // default and brightens on hover/selection so it reads as "drop zone" not
+  // "loud UI". On the rendered site (editor.isEditable === false) we drop
+  // the chrome entirely so the published page shows naked grid cells.
+  const editing = editor.isEditable;
   return (
     <NodeViewWrapper
       data-mdx-column=""
       className={cn(
         'min-w-0 prose dark:prose-invert',
-        selected && 'rounded-md ring-2 ring-primary/40',
+        editing &&
+          'group/column relative rounded-md border border-dashed border-stone-300/80 px-3 py-2 transition-colors min-h-[88px] hover:border-stone-400 dark:border-white/10 dark:hover:border-white/25',
+        editing && selected && 'border-primary/60 ring-2 ring-primary/30',
       )}
     >
       <NodeViewContent />

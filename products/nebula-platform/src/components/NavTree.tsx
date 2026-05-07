@@ -8,9 +8,11 @@ import {
   type ReactNode,
 } from 'react';
 import {
+  Anchor as AnchorIcon,
   ChevronDown,
   ChevronRight,
   ChevronsDownUp,
+  ChevronsUpDown,
   FilePlus,
   FolderPlus,
   Folder,
@@ -45,7 +47,13 @@ import {
  */
 export type NavSettingsKey = string;
 
-export type NavSettingsKind = 'tab' | 'group' | 'page';
+export type NavSettingsKind =
+  | 'tab'
+  | 'group'
+  | 'page'
+  | 'anchor'
+  | 'dropdown'
+  | 'menu-item';
 
 export type AddEntryKind = 'page' | 'group';
 
@@ -69,6 +77,10 @@ interface NavTreeProps {
   onAddEntry?: (parentKey: NavSettingsKey, kind: AddEntryKind, value: string) => void;
   /** Append a top-level tab to `navigation.tabs`. */
   onAddTab?: (name: string) => void;
+  /** Append a top-level anchor to `navigation.anchors`. */
+  onAddAnchor?: (name: string) => void;
+  /** Append a top-level dropdown to `navigation.dropdowns`. */
+  onAddDropdown?: (name: string) => void;
   /** All file paths in the repo — used to resolve docs.json page entries to
    *  actual MDX paths via `buildPageEntryResolver`. */
   repoPaths?: ReadonlySet<string>;
@@ -94,14 +106,12 @@ type CollapseSignal = number;
 // were passed in (early-render case).
 const EMPTY_PATH_SET: ReadonlySet<string> = new Set<string>();
 
-// Pixel widths used to compute the cascading text-indent. Tabs and groups
-// share the same shape (chevron + icon + label) so children align under
-// their parent's title at the same offset regardless of parent kind.
+// Pixel widths used to compute the cascading text-indent. Children are
+// indented by a small fixed step under their parent's row so nesting reads
+// visually without wasting horizontal space — the parent's icon column is
+// not duplicated, just a subtle indent shift.
 const ROOT_PL = 8;
-const CHEVRON = 14;
-const ICON = 14;
-const GAP = 4;
-const GROUP_TEXT_OFFSET = CHEVRON + GAP + ICON + GAP;
+const GROUP_TEXT_OFFSET = 14;
 
 export function NavTree({
   config,
@@ -111,13 +121,18 @@ export function NavTree({
   onOpenSettings,
   onAddEntry,
   onAddTab,
+  onAddAnchor,
+  onAddDropdown,
   repoPaths,
   docsSubdirectory,
   frontmatterCache,
   frontmatterLoaded,
 }: NavTreeProps) {
   const tabs = (config.navigation?.tabs ?? []).filter((t) => !t.hidden);
+  const anchors = config.navigation?.anchors ?? [];
+  const dropdowns = config.navigation?.dropdowns ?? [];
   const [addingTab, setAddingTab] = useState(false);
+  const [addingKind, setAddingKind] = useState<null | 'anchor' | 'dropdown'>(null);
   const [collapseSignal, setCollapseSignal] = useState<CollapseSignal>(0);
 
   const resolveEntryPath = useMemo(
@@ -131,10 +146,40 @@ export function NavTree({
         <span>Navigation</span>
         <div className="flex items-center gap-0.5">
           <CollapseAllButton onCollapseAll={() => setCollapseSignal((n) => n + 1)} />
-          <NavigationAddButton onPickTab={() => setAddingTab(true)} />
+          <NavigationAddButton
+            onPickTab={() => setAddingTab(true)}
+            onPickAnchor={() => setAddingKind('anchor')}
+            onPickDropdown={() => setAddingKind('dropdown')}
+          />
         </div>
       </div>
       <div className="flex flex-col gap-0.5">
+        {/* Anchors — Mintlify "persistent items above the sidebar groups". */}
+        {anchors.map((a, i) => (
+          <NamedNavRow
+            key={`anchor:${i}:${a.anchor}`}
+            settingsKey={`anchor:${i}`}
+            label={a.anchor}
+            icon={a.icon}
+            kind="anchor"
+            indent={ROOT_PL}
+            settingsOpenKey={settingsOpenKey}
+            onOpenSettings={onOpenSettings}
+          />
+        ))}
+        {/* Dropdowns. Same shape as anchors but a different settings kind. */}
+        {dropdowns.map((d, i) => (
+          <NamedNavRow
+            key={`dropdown:${i}:${d.dropdown}`}
+            settingsKey={`dropdown:${i}`}
+            label={d.dropdown}
+            icon={d.icon}
+            kind="dropdown"
+            indent={ROOT_PL}
+            settingsOpenKey={settingsOpenKey}
+            onOpenSettings={onOpenSettings}
+          />
+        ))}
         {tabs.map((tab, i) => (
           <TabSection
             key={`${tab.tab}-${i}`}
@@ -163,8 +208,83 @@ export function NavTree({
             onCancel={() => setAddingTab(false)}
           />
         ) : null}
+        {addingKind === 'anchor' ? (
+          <InlineAddRow
+            kind="anchor"
+            indent={ROOT_PL}
+            onCommit={(value) => {
+              onAddAnchor?.(value);
+              setAddingKind(null);
+            }}
+            onCancel={() => setAddingKind(null)}
+          />
+        ) : null}
+        {addingKind === 'dropdown' ? (
+          <InlineAddRow
+            kind="dropdown"
+            indent={ROOT_PL}
+            onCommit={(value) => {
+              onAddDropdown?.(value);
+              setAddingKind(null);
+            }}
+            onCancel={() => setAddingKind(null)}
+          />
+        ) : null}
       </div>
     </div>
+  );
+}
+
+/**
+ * Lightweight, non-collapsible row for top-level named nav entries — anchors
+ * and dropdowns. Renders icon + label + the standard "Edit" gear, hooking
+ * into the same settings panel routing as TabSection. Children (nested
+ * pages/groups) are managed via the settings panel + popover, not inline.
+ */
+function NamedNavRow({
+  settingsKey,
+  label,
+  icon,
+  kind,
+  indent,
+  settingsOpenKey,
+  onOpenSettings,
+}: {
+  settingsKey: NavSettingsKey;
+  label: string;
+  icon: IconValue | undefined;
+  kind: 'anchor' | 'dropdown';
+  indent: number;
+  settingsOpenKey: NavSettingsKey | null;
+  onOpenSettings: (next: OpenNavSettings | null) => void;
+}) {
+  const settingsOpen = settingsOpenKey === settingsKey;
+  const FallbackIcon = kind === 'anchor' ? AnchorIcon : ChevronsUpDown;
+  const iconName = iconNameOf(icon);
+  return (
+    <DragRow id={settingsKey} draggable={false} droppable={false}>
+      <Row
+        paddingLeft={indent}
+        settingsOpen={settingsOpen}
+        showActions
+        actions={
+          <SettingsToggle
+            label={label}
+            isOpen={settingsOpen}
+            onToggle={() =>
+              onOpenSettings(settingsOpen ? null : { key: settingsKey, kind, title: label })
+            }
+          />
+        }
+      >
+        {iconName ? (
+          <Icon icon={iconName} size={14} className="shrink-0 text-muted-foreground" />
+        ) : (
+          <FallbackIcon className="size-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
+        )}
+        <Title>{label}</Title>
+      </Row>
+    </DragRow>
   );
 }
 
@@ -194,14 +314,21 @@ function CollapseAllButton({ onCollapseAll }: CollapseAllButtonProps) {
 
 interface NavigationAddButtonProps {
   onPickTab: () => void;
+  onPickAnchor?: () => void;
+  onPickDropdown?: () => void;
 }
 
 /**
- * Top-level Navigation `+` — the only thing you can add at the root of
- * navigation is a tab, so the popover has a single item. Mirrors the
- * group-level `AddEntryButton` shape so the muscle memory transfers.
+ * Top-level Navigation `+` — opens a popover with the three kinds of
+ * top-level entry Mintlify supports at the root of navigation: tabs,
+ * anchors, and dropdowns. Mirrors the group-level `AddEntryButton` shape so
+ * the muscle memory transfers.
  */
-function NavigationAddButton({ onPickTab }: NavigationAddButtonProps) {
+function NavigationAddButton({
+  onPickTab,
+  onPickAnchor,
+  onPickDropdown,
+}: NavigationAddButtonProps) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -246,6 +373,32 @@ function NavigationAddButton({ onPickTab }: NavigationAddButtonProps) {
             <LayoutPanelTop className="size-3.5" />
             Tab
           </button>
+          {onPickAnchor && (
+            <button
+              type="button"
+              className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent"
+              onClick={() => {
+                setOpen(false);
+                onPickAnchor();
+              }}
+            >
+              <AnchorIcon className="size-3.5" />
+              Anchor
+            </button>
+          )}
+          {onPickDropdown && (
+            <button
+              type="button"
+              className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent"
+              onClick={() => {
+                setOpen(false);
+                onPickDropdown();
+              }}
+            >
+              <ChevronsUpDown className="size-3.5" />
+              Dropdown
+            </button>
+          )}
         </Popover.Content>
       </Popover.Portal>
     </Popover.Root>
@@ -323,7 +476,7 @@ function TabSection({
 
   return (
     <div className="flex flex-col gap-0.5">
-      <DragRow id={settingsKey} draggable={false} droppable={false}>
+      <DragRow id={settingsKey}>
         <Row
           paddingLeft={indent}
           settingsOpen={settingsOpen}
@@ -350,7 +503,7 @@ function TabSection({
           }
         >
           <CollapseToggleIcon
-            icon={tab.icon}
+            icon={undefined}
             fallback="tab"
             expanded={expanded}
           />
@@ -879,7 +1032,7 @@ function AddEntryButton({ parentLabel, onPick }: AddEntryButtonProps) {
   );
 }
 
-type InlineAddKind = AddEntryKind | 'tab';
+type InlineAddKind = AddEntryKind | 'tab' | 'anchor' | 'dropdown';
 
 interface InlineAddRowProps {
   kind: InlineAddKind;
@@ -899,7 +1052,11 @@ function InlineAddRow({ kind, indent, onCommit, onCancel }: InlineAddRowProps) {
       ? 'untitled-page'
       : kind === 'group'
         ? 'untitled-group'
-        : 'untitled-tab';
+        : kind === 'anchor'
+          ? 'untitled-anchor'
+          : kind === 'dropdown'
+            ? 'untitled-dropdown'
+            : 'untitled-tab';
   const [value, setValue] = useState(placeholder);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const committedRef = useRef(false);
@@ -918,7 +1075,15 @@ function InlineAddRow({ kind, indent, onCommit, onCancel }: InlineAddRowProps) {
   };
 
   const KindIcon =
-    kind === 'page' ? FilePlus : kind === 'group' ? FolderPlus : LayoutPanelTop;
+    kind === 'page'
+      ? FilePlus
+      : kind === 'group'
+        ? FolderPlus
+        : kind === 'anchor'
+          ? AnchorIcon
+          : kind === 'dropdown'
+            ? ChevronsUpDown
+            : LayoutPanelTop;
 
   return (
     <div

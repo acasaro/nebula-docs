@@ -56,7 +56,7 @@ const tocItems = (headings ?? []).filter((h) => h.depth === 2 || h.depth === 3);
       });
       if (!headings.length) return;
 
-      var OFFSET = 120; // sticky-navbar height + breathing room
+      var OFFSET = 124; // sticky-navbar height (100px) + breathing room
 
       function setActive(slug) {
         bySlug.forEach(function (link, key) {
@@ -102,14 +102,14 @@ const tocItems = (headings ?? []).filter((h) => h.depth === 2 || h.depth === 3);
 
 <style is:global>
   .nebula-toc {
-    font-size: 0.8125rem;
+    font-size: 0.84375rem;
     line-height: 1.5;
     border-left: 1px solid var(--mcoe-border-default);
     padding-left: 1rem;
   }
   .nebula-toc-title {
     margin: 0 0 0.625rem;
-    font-size: 0.6875rem;
+    font-size: 0.71875rem;
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.06em;

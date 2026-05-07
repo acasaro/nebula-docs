@@ -1,9 +1,8 @@
 ---
-title: Onboarding Guide
+title: Bitrise Onboarding
 description: "How to onboard your mobile app to Bitrise CI — what the MCoE team needs from you and what happens next."
-sidebarTitle: "Onboarding Guide"
+sidebarTitle: "Birtrise Onboarding"
 ---
-
 This guide walks through the process of getting your mobile app project set up in Bitrise. The MCoE team handles the heavy lifting — you just need to provide a few details.
 
 ## Prerequisites
@@ -22,7 +21,7 @@ If you've already [requested access](/developers/bitrise-platform/bitrise-access
 Reach out to the MCoE team with the following:
 
 | Item | Details |
-|---|---|
+| --- | --- |
 | **GitHub organization name** | The org that hosts your mobile repositories |
 | **Repository links** | Direct links to each mobile app repo |
 | **CI Platform Engineer emails** | Engineers who will lead the migration (must have `AZU_BITRISE_USERS` access) |
@@ -32,7 +31,7 @@ Reach out to the MCoE team with the following:
 The following GitHub organizations already have the Bitrise GitHub app installed. If your org is listed, you only need to provide your **repo links** and **engineer contacts**.
 
 | Organization |
-|---|
+| --- |
 | `optum-digital-experience` |
 | `uhg-pipelines` |
 | `uhc-consumer` |
@@ -50,21 +49,24 @@ If your organization is not listed, let us know — we're actively connecting ad
 Once the MCoE team has your details, we will:
 
 <Steps>
-  <Step title="Connect your GitHub org">
-    If not already connected, we'll install the Bitrise GitHub app on your organization.
-  </Step>
-  <Step title="Create your Bitrise CI project">
-    We'll create the project and connect the required repositories.
-  </Step>
-  <Step title="Set up access groups">
-    Two groups are created per app:
+<Step title="Connect your GitHub org">
+If not already connected, we'll install the Bitrise GitHub app on your organization.
+</Step>
 
-    - `[App Name]__OWNERS` — Platform Engineer access
-    - `[App Name]__CONTRIBUTORS` — Tester / QA access (onboarded later)
-  </Step>
-  <Step title="Notify your team">
-    You'll be notified when Bitrise CI is fully integrated and ready for migration.
-  </Step>
+<Step title="Create your Bitrise CI project">
+We'll create the project and connect the required repositories.
+</Step>
+
+<Step title="Set up access groups">
+Two groups are created per app:
+
+- `[App Name]__OWNERS` — Platform Engineer access
+- `[App Name]__CONTRIBUTORS` — Tester / QA access (onboarded later)
+</Step>
+
+<Step title="Notify your team">
+You'll be notified when Bitrise CI is fully integrated and ready for migration.
+</Step>
 </Steps>
 
 ## How to get started

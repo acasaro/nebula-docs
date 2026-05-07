@@ -45,6 +45,9 @@ import { getThemeById } from "@nebula-docs/theme";
 import {
   addressOfEntry,
   appendTab,
+  appendAnchor,
+  appendDropdown,
+  reorderTabs,
   appendToGroup,
   appendToTab,
   deleteEntry,
@@ -94,6 +97,21 @@ interface FileEntry {
 
 function isMdxFile(name: string): boolean {
   return name.endsWith(".mdx") || name.endsWith(".md");
+}
+
+/**
+ * Convert a tab's display name into the slug fragment we auto-prefix new
+ * pages with. Lowercases, swaps any run of non-alphanumerics for `-`, and
+ * trims leading/trailing dashes — same shape Mintlify's editor uses when
+ * seeding a page slug from a tab name (e.g. "API Reference" → "api-reference",
+ * "Developers" → "developers", "About " → "about").
+ */
+function slugifyTabName(name: string): string {
+  return name
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
 }
 
 type ViewMode = "visual" | "source";
@@ -610,13 +628,22 @@ export function RepoBrowser() {
 
   const handleDragOver = useCallback((e: DragOverEvent) => {
     const overId = e.over?.id;
+    const activeId = e.active?.id;
     if (!overId || typeof overId !== "string") {
       setHover({ overId: null, side: null });
       return;
     }
-    if (overId.startsWith(ORPHAN_ID_PREFIX) || overId.startsWith("tab:")) {
-      // Orphan rows aren't drop targets; tab rows are out-of-scope for
-      // reordering. Show no indicator.
+    const activeStr = typeof activeId === 'string' ? activeId : '';
+    const activeIsTab = activeStr.startsWith('tab:');
+    const overIsTab = overId.startsWith('tab:');
+    if (overId.startsWith(ORPHAN_ID_PREFIX)) {
+      // Orphan rows aren't drop targets.
+      setHover({ overId: null, side: null });
+      return;
+    }
+    // Tab targets: only valid when dragging another tab. Cross-kind drops
+    // (group/page over tab, tab over group/page) show no indicator.
+    if (overIsTab !== activeIsTab) {
       setHover({ overId: null, side: null });
       return;
     }
@@ -672,7 +699,30 @@ export function RepoBrowser() {
 
       if (!overId || !liveDocsConfig) return;
       if (overId === activeId) return;
-      if (overId.startsWith(ORPHAN_ID_PREFIX) || overId.startsWith("tab:")) return;
+      if (overId.startsWith(ORPHAN_ID_PREFIX)) return;
+
+      // Tab-to-tab reorder. Source and target are both `tab:<name>`. We
+      // resolve both to indices, compute the insert index from `side`,
+      // and call `reorderTabs`. Cross-kind drops (tab over non-tab, etc.)
+      // are blocked above by handleDragOver; double-check here so a stale
+      // hover state can't slip through.
+      if (activeId.startsWith('tab:') && overId.startsWith('tab:')) {
+        const sourceResolved = findEntry(liveDocsConfig, activeId, resolveCtx);
+        const targetResolved = findEntry(liveDocsConfig, overId, resolveCtx);
+        if (
+          !sourceResolved ||
+          !targetResolved ||
+          sourceResolved.kind !== 'tab' ||
+          targetResolved.kind !== 'tab'
+        )
+          return;
+        const fromIndex = sourceResolved.tabIndex;
+        const insertIndex =
+          side === 'below' ? targetResolved.tabIndex + 1 : targetResolved.tabIndex;
+        handleConfigChange((config) => reorderTabs(config, fromIndex, insertIndex));
+        return;
+      }
+      if (activeId.startsWith('tab:') || overId.startsWith('tab:')) return;
 
       const targetResolved = findEntry(liveDocsConfig, overId, resolveCtx);
       if (!targetResolved) return;
@@ -859,7 +909,27 @@ export function RepoBrowser() {
       // Run the slug through the same resolver NavTree uses so the seeded
       // path matches what nav clicks will navigate to (CLI-shape repos seed
       // under `content/`; root-shape repos seed at the docs root).
-      const slug = value.replace(/\.mdx?$/i, "");
+      //
+      // Auto-prefix with the parent tab's slug (Mintlify-editor parity). When
+      // the user types `intro` inside Tab "Developers", we commit
+      // `developers/intro` so the file lands at `content/developers/intro.mdx`
+      // instead of root. The user can opt out by typing a slug that already
+      // starts with the tab prefix or by typing an absolute-shaped slug
+      // beginning with their own prefix (we only prepend when the slug doesn't
+      // already start with `<tab-slug>/` and isn't equal to `<tab-slug>`).
+      const rawSlug = value.replace(/\.mdx?$/i, "");
+      const parentResolved = findEntry(liveDocsConfig, parentKey, resolveCtx);
+      const parentTabIndex =
+        parentResolved && 'tabIndex' in parentResolved ? parentResolved.tabIndex : -1;
+      const parentTabName =
+        parentTabIndex >= 0
+          ? liveDocsConfig.navigation?.tabs?.[parentTabIndex]?.tab
+          : undefined;
+      const tabSlug = parentTabName ? slugifyTabName(parentTabName) : '';
+      const slug =
+        tabSlug && rawSlug !== tabSlug && !rawSlug.startsWith(`${tabSlug}/`)
+          ? `${tabSlug}/${rawSlug}`
+          : rawSlug;
       const filePath = resolvePagePath(slug) ?? `${slug}.mdx`;
       handleConfigChange((cfg) => append(cfg, slug));
       const title =
@@ -883,7 +953,7 @@ export function RepoBrowser() {
       // seeded draft is the source of truth until then.
       fetchedPathsRef.current.add(filePath);
     },
-    [liveDocsConfig, handleConfigChange, resolvePagePath],
+    [liveDocsConfig, handleConfigChange, resolvePagePath, resolveCtx],
   );
 
   const handleAddTab = useCallback(
@@ -891,6 +961,22 @@ export function RepoBrowser() {
       if (!liveDocsConfig) return;
       const newTab: Tab = { tab: name };
       handleConfigChange((cfg) => appendTab(cfg, newTab));
+    },
+    [liveDocsConfig, handleConfigChange],
+  );
+
+  const handleAddAnchor = useCallback(
+    (name: string) => {
+      if (!liveDocsConfig) return;
+      handleConfigChange((cfg) => appendAnchor(cfg, { anchor: name }));
+    },
+    [liveDocsConfig, handleConfigChange],
+  );
+
+  const handleAddDropdown = useCallback(
+    (name: string) => {
+      if (!liveDocsConfig) return;
+      handleConfigChange((cfg) => appendDropdown(cfg, { dropdown: name }));
     },
     [liveDocsConfig, handleConfigChange],
   );
@@ -1368,6 +1454,8 @@ export function RepoBrowser() {
                       onOpenSettings={setSettingsOpen}
                       onAddEntry={handleAddEntry}
                       onAddTab={handleAddTab}
+                      onAddAnchor={handleAddAnchor}
+                      onAddDropdown={handleAddDropdown}
                       repoPaths={repoPathSet}
                       docsSubdirectory={docsSubdir}
                       frontmatterCache={frontmatterCacheState.cache}
@@ -1428,7 +1516,7 @@ export function RepoBrowser() {
           }}
           aria-pressed={configurationsOpen}
           className={cn(
-            "flex h-11 shrink-0 items-center gap-2 border-t border-border/40 px-4 text-sm font-semibold transition-colors",
+            "flex h-11 shrink-0 cursor-pointer items-center gap-2 border-t border-border/40 px-4 text-sm font-semibold transition-colors",
             configurationsOpen
               ? "bg-accent text-brand-text"
               : "text-foreground/80 hover:bg-accent/60 hover:text-foreground",

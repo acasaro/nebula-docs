@@ -3,4 +3,6 @@ export type { PageFrontmatterValues } from './PageSettingsForm';
 export { GroupSettingsForm } from './GroupSettingsForm';
 export type { GroupConfigValues } from './GroupSettingsForm';
 export { TabSettingsForm } from './TabSettingsForm';
-export type { TabConfigValues } from './TabSettingsForm';
+export type { TabConfigValues, PagePickerOption } from './TabSettingsForm';
+export { NavItemSettingsForm } from './NavItemSettingsForm';
+export type { NavItemConfigValues, NavItemKind } from './NavItemSettingsForm';

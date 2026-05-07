@@ -3,8 +3,11 @@ import {
   isGroup,
   isPageObject,
   pageEntryToFilePath,
+  type Anchor,
   type DocsConfig,
+  type Dropdown,
   type Group,
+  type MenuItem,
   type PageEntry,
   type PageObject,
   type Tab,
@@ -39,7 +42,11 @@ export interface ResolveContext {
 export type ParsedKey =
   | { kind: 'tab'; tabName: string }
   | { kind: 'group'; tabIndex: number; groupPath: number[] }
-  | { kind: 'page'; filePath: string };
+  | { kind: 'page'; filePath: string }
+  | { kind: 'anchor'; index: number }
+  | { kind: 'dropdown'; index: number }
+  | { kind: 'global-anchor'; index: number }
+  | { kind: 'menu-item'; tabIndex: number; itemIndex: number };
 
 export function parseSettingsKey(raw: string): ParsedKey | null {
   const colon = raw.indexOf(':');
@@ -48,6 +55,27 @@ export function parseSettingsKey(raw: string): ParsedKey | null {
   const value = raw.slice(colon + 1);
   if (kind === 'tab') return { kind: 'tab', tabName: value };
   if (kind === 'page') return { kind: 'page', filePath: value };
+  if (kind === 'anchor') {
+    const index = Number(value);
+    return Number.isFinite(index) ? { kind: 'anchor', index } : null;
+  }
+  if (kind === 'dropdown') {
+    const index = Number(value);
+    return Number.isFinite(index) ? { kind: 'dropdown', index } : null;
+  }
+  if (kind === 'global-anchor') {
+    const index = Number(value);
+    return Number.isFinite(index) ? { kind: 'global-anchor', index } : null;
+  }
+  if (kind === 'menu-item') {
+    // Format: menu-item:<tabIndex>:<itemIndex>
+    const parts = value.split(':');
+    if (parts.length !== 2) return null;
+    const tabIndex = Number(parts[0]);
+    const itemIndex = Number(parts[1]);
+    if (!Number.isFinite(tabIndex) || !Number.isFinite(itemIndex)) return null;
+    return { kind: 'menu-item', tabIndex, itemIndex };
+  }
   if (kind === 'group') {
     const parts = value.split('/');
     if (parts.length < 2) return null;
@@ -101,7 +129,35 @@ export interface ResolvedPage {
   inTabDirect: boolean;
 }
 
-export type ResolvedEntry = ResolvedTab | ResolvedGroup | ResolvedPage;
+export interface ResolvedAnchor {
+  kind: 'anchor';
+  anchor: Anchor;
+  index: number;
+  /** Whether this anchor is in `navigation.global.anchors` (vs the regular
+   *  per-section `navigation.anchors`). Render flow + storage path differ. */
+  isGlobal: boolean;
+}
+
+export interface ResolvedDropdown {
+  kind: 'dropdown';
+  dropdown: Dropdown;
+  index: number;
+}
+
+export interface ResolvedMenuItem {
+  kind: 'menu-item';
+  item: MenuItem;
+  tabIndex: number;
+  itemIndex: number;
+}
+
+export type ResolvedEntry =
+  | ResolvedTab
+  | ResolvedGroup
+  | ResolvedPage
+  | ResolvedAnchor
+  | ResolvedDropdown
+  | ResolvedMenuItem;
 
 export function findEntry(
   config: DocsConfig,
@@ -133,6 +189,40 @@ export function findEntry(
       group,
       tabIndex: parsed.tabIndex,
       groupPath: parsed.groupPath,
+    };
+  }
+
+  if (parsed.kind === 'anchor') {
+    const anchors = config.navigation?.anchors ?? [];
+    const anchor = anchors[parsed.index];
+    if (!anchor) return null;
+    return { kind: 'anchor', anchor, index: parsed.index, isGlobal: false };
+  }
+
+  if (parsed.kind === 'global-anchor') {
+    const anchors = config.navigation?.global?.anchors ?? [];
+    const anchor = anchors[parsed.index];
+    if (!anchor) return null;
+    return { kind: 'anchor', anchor, index: parsed.index, isGlobal: true };
+  }
+
+  if (parsed.kind === 'dropdown') {
+    const dropdowns = config.navigation?.dropdowns ?? [];
+    const dropdown = dropdowns[parsed.index];
+    if (!dropdown) return null;
+    return { kind: 'dropdown', dropdown, index: parsed.index };
+  }
+
+  if (parsed.kind === 'menu-item') {
+    const tab = tabs[parsed.tabIndex];
+    if (!tab) return null;
+    const item = tab.menu?.[parsed.itemIndex];
+    if (!item) return null;
+    return {
+      kind: 'menu-item',
+      item,
+      tabIndex: parsed.tabIndex,
+      itemIndex: parsed.itemIndex,
     };
   }
 
@@ -276,6 +366,52 @@ function mutateAt(
     return next;
   }
 
+  if (resolved.kind === 'anchor') {
+    if (resolved.isGlobal) {
+      const list = next.navigation!.global?.anchors ?? [];
+      if (!next.navigation!.global) next.navigation!.global = { anchors: list };
+      if (!next.navigation!.global!.anchors) next.navigation!.global!.anchors = list;
+      if (opts.remove) {
+        list.splice(resolved.index, 1);
+      } else {
+        list[resolved.index] = replacement() as Anchor;
+      }
+      return next;
+    }
+    const list = next.navigation!.anchors ?? [];
+    if (!next.navigation!.anchors) next.navigation!.anchors = list;
+    if (opts.remove) {
+      list.splice(resolved.index, 1);
+    } else {
+      list[resolved.index] = replacement() as Anchor;
+    }
+    return next;
+  }
+
+  if (resolved.kind === 'dropdown') {
+    const list = next.navigation!.dropdowns ?? [];
+    if (!next.navigation!.dropdowns) next.navigation!.dropdowns = list;
+    if (opts.remove) {
+      list.splice(resolved.index, 1);
+    } else {
+      list[resolved.index] = replacement() as Dropdown;
+    }
+    return next;
+  }
+
+  if (resolved.kind === 'menu-item') {
+    const tab = tabs[resolved.tabIndex];
+    if (!tab) return next;
+    const menu = tab.menu ?? [];
+    if (!tab.menu) tab.menu = menu;
+    if (opts.remove) {
+      menu.splice(resolved.itemIndex, 1);
+    } else {
+      menu[resolved.itemIndex] = replacement() as MenuItem;
+    }
+    return next;
+  }
+
   // page
   const tab = tabs[resolved.tabIndex];
   if (!tab) return next;
@@ -350,6 +486,79 @@ export function appendTab(config: DocsConfig, tab: Tab): DocsConfig {
   if (!next.navigation) next.navigation = { tabs: [] };
   if (!next.navigation.tabs) next.navigation.tabs = [];
   next.navigation.tabs.push(tab);
+  return next;
+}
+
+/**
+ * Append a new anchor to `navigation.anchors` (or `navigation.global.anchors`
+ *  when `isGlobal` is true). The minimum payload is `{ anchor: name }`; the
+ *  user fills in icon/href/pages via the settings panel afterward.
+ */
+export function appendAnchor(
+  config: DocsConfig,
+  anchor: Anchor,
+  isGlobal = false,
+): DocsConfig {
+  const next: DocsConfig = JSON.parse(JSON.stringify(config));
+  if (!next.navigation) next.navigation = {};
+  if (isGlobal) {
+    if (!next.navigation.global) next.navigation.global = {};
+    if (!next.navigation.global.anchors) next.navigation.global.anchors = [];
+    next.navigation.global.anchors.push(anchor);
+  } else {
+    if (!next.navigation.anchors) next.navigation.anchors = [];
+    next.navigation.anchors.push(anchor);
+  }
+  return next;
+}
+
+/** Append a new dropdown to `navigation.dropdowns`. */
+export function appendDropdown(config: DocsConfig, dropdown: Dropdown): DocsConfig {
+  const next: DocsConfig = JSON.parse(JSON.stringify(config));
+  if (!next.navigation) next.navigation = {};
+  if (!next.navigation.dropdowns) next.navigation.dropdowns = [];
+  next.navigation.dropdowns.push(dropdown);
+  return next;
+}
+
+/** Append a new menu item to a tab's `menu` array. */
+export function appendMenuItem(
+  config: DocsConfig,
+  tabIndex: number,
+  item: MenuItem,
+): DocsConfig {
+  const next: DocsConfig = JSON.parse(JSON.stringify(config));
+  const tabs = next.navigation?.tabs ?? [];
+  const tab = tabs[tabIndex];
+  if (!tab) return config;
+  if (!tab.menu) tab.menu = [];
+  tab.menu.push(item);
+  return next;
+}
+
+/**
+ * Reorder a tab within `navigation.tabs`. `fromIndex` is the source slot;
+ * `insertIndex` is the destination expressed against the ORIGINAL array
+ * (i.e. before splicing the source out). Used by drag-and-drop where the
+ * UI knows "above" or "below" a target row — the caller computes the
+ * insert index as `targetIndex` (above) or `targetIndex + 1` (below) and
+ * we handle the same-array shift internally.
+ */
+export function reorderTabs(
+  config: DocsConfig,
+  fromIndex: number,
+  insertIndex: number,
+): DocsConfig {
+  const next: DocsConfig = JSON.parse(JSON.stringify(config));
+  const tabs = next.navigation?.tabs ?? [];
+  if (fromIndex < 0 || fromIndex >= tabs.length) return config;
+  if (insertIndex === fromIndex || insertIndex === fromIndex + 1) return config;
+  const [moved] = tabs.splice(fromIndex, 1);
+  const dest = Math.max(
+    0,
+    Math.min(insertIndex > fromIndex ? insertIndex - 1 : insertIndex, tabs.length),
+  );
+  tabs.splice(dest, 0, moved!);
   return next;
 }
 

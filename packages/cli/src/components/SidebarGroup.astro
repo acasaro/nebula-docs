@@ -28,6 +28,20 @@ function containsSlug(g: any, slug: string): boolean {
 }
 const nestedOpen = !isTopLevel && (group.expanded || containsSlug(group, currentSlug));
 const visiblePages = (group.pages ?? []).filter((p: any) => !isHidden(p));
+
+// Mintlify `group.root`: when set, the group title navigates to that page
+// instead of being plain text. We render the title as an `<a>` and let the
+// platform style it like a regular link. For nested groups (details/summary)
+// the click bubble would also toggle the disclosure — an `is:inline` script
+// at the bottom of this file stops that bubble so the click is purely a
+// navigation.
+const rootHref =
+  typeof group.root === 'string' && group.root.length > 0
+    ? group.root === 'index'
+      ? '/'
+      : `/${group.root}`
+    : null;
+const groupTag = typeof group.tag === 'string' && group.tag.trim() ? group.tag.trim() : null;
 ---
 {isTopLevel ? (
   <div class="nebula-sidebar-group">
@@ -40,7 +54,14 @@ const visiblePages = (group.pages ?? []).filter((p: any) => !isHidden(p));
           size={14}
         />
       )}
-      <span>{group.group}</span>
+      {rootHref ? (
+        <a class="nebula-sidebar-group-title-link" href={rootHref} aria-current={currentSlug === group.root ? 'page' : undefined}>
+          {group.group}
+        </a>
+      ) : (
+        <span>{group.group}</span>
+      )}
+      {groupTag && <span class="nebula-sidebar-tag">{groupTag}</span>}
     </p>
     <ul class="nebula-sidebar-list">
       {visiblePages.map((page: any) =>
@@ -65,7 +86,19 @@ const visiblePages = (group.pages ?? []).filter((p: any) => !isHidden(p));
           size={14}
         />
       )}
-      <span>{group.group}</span>
+      {rootHref ? (
+        <a
+          class="nebula-sidebar-group-title-link"
+          href={rootHref}
+          data-stop-toggle
+          aria-current={currentSlug === group.root ? 'page' : undefined}
+        >
+          {group.group}
+        </a>
+      ) : (
+        <span>{group.group}</span>
+      )}
+      {groupTag && <span class="nebula-sidebar-tag">{groupTag}</span>}
       <svg
         class="nebula-sidebar-nested-chevron"
         viewBox="0 0 12 12"
@@ -92,3 +125,15 @@ const visiblePages = (group.pages ?? []).filter((p: any) => !isHidden(p));
     </ul>
   </details>
 )}
+
+<script is:inline>
+  // Stop a click on a nested-group's root link from bubbling up to the
+  // <summary>, which would otherwise toggle the <details> disclosure on top
+  // of the navigation. Top-level groups don't need this (no <details>).
+  document.addEventListener('click', (e) => {
+    const target = e.target;
+    if (target instanceof Element && target.closest('[data-stop-toggle]')) {
+      e.stopPropagation();
+    }
+  }, true);
+</script>

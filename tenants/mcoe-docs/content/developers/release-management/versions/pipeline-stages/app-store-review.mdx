@@ -1,0 +1,158 @@
+---
+title: "App Store Review Stage"
+description: "Submitting to Apple review, tracking review status, and handling rejections."
+sidebarTitle: "4. App Store Review"
+---
+
+The App Store Review stage is the fourth step in the version pipeline. Here, you submit your build to Apple for review and track the review status through to approval.
+
+<Note>To send your app to App Store review, you need to have the Release Manager role for your connected app.</Note>
+
+## Prerequisites
+
+Before you can submit for App Store review:
+
+- All six approvals must be **Approved** (see [Approvals](/developers/release-management/versions/pipeline-stages/approvals))
+- Your App Store Connect configuration must be complete (see [Settings](/developers/release-management/manage-rollout/settings))
+
+## Submitting for Review
+
+<Steps>
+  <Step title="Open the App Store Review stage">
+    Navigate to your version's pipeline view and expand the App Store Review stage card.
+
+    <Frame caption="The App Store Review stage in Ready for Review state">
+      ![app-store-review-ready](/images/image-place-holder.png)
+    </Frame>
+  </Step>
+  <Step title="Configure release settings">
+    Review the release settings section:
+
+    - **Phased Release** — Toggle on/off. When enabled, your app rolls out gradually to users over 7 days instead of all at once.
+    - **Release Date** — Optionally schedule when the app should be released after approval. You can:
+      - Release the app manually
+      - Release the app automatically as soon as it passes review
+      - Release the app on a specific date after review
+
+    <Frame caption="App Store release settings with phased release and version release options">
+      ![release-settings](/images/image-place-holder.png)
+    </Frame>
+  </Step>
+  <Step title="Review and update metadata (optional)">
+    Click **"Configure Metadata"** to open the **App Store Metadata** modal. Here you can review and edit:
+
+    - App name for the App Store
+    - Keywords and subtitle
+    - Description and release notes (What's New)
+    - Support URL
+    - Category and age rating
+
+    <Frame caption="The App Store Metadata modal for reviewing and editing store listing details">
+      ![app-store-metadata](/images/image-place-holder.png)
+    </Frame>
+  </Step>
+  <Step title="Submit for review">
+    Click **"Submit for Review"**. The build is submitted to Apple for review.
+  </Step>
+</Steps>
+
+## Tracking Review Status
+
+After submission, the stage card shows the current Apple review status:
+
+| Status | Meaning | What to Do |
+|--------|---------|------------|
+| **Waiting for Review** | Submitted and in Apple's queue | Wait — Apple will begin reviewing shortly |
+| **In Review** | Apple is currently reviewing your app | Wait — review typically takes 24-48 hours |
+| **Approved** | Apple has approved your app | Move to the [Release](/developers/release-management/versions/pipeline-stages/release) stage |
+| **Rejected** | Apple has rejected your submission | Review the rejection reason and address the issues |
+| **Canceled** | The review was canceled by the developer | You can re-submit if needed |
+
+<Frame caption="The App Store Review stage showing review status timeline">
+  ![review-status-timeline](/images/image-place-holder.png)
+</Frame>
+
+### Submission Timeline
+
+The stage shows a timeline of key dates:
+- When the build was submitted
+- When the review started
+- When a decision was made
+
+## If Your App Is Rejected
+
+If Apple rejects your submission:
+
+<Steps>
+  <Step title="Review the rejection reason">
+    Read the rejection reason shown in the stage card. Apple provides specific feedback with each rejection.
+  </Step>
+  <Step title="Determine the type of fix needed">
+    - **Code changes needed** — Go back to the [Release Candidate](/developers/release-management/versions/pipeline-stages/release-candidate) stage to select a new build
+    - **Metadata changes only** — Update via the **App Store Metadata** modal
+  </Step>
+  <Step title="Make corrections">
+    Address the issues Apple identified.
+  </Step>
+  <Step title="Re-submit for review">
+    Submit for review again after corrections are made.
+  </Step>
+</Steps>
+
+<Note>Common rejection reasons include: missing privacy policy, incomplete metadata, crashes during review, and guideline violations.</Note>
+
+## Editing Release Notes
+
+If you wish to release an app with different release notes, you can manually edit them before submission. This change only affects the current release, not your default presets.
+
+<Steps>
+  <Step title="Navigate to App Store Metadata">
+    On the App Store Review page, scroll down to **App Store Metadata**.
+  </Step>
+  <Step title="Edit the release notes">
+    Click **What's new in this version**, then **Edit metadata** to change the release note. It will only apply to the selected localization shown under **Language**.
+  </Step>
+  <Step title="Apply to other localizations (optional)">
+    Tick **Use same content for all localizations** or click **Copy to** and select specific localizations.
+  </Step>
+</Steps>
+
+## Canceling a Review
+
+If you need to cancel a submitted review (e.g., you discovered an issue after submitting):
+
+1. While the status is **Waiting for Review** or **In Review**, click **"Cancel App Store review"**
+2. Confirm the cancellation
+3. The status changes to **Canceled**
+4. You can make changes and re-submit when ready
+
+<Note>Once Apple has made a decision (Approved or Rejected), you cannot cancel the review.</Note>
+
+## When the App Is Approved
+
+Once Apple approves your app:
+
+- The App Store Review stage is marked as **Complete**
+- The **Release** stage becomes available
+- You can release the app to the App Store
+
+## Troubleshooting
+
+**"Submit for Review" button not available:**
+- Ensure all six approvals are in Approved status
+- Verify App Store Connect configuration is complete (Application Name, Bundle ID)
+
+**Review taking longer than expected:**
+- Apple reviews typically take 24-48 hours but can take longer
+- During busy periods (holidays, major iOS releases), wait times may increase
+- Check Apple's system status page if delays seem unusual
+
+**Metadata issues flagged by Apple:**
+- Use the App Store Metadata modal to update metadata without changing the build
+- Re-submit after making corrections
+
+## What's Next
+
+- [Release](/developers/release-management/versions/pipeline-stages/release) — Next step: release your approved app
+- [Approvals](/developers/release-management/versions/pipeline-stages/approvals) — Previous step: approval workflows
+- [Pipeline Overview](/developers/release-management/pipeline-overview) — See all five stages

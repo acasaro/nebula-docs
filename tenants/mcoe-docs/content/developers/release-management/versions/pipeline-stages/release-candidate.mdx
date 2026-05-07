@@ -1,0 +1,120 @@
+---
+title: "Release Candidate Stage"
+description: "Selecting your build artifact from Bitrise CI to use as a release candidate."
+sidebarTitle: "1. Release Candidate"
+---
+
+The Release Candidate stage is the first step in the version pipeline. Here, you configure where your build artifacts come from and select the specific build you want to release.
+
+## What This Stage Does
+
+This stage connects your version to a Bitrise CI build. You'll:
+
+1. Tell the system which **branch** and **workflow** produce your release builds
+2. Select a specific **build artifact** (e.g., a signed `.ipa` file) from the available builds
+
+<Note>
+The installable artifact must be a SIGNED artifact (IPA or AAB). Check out our code signing guides:
+
+- [iOS code signing overview](/pages/mobile-ci/03-code-signing/ios-code-signing/ios-code-signing)
+- [Android code signing](/pages/mobile-ci/03-code-signing/android-code-signing/android-code-signing-in-gradle)
+</Note>
+
+## Step 1: Configure the Build Artifact Source
+
+Before you can select an artifact, you need to tell the system where to look for builds.
+
+<Steps>
+  <Step title="Find the source configuration banner">
+    In the Release Candidate stage card, find the **"Source: Bitrise CI builds"** banner.
+
+    <Frame caption="The Release Candidate stage card with the Configure button">
+      ![rc-stage-card](/images/image-place-holder.png)
+    </Frame>
+  </Step>
+  <Step title="Open the Build Artifact Source dialog">
+    Click the **"Configure"** button on the banner. The **Build Artifact Source** modal opens with two fields.
+
+    <Frame caption="The Build Artifact Source configuration dialog">
+      ![build-artifact-source](/images/image-place-holder.png)
+    </Frame>
+  </Step>
+  <Step title="Select a release branch">
+    Use the **Release Branch** dropdown (searchable) to select the Git branch that your release builds come from (e.g., `main`, `release/1.2.6`).
+  </Step>
+  <Step title="Select a workflow">
+    Use the **Workflow** dropdown (searchable) to select the Bitrise workflow that generates your signed app archive (e.g., `release-build`, `deploy-appstore`).
+  </Step>
+  <Step title="Save changes">
+    Click **"Save changes"** to confirm.
+  </Step>
+</Steps>
+
+<Tip>The branch dropdown shows all branches available in your Bitrise app. The workflow dropdown shows all workflows defined in your `bitrise.yml` configuration.</Tip>
+
+## Step 2: Select a Build Artifact
+
+Once the source is configured, the system fetches available build artifacts that match your branch and workflow.
+
+<Steps>
+  <Step title="Open the artifact selector">
+    Click **"Select Build Artifact"** in the Release Candidate stage card.
+
+    <Frame caption="The Select Build Artifact dialog showing available builds">
+      ![select-artifact](/images/image-place-holder.png)
+    </Frame>
+  </Step>
+  <Step title="Review available artifacts">
+    Each artifact shows:
+    - **Filename** — The build file name (e.g., `MyApp.ipa`)
+    - **Version** — The version string embedded in the build
+    - **Build Number** — The CI build number
+    - **Timestamp** — When the build was created
+  </Step>
+  <Step title="Select and confirm">
+    Click the artifact you want to use, then confirm your selection.
+  </Step>
+</Steps>
+
+## After Selecting an Artifact
+
+Once an artifact is selected, the Release Candidate stage card shows an **Artifact Card** with:
+
+- The artifact icon and filename
+- Version string
+- Build number
+- Build timestamp
+
+<Frame caption="The completed Release Candidate stage showing the selected artifact">
+  ![rc-artifact-selected](/images/image-place-holder.png)
+</Frame>
+
+The stage is now **complete**, and the Testing stage becomes available.
+
+## Changing the Build Source
+
+You can reconfigure the branch and workflow at any time by clicking **"Configure"** on the source banner. When you change the build source:
+
+- The list of available artifacts refreshes to match the new branch/workflow
+- Any previously selected artifact is cleared
+- The OSPO compliance scan is reset (you'll need to re-trigger it in the Approvals stage)
+
+<Warning>Changing the build source after selecting an artifact means you'll need to select a new artifact and re-run any compliance checks that depend on the build.</Warning>
+
+## Troubleshooting
+
+**No artifacts appear after configuring the source:**
+- Verify the branch and workflow are correct
+- Ensure the workflow has completed successfully in Bitrise
+- Check that the workflow produces a signed artifact (not just a test build)
+- Wait a moment and try refreshing — recent builds may take a short time to appear
+
+**The branch or workflow I need isn't in the dropdown:**
+- Branches are pulled from your Bitrise app — make sure the branch exists and has been pushed
+- Workflows are read from your `bitrise.yml` — make sure the workflow is defined and the config is up to date in Bitrise
+
+## What's Next
+
+- [Testing](/developers/release-management/versions/pipeline-stages/testing) — Next step: upload your artifact for beta testing
+- [Pipeline Overview](/developers/release-management/pipeline-overview) — See all five stages
+- [OSPO Compliance](/developers/release-management/versions/pipeline-stages/ospo-compliance) — How changing your artifact source affects the compliance scan

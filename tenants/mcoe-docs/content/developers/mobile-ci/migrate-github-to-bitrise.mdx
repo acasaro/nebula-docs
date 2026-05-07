@@ -1,0 +1,201 @@
+---
+title: "Migrating to Bitrise"
+description: "How to migrate your mobile CI workflows from GitHub to Bitrise."
+sidebarTitle: "Migrate to Bitrise"
+---
+<Warning title="macos-uhg runners are being retired">By end of Q2 / early Q3, `macos-uhg` runners will be retired. All mobile apps released via MCoE must be building and releasing through Bitrise before then.</Warning>
+
+If your mobile project currently runs CI builds directly in GitHub Actions, you'll need to migrate to Bitrise to take advantage of the MCOE mobile CI platform — including native iOS/Android builds, real-device testing, and integration with Immerse Release Management.
+
+{/* <BitrisePrereq feature='Release Management' /> */}
+
+## Why Migrate?
+
+GitHub Actions is well-suited for general-purpose CI, but Bitrise provides purpose-built capabilities for mobile development:
+
+- **Native mobile build environments** — Pre-configured Xcode and Android SDK environments, updated with each OS release
+- **Code signing management** — Centralized management of provisioning profiles, certificates, and keystores
+- **Real-device testing** — Run tests on physical iOS and Android devices
+- **Release Management integration** — Seamlessly connect builds to the [Rollouts pipeline](/developers/release-management/getting-started) for approvals and store submission
+- **Enterprise workflows** — Pre-built workflows for iOS Build, Android Build, and Release Candidate generation
+
+## Prerequisites
+
+Before migrating, ensure you have:
+
+- A GitHub repository with your mobile application source code
+- Access to the Immerse platform
+- Your application registered with an ASK ID in Immerse
+
+## Quick Reference
+
+There are two ways to trigger Bitrise builds from GitHub Actions. Choose the option that fits your needs.
+
+### Option 1 — Shared workflow (recommended)
+
+The shared workflow handles auth, app-slug resolution, and all CI steps automatically:
+
+```yaml build-dev.yml lines wrap
+jobs:
+  build:
+    uses: uhg-pipelines/mobile-workflows/.github/workflows/react-native-ci.yml@main
+    with:
+      working-directory: products/my-app
+      bitrise-workflow-id: "my-workflow"
+    secrets:
+      bitrise-build-secrets: |
+        MY_SECRET=${{ secrets.MY_SECRET }}
+        ANOTHER_SECRET=${{ secrets.ANOTHER_SECRET }}
+```
+
+### Option 2 — Direct action call
+
+Use the action directly when you need full control over auth and inputs:
+
+```yaml build-dev.yml lines wrap
+jobs:
+  build:
+    runs-on: uhg-runner
+    steps:
+      - uses: uhg-pipelines/mobile-workflows/.github/actions/trigger-bitrise@main
+        with:
+          bitrise-token: ${{ secrets.BITRISE_ACCESS_TOKEN }}
+          app-slug: ${{ secrets.BITRISE_APP_SLUG }}
+          workflow: "my-workflow"
+          branch: ${{ github.ref_name }}
+          environments: |
+            BUILD_TYPE:Internal,
+            EVENT_NAME:${{ github.event_name }}
+          build-secrets: |
+            MY_SECRET=${{ secrets.MY_SECRET }}
+            ANOTHER_SECRET=${{ secrets.ANOTHER_SECRET }}
+```
+
+You manage auth and inputs yourself. Use `environments` for non-sensitive values (`KEY:VALUE` comma-separated) and `build-secrets` for sensitive values (`KEY=VALUE` one per line).
+
+## How Build Secrets Work
+
+The action sends secrets via the **Build Trigger API** (`POST /apps/{slug}/builds`) in the `build_params.secrets` field.
+
+<Warning>This is **not** the Bitrise Secrets API (`POST /apps/{slug}/build-trigger-token/secrets`) that permanently adds secrets to the app config. Don't confuse the two.</Warning>
+
+When you pass secrets through the action:
+
+- Values are available **only for that single build** as environment variables
+- They're **ephemeral** — they don't persist in the Bitrise Secrets tab
+- They're redacted from build logs
+
+Your Bitrise workflows need to read them as environment variables (e.g., `$DATADOG_API_KEY`). They will **not** appear on the Bitrise Secrets configuration page or in the Bitrise dashboard — they only exist during the build execution.
+
+<Tip>This is the more secure approach. Secrets are never stored in Bitrise — they're injected per-build and disappear afterward. The alternative (using the Secrets Management API to permanently store them) would mean secrets live in two places.</Tip>
+
+## Migration Steps
+
+<Steps>
+<Step title="Create a pipeline in Immerse">
+Navigate to **Pipelines** in the Immerse platform and [create a new mobile pipeline](/developers/mobile-ci/mobile-workflows). This provisions a Bitrise project for your application and commits the shared workflow configuration to your GitHub repository.
+
+<Video src="https://firebasestorage.googleapis.com/v0/b/mcoe-d.firebasestorage.app/o/dev%2F1%2Fvideos%2Fa873353eb34813ce.mp4?alt=media&token=6a2f4632-8271-47c6-a51d-c66433bb56ec" caption="Creating a new pipeline in Immerse — select your platform type and provide your ASK ID" loop maxLoops={3} />
+</Step>
+
+<Step title="Configure the reusable workflow">
+The pipeline creation process adds a shared workflow file to your repository. Update your GitHub Actions workflow to use the [React Native CI reusable workflow](/developers/mobile-ci/mobile-workflows/react-native-ci).
+
+If you're using the shared workflow (Option 1), your configuration looks like this:
+
+```yaml
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    uses: uhg-pipelines/mobile-workflows/.github/workflows/react-native-ci.yml@main
+    with:
+      working-directory: products/my-app
+      bitrise-workflow-id: "my-workflow"
+    secrets:
+      bitrise-build-secrets: |
+        MY_SECRET=${{ secrets.MY_SECRET }}
+```
+
+If you need full control (Option 2), use the direct action call as shown in the [quick reference](#option-2--direct-action-call) above.
+</Step>
+
+<Step title="Set up Bitrise authentication">
+Add `BITRISE_ACCESS_TOKEN` as a repository secret in GitHub. The shared workflow (Option 1) picks this up automatically.
+
+<Note>If you're using the direct action call (Option 2), you must pass `bitrise-token` explicitly.</Note>
+
+See the [Bitrise Configuration](/developers/mobile-ci/mobile-workflows/react-native-ci#bitrise-configuration) section for full details.
+</Step>
+
+<Step title="Configure the Bitrise app slug">
+The workflow needs to know which Bitrise project to trigger. Set this via one of:
+
+1. The `immerse_bitrise_project_key` GitHub custom property on your repository (recommended — the shared workflow resolves it automatically)
+2. A `BITRISE_APP_SLUG` repository secret
+3. The `bitrise-app-slug` workflow input (or `app-slug` for the direct action)
+</Step>
+
+<Step title="Remove old CI configuration">
+Once the new workflow is verified, remove any legacy CI steps from your GitHub Actions that are now handled by Bitrise (native builds, code signing, artifact generation).
+
+<Note>Keep any non-mobile CI steps (linting, unit tests, SonarQube) in your GitHub Actions workflow — these still run in GitHub before triggering the Bitrise build.</Note>
+</Step>
+
+<Step title="Verify the pipeline">
+Push a commit or open a pull request to trigger the new workflow. Verify that:
+
+- Dependencies install successfully
+- Tests pass
+- SonarQube analysis completes (if enabled)
+- The Bitrise build triggers and produces a signed artifact
+- Build secrets are accessible as environment variables in your Bitrise workflow
+</Step>
+</Steps>
+
+## After Migration
+
+Once migrated, your CI pipeline will:
+
+1. **Run code quality checks in GitHub Actions** — dependency installation, tests, SonarQube analysis
+2. **Trigger Bitrise for mobile builds** — iOS and Android builds run on dedicated mobile infrastructure
+3. **Produce signed artifacts** — Ready for TestFlight, Google Play, or the Rollouts release pipeline
+
+<Tip>You can now set up [Release Management](/developers/release-management/getting-started) to manage the full release lifecycle for your builds — from TestFlight distribution through App Store and Google Play submission.</Tip>
+
+## Troubleshooting
+
+**Bitrise build not triggering:**
+
+- Verify your Bitrise app slug is configured (custom property, secret, or workflow input)
+- Check that authentication is set up correctly (`BITRISE_ACCESS_TOKEN` secret)
+- Review the GitHub Actions logs for API errors
+
+**Build fails in Bitrise but passes locally:**
+
+- Check that code signing is configured in the Bitrise project
+- Verify the Bitrise workflow ID matches an existing workflow in your `bitrise.yml`
+- Review Bitrise build logs for environment-specific issues
+
+**Secrets not available in Bitrise workflow:**
+
+- Confirm you're reading them as environment variables (e.g., `$MY_SECRET`), not looking for them in the Bitrise Secrets dashboard
+- Verify the `build-secrets` / `bitrise-build-secrets` input uses the correct format (`KEY=VALUE`, one per line)
+- Check that the secret names in your Bitrise workflow steps match what you're passing from GitHub
+
+**Artifacts not appearing:**
+
+- Ensure `bitrise-wait-for-build` is `true` (default)
+- Check that the Bitrise workflow produces signed artifacts
+- Verify `upload-artifacts-path` is set if you need artifacts in JFrog
+
+## What's Next
+
+- [React Native CI Workflow](/developers/mobile-ci/mobile-workflows/react-native-ci) — Full configuration reference
+- [Enterprise Pipelines](/developers/mobile-ci/mobile-workflows) — Create pipelines in Immerse
+- [Release Management](/developers/release-management/getting-started) — Set up the release pipeline for your builds

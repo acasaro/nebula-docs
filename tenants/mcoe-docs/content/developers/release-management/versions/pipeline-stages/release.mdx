@@ -1,0 +1,146 @@
+---
+title: "Release Stage"
+description: "Releasing your approved app to the App Store, including phased release configuration."
+sidebarTitle: "5. Release"
+---
+
+The Release stage is the final step in the version pipeline. This is where you publish your approved app to the App Store for users to download.
+
+## Prerequisites
+
+- Your app must be **Approved** by Apple in the [App Store Review](/developers/release-management/versions/pipeline-stages/app-store-review) stage
+
+## What You'll See
+
+When you reach this stage, you'll see:
+
+- A banner: **"Ready to release"** with the note: "You can release your app for distribution in the App Store"
+- **Release Settings** — Options for how and when to release
+- A **"Release Version"** button
+
+<Frame caption="The Release stage in Ready to Release state">
+  ![release-stage-ready](/images/image-place-holder.png)
+</Frame>
+
+## Releasing Your App
+
+### Immediate Release
+
+<Steps>
+  <Step title="Review the release settings">
+    Confirm your phased release and version release preferences are set correctly.
+  </Step>
+  <Step title="Click Release Version">
+    Click the **"Release Version"** button.
+  </Step>
+  <Step title="Confirm the release">
+    The **Version Release** modal appears asking you to confirm. Click **Confirm** to release.
+
+    <Frame caption="The release confirmation dialog">
+      ![release-confirm](/images/image-place-holder.png)
+    </Frame>
+  </Step>
+</Steps>
+
+Your app is now live on the App Store. The version status changes to **Completed**.
+
+<Note>To release your app on the App Store, you need to have the Release Manager role for your connected app.</Note>
+
+### Phased Release
+
+If phased release is enabled (configured in the App Store Review stage or in release settings):
+
+- Your app rolls out gradually over **7 days**
+- Apple automatically increases the percentage of users who can see the update each day
+- You can monitor rollout progress
+
+<Note>Google calls this feature a staged rollout while Apple calls it a phased release. This is different from the Rollout product name.</Note>
+
+**Phased release schedule (approximate):**
+
+| Day | Percentage of Users |
+|-----|-------------------|
+| 1 | 1% |
+| 2 | 2% |
+| 3 | 5% |
+| 4 | 10% |
+| 5 | 20% |
+| 6 | 50% |
+| 7 | 100% |
+
+<Tip>Phased release lets you monitor crash reports and user feedback at each tier before the update reaches all users. This is recommended for significant updates.</Tip>
+
+#### Configuring Phased Release
+
+<Steps>
+  <Step title="Find the Phased release card">
+    On the App Store Review stage or Release stage, find the **Phased release for automatic updates** card and click **Change**.
+  </Step>
+  <Step title="Choose your release strategy">
+    Select either **Release update to all users at once** or **Release update over 7-day period using phased release**.
+
+    <Frame caption="The phased release configuration dialog">
+      ![phased-release-settings](/images/image-place-holder.png)
+    </Frame>
+  </Step>
+  <Step title="Save changes">
+    Click **Save changes**.
+  </Step>
+</Steps>
+
+#### Pausing and Resuming Phased Release
+
+While your app is in phased release, you can choose to pause the release for a total of 30 days. There's no limit to the number of pauses.
+
+<Steps>
+  <Step title="Pause the release">
+    On the Release stage, click the **Pause phased release** button to pause the release.
+  </Step>
+  <Step title="Resume when ready">
+    To resume the release, click the **Resume phased release** button.
+  </Step>
+</Steps>
+
+### Scheduled Release
+
+You can also set a specific release date and time:
+
+1. In the release settings, select a date/time for the release
+2. The app will be released automatically at the scheduled time after Apple's approval
+3. This is useful for coordinating releases with marketing campaigns or announcements
+
+<Note>You can change the date on the **Release** page if you selected **Automatically release this version after App Review, no earlier than** in the App Store Review stage.</Note>
+
+## Canceling a Release
+
+If you need to stop a release that's in progress (e.g., a critical issue is discovered during phased rollout):
+
+<Steps>
+  <Step title="Find the cancel option">
+    Look for the info banner: **"You can cancel the release if needed"**.
+  </Step>
+  <Step title="Click Cancel release">
+    Click **"Cancel release"**. The **Cancel Release** modal appears.
+  </Step>
+  <Step title="Confirm cancellation">
+    Optionally provide a reason for cancellation, then confirm.
+  </Step>
+</Steps>
+
+<Warning>Canceling a release stops the phased rollout. Users who already received the update will keep it, but no new users will get it.</Warning>
+
+## After Release
+
+Once your app is released:
+
+- The version status changes to **Completed**
+- The pipeline shows all five stages as complete
+- The version appears in your version list with a completed status
+- Your app is available for download on the App Store
+
+## What's Next
+
+- [App Store Review](/developers/release-management/versions/pipeline-stages/app-store-review) — Previous step: Apple review
+- [Pipeline Overview](/developers/release-management/pipeline-overview) — See the full pipeline lifecycle
+- [Manage Versions](/developers/release-management/versions/manage-versions) — View and manage all your versions
+- [Create Version](/developers/release-management/versions/create-version) — Start a new release

@@ -1,0 +1,56 @@
+---
+title: "Creating a Rollout"
+description: "Step-by-step instructions for creating a new Rollout in Immerse."
+sidebarTitle: "Create Rollout"
+---
+
+A rollout must be created before you can start releasing versions of your mobile app. Each rollout is tied to one application (ASK ID) and serves as the container for all your release activity.
+
+<Note>Only one rollout can exist per ASK ID. If a rollout already exists for your application, you'll use that one instead of creating a new one.</Note>
+
+## Create Your Rollout
+
+<Steps>
+  <Step title="Navigate to the Rollout Select page">
+    Go to `/beta/rollouts/` in Immerse. If this is your team's first Rollout, you'll see a **Get started with Rollouts** page.
+
+    <VideoLoop src="/videos/01-creating-rollouts.mp4" loop caption="The Rollout Select page with the Create Rollout button" maxLoops={4} />
+  </Step>
+  <Step title="Click Create Rollout">
+    Click the **"Create Rollout"** button in the top-right corner (or the **Create Rollout** button on the empty state page).
+  </Step>
+  <Step title="Select an Application">
+    Use the dropdown labeled **"Select an Application"**.
+    - The dropdown is searchable — start typing your application name or ASK ID to filter
+    - Select your application from the results
+    - If your application doesn't appear, click the link to **create a new application** first
+  </Step>
+  <Step title="Enter a Rollout Name">
+    In the **"Rollout Name"** field, type a name for your rollout.
+
+    <Note>Names are automatically converted to lowercase with hyphens replacing spaces and special characters (e.g., `myhealth-ios-release`).</Note>
+  </Step>
+  <Step title="Confirm creation">
+    Click **"Create Rollout"**. A success screen confirms your rollout was created, and you're automatically redirected to the **Rollout Checklist** page.
+  </Step>
+</Steps>
+
+## What Happens Behind the Scenes
+
+When you create a rollout, the system:
+
+- Creates the rollout record linked to your ASK ID
+- Pulls application information (name, description, lifecycle stage, category, owners) from the application registry
+- Sets up approver mappings based on your application's ownership:
+  - **Service Owner**, **Technical Owner**, and **Product Owner** are pulled from the application record
+  - **Legal**, **ESRO**, and **OSPO** reviewers are assigned from the system configuration
+- Generates a compliance checklist for your rollout
+
+<Note title="Application data is synced">Ownership and organization information displayed in your rollout comes from the application registry. To update these fields, update them in the application registry — they'll be reflected in your rollout automatically.</Note>
+
+## What's Next
+
+After creating your rollout, you'll land on the **Rollout Checklist** page. This checklist shows you what needs to be configured before you can start releasing versions.
+
+- [Setup Checklist](/developers/release-management/manage-rollout/setup-checklist) — Complete your rollout setup
+- [Settings](/developers/release-management/manage-rollout/settings) — Configure app store details

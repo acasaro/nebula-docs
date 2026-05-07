@@ -1,0 +1,277 @@
+---
+title: "React Native CI Workflow"
+description: "Configuration reference for the react-native-ci reusable GitHub Actions workflow."
+sidebarTitle: "React Native CI"
+---
+
+The `react-native-ci` reusable workflow provides a full CI pipeline for React Native mobile applications, including dependency installation, code quality scanning, SonarQube analysis, and Bitrise mobile builds (Android/iOS).
+
+## Quick Start
+
+Create a workflow file in your repository (e.g., `.github/workflows/ci.yml`) and call the reusable workflow:
+
+```yaml title=".github/workflows/ci.yml"
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  ci:
+    uses: uhg-pipelines/mobile-workflows/.github/workflows/react-native-ci.yml@main
+    secrets: inherit
+    with:
+      bitrise-workflow-id: Primary
+```
+
+This runs the full pipeline with sensible defaults: Node 20, npm, SonarQube enabled, and a Bitrise `Primary` workflow triggered.
+
+## Common Scenarios
+
+### Using yarn or pnpm
+
+```yaml
+with:
+  package-manager: yarn   # or: pnpm
+```
+
+### Specifying the Node version
+
+```yaml
+with:
+  node-version: "18"
+```
+
+### Running tests with a custom script name
+
+```yaml
+with:
+  npm-test-script: test:ci
+```
+
+### Skipping the code quality scan
+
+Set `enable-code-quality-scan: false` to bypass the entire build/test/Sonar step. Useful when iterating on infrastructure or Bitrise-only changes.
+
+```yaml
+with:
+  enable-code-quality-scan: false
+```
+
+### Disabling SonarQube only
+
+Run the full build and test pipeline but skip the Sonar gate:
+
+```yaml
+with:
+  enable-sonar: false
+```
+
+### Disabling the Bitrise mobile build
+
+```yaml
+with:
+  enable-bitrise: false
+```
+
+### Running the project from a subdirectory
+
+```yaml
+with:
+  working-directory: apps/mobile
+```
+
+## Bitrise Configuration
+
+### Authentication
+
+The workflow supports two auth methods for Bitrise, controlled by `bitrise-auth-method`.
+
+#### Token (default)
+
+Provide the Bitrise API token as a repository secret named `BITRISE_ACCESS_TOKEN`:
+
+```yaml
+secrets:
+  BITRISE_ACCESS_TOKEN: ${{ secrets.BITRISE_ACCESS_TOKEN }}
+```
+
+Or pass it via `secrets: inherit` and store it in the repo/org secrets.
+
+#### OIDC (recommended)
+
+Use short-lived tokens exchanged via the OIDC proxy — no long-lived secrets required:
+
+```yaml
+with:
+  bitrise-auth-method: oidc
+  bitrise-oidc-proxy-url: https://bitrise-oidc-proxy.uhg.com  # default
+```
+
+<Tip>OIDC is the recommended approach because it eliminates long-lived secrets. The workflow already declares the required `id-token: write` permission.</Tip>
+
+### Specifying the Bitrise app
+
+The workflow resolves the Bitrise app slug in priority order:
+
+<Steps>
+  <Step title="BITRISE_APP_SLUG repository secret">
+    If set as a repository secret, this takes highest priority.
+  </Step>
+  <Step title="immerse_bitrise_project_key custom property">
+    GitHub custom property set on your repository. This is the simplest approach for most teams.
+  </Step>
+  <Step title="bitrise-app-slug workflow input">
+    Passed directly in the workflow `with:` block.
+  </Step>
+</Steps>
+
+<Warning>If none of these are set, the build will fail. The simplest approach for most teams is to set the `immerse_bitrise_project_key` custom property on their repository.</Warning>
+
+### Triggering a specific workflow and branch
+
+```yaml
+with:
+  bitrise-workflow-id: deploy-staging
+  bitrise-branch: release/1.2.0
+```
+
+### Passing environment variables to Bitrise
+
+```yaml
+with:
+  bitrise-environment-variables: "APP_ENV:staging,FEATURE_FLAGS:enabled"
+```
+
+### Passing secrets to the Bitrise build
+
+```yaml
+secrets:
+  bitrise-build-secrets: ${{ secrets.MY_BITRISE_SECRETS }}
+```
+
+<Note>The value must be a JSON object. Secrets are ephemeral (scoped to the single build) and redacted from Bitrise logs.</Note>
+
+### Not waiting for the Bitrise build to finish
+
+```yaml
+with:
+  bitrise-wait-for-build: false
+```
+
+The workflow will trigger the build and exit immediately. No artifacts will be downloaded or uploaded to JFrog.
+
+## Code Coverage
+
+Generate and upload a code coverage report as a workflow artifact:
+
+```yaml
+with:
+  enable-code-coverage: true
+```
+
+## Uploading Artifacts to JFrog
+
+To capture and publish files (e.g., a build output folder) to JFrog:
+
+```yaml
+with:
+  upload-artifacts-path: dist/
+  upload-artifacts-name: my-app-dist
+```
+
+## Full Example
+
+```yaml title=".github/workflows/ci.yml"
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  ci:
+    uses: uhg-pipelines/mobile-workflows/.github/workflows/react-native-ci.yml@main
+    secrets: inherit
+    with:
+      node-version: "20"
+      package-manager: yarn
+      working-directory: apps/mobile
+      npm-test-script: test:ci
+      bitrise-workflow-id: Primary
+      bitrise-auth-method: oidc
+      enable-sonar: true
+      sonar-quality-gate-wait: true
+      enable-code-coverage: true
+      upload-artifacts-path: artifacts/
+      upload-artifacts-name: mobile-build
+```
+
+## Input Reference
+
+### React Native
+
+| Input | Default | Description |
+|---|---|---|
+| `node-version` | `20` | Node.js version to install |
+| `working-directory` | `.` | Path to the React Native project root |
+| `package-manager` | `npm` | `npm`, `yarn`, or `pnpm` |
+| `npm-args` | | Extra args passed to `npm install` |
+| `yarn-args` | | Extra args passed to `yarn install` |
+| `pnpm-args` | | Extra args passed to `pnpm install` |
+| `npm-test-script` | `test` | npm script name used to run tests |
+| `enable-code-coverage` | `false` | Generate and upload code coverage |
+| `enable-code-quality-scan` | `true` | Run the full code quality scan step (install, test, Sonar) |
+
+### SonarQube
+
+| Input | Default | Description |
+|---|---|---|
+| `enable-sonar` | `true` | Run SonarQube analysis |
+| `sonar-quality-gate-wait` | `true` | Fail the workflow if the Sonar quality gate is not met |
+| `sonar-sources-folder` | `.` | Folder to pass to Sonar, relative to `working-directory` |
+
+### Bitrise
+
+| Input | Default | Description |
+|---|---|---|
+| `enable-bitrise` | `true` | Trigger a Bitrise mobile build |
+| `bitrise-app-slug` | | Bitrise app slug (falls back to secret/custom property) |
+| `bitrise-workflow-id` | `Primary` | Bitrise workflow to trigger |
+| `bitrise-branch` | | Branch to build (defaults to the current branch) |
+| `bitrise-commit` | | Commit SHA to build (defaults to current commit) |
+| `bitrise-tag` | | Git tag to build |
+| `bitrise-auth-method` | `token` | `token` or `oidc` |
+| `bitrise-oidc-proxy-url` | `https://bitrise-oidc-proxy.uhg.com` | OIDC proxy URL |
+| `bitrise-wait-for-build` | `true` | Wait for the Bitrise build to finish |
+| `bitrise-polling-interval` | `30` | Seconds between Bitrise status polls |
+| `bitrise-environment-variables` | | `KEY:value,KEY2:value2` pairs forwarded to Bitrise |
+
+### Artifacts & JFrog
+
+| Input | Default | Description |
+|---|---|---|
+| `upload-artifacts-path` | | Paths to upload as workflow artifacts |
+| `upload-artifacts-name` | `artifact` | Name for the uploaded artifact |
+| `upload-artifacts-include-hidden` | `false` | Include hidden files in the artifact |
+| `jfrog-audit` | `false` | Run `jf audit` dependency scan |
+| `jfrog-project-key` | | JFrog project key (falls back to `immerse_jfrog_project_key` custom property) |
+
+## Outputs
+
+| Output | Description |
+|---|---|
+| `bitrise-build-url` | Direct URL to the triggered Bitrise build |
+| `bitrise-build-status` | Bitrise status code: `0`=in-progress, `1`=success, `2`=failed, `3`=aborted |
+| `jfrog-build-name` | JFrog build name |
+| `jfrog-build-number` | JFrog build number |
+| `docker-tags` | Docker image tags (when Docker build is enabled) |
+
+## What's Next
+
+- [Enterprise Pipelines](/developers/mobile-ci/mobile-workflows) — Create and manage pipelines in Immerse
+- [About Mobile CI](/developers/mobile-ci/about-mobile-ci) — Architecture overview
+- [Release Management](/developers/release-management/getting-started) — Manage the release lifecycle for your builds

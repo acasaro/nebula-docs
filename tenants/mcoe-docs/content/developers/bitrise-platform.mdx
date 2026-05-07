@@ -1,0 +1,51 @@
+---
+title: Bitrise Platform
+description: "MCoE is standardizing on Bitrise for mobile CI/CD — replacing GitHub Actions and macOS‑UHG runners with a single workflow from PR to production."
+sidebarTitle: "Overview"
+---
+
+The Mobile Center of Excellence is standardizing on **Bitrise** as the CI/CD platform for all mobile applications released through MCoE. Bitrise replaces GitHub Actions + macOS‑UHG runners with a single, supported workflow from pull request to production.
+
+## What Bitrise replaces
+
+| Before | After |
+|---|---|
+| GitHub Actions | Bitrise Workflows |
+| AWS macOS runners (`macos‑uhg`) | Bitrise-managed build machines |
+| Manual artifact uploads to Firebase | Automated release pipeline |
+
+<Note>
+This change applies only to mobile apps released through MCoE. It does **not** affect non‑mobile teams or non‑macOS runners.
+</Note>
+
+## Why Bitrise
+
+- **Single pipeline** — build, test, sign, and release in one platform
+- **Reliability** — purpose‑built for mobile with managed Xcode and Android SDK stacks
+- **Auditability** — full trace from commit to production release
+- **Alignment** — integrates directly with the MCoE automated mobile release process
+
+## Migration timeline
+
+| Timeframe | What's happening |
+|---|---|
+| **Now through March 2026** | Enablement, onboarding, and early migrations. No forced shutdowns. |
+| **Mid‑April 2026** | Recommended planning window — MCoE will actively assist teams still on GitHub Actions. |
+| **End of Q2 2026** | `macos‑uhg` runners retired. All MCoE mobile apps must build and release through Bitrise. |
+
+## What's next
+
+<Steps>
+  <Step title="Request access to Bitrise">
+    Submit a Secure request for `AZU_BITRISE_USERS` and confirm SSO login.
+    See [Request Access](/developers/bitrise-platform/bitrise-access) for the full walkthrough.
+  </Step>
+  <Step title="Onboard your project">
+    Provide your GitHub org, repos, and team contacts so MCoE can create your Bitrise project.
+    See [Onboarding Guide](/developers/bitrise-platform/onboarding) for details.
+  </Step>
+  <Step title="Migrate your workflows">
+    Work with the MCoE team to move your build and release pipelines from GitHub Actions to Bitrise.
+    See [Migrating from GitHub to Bitrise](/developers/mobile-ci/migrate-github-to-bitrise) for step‑by‑step instructions.
+  </Step>
+</Steps>

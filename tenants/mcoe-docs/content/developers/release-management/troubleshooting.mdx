@@ -1,0 +1,224 @@
+---
+title: "Troubleshooting & FAQ"
+description: "Common issues and answers to frequently asked questions about Rollouts."
+sidebarTitle: "Troubleshooting"
+---
+
+Common issues and frequently asked questions about the Rollouts module.
+
+## Common Issues
+
+### Version Stuck in "Pending" State
+
+**Symptom:** A version was created but appears stuck without a pipeline view.
+
+**Cause:** The Bitrise release may not have been created successfully after the version record was saved.
+
+<Steps>
+  <Step title="Refresh the page">
+    Try refreshing the browser to reload the version data.
+  </Step>
+  <Step title="Delete and recreate (if needed)">
+    If the issue persists, delete the version and create a new one.
+  </Step>
+  <Step title="Verify Bitrise integration">
+    Check that your Bitrise integration is configured correctly in the [Setup Checklist](/developers/release-management/manage-rollout/setup-checklist).
+  </Step>
+</Steps>
+
+---
+
+### Business Approvals Won't Activate
+
+**Symptom:** Service Owner, Technical Owner, and Product Owner approvals remain in "Not Started" status even though you've submitted compliance approvals.
+
+**Cause:** All three compliance approvals (OSPO, Legal, ESRO) must be fully **Approved** before business approvals activate. This is an ordering dependency.
+
+<Steps>
+  <Step title="Check OSPO status">
+    Has the automated scan completed and passed? See [OSPO Compliance](/developers/release-management/versions/pipeline-stages/ospo-compliance).
+  </Step>
+  <Step title="Check Legal status">
+    Has the reviewer approved the submission?
+  </Step>
+  <Step title="Check ESRO status">
+    Has the reviewer approved the submission?
+  </Step>
+  <Step title="Confirm all three are Approved">
+    All three must show "Approved" status. Once complete, business approvals will automatically activate and send email notifications.
+  </Step>
+</Steps>
+
+---
+
+### OSPO Scan Fails or Stays in "Scanning"
+
+**Symptom:** The OSPO compliance scan doesn't complete, shows errors, or remains in "Scanning" mode indefinitely.
+
+| Cause | Solution |
+|-------|----------|
+| Bitrise build failed | Check the build status in Bitrise; look for build errors |
+| Missing `ospo-compliance-check` workflow | Ensure the workflow exists in your `bitrise.yml` configuration |
+| Bitrise App Slug not configured | Set up Bitrise integration in rollout settings (see [Checklist](/developers/release-management/manage-rollout/setup-checklist)) |
+| Network/API timeout | Click the refresh button to re-trigger the scan |
+
+---
+
+### No Build Artifacts Available
+
+**Symptom:** After configuring the branch and workflow in the Release Candidate stage, no artifacts appear for selection.
+
+| Cause | Solution |
+|-------|----------|
+| No successful builds for that branch/workflow | Trigger a build in Bitrise first, then return |
+| Wrong branch or workflow selected | Double-check the configuration matches your release build setup |
+| Build doesn't produce a signed artifact | Ensure the workflow includes signing and artifact export steps |
+| Recent build still processing | Wait a moment and refresh — new builds may take time to appear |
+
+---
+
+### App Store Rejection
+
+**Symptom:** Apple rejected your app during the App Store Review stage.
+
+<Steps>
+  <Step title="Read the rejection reason">
+    Review the rejection reason carefully on the App Store Review stage card.
+  </Step>
+  <Step title="Identify the issue type">
+    Common reasons include:
+    - **Missing privacy policy** — Add or update the privacy policy URL in [Settings](/developers/release-management/manage-rollout/settings)
+    - **Metadata issues** — Update via the App Store Metadata modal
+    - **Crashes during review** — Fix the bug, rebuild, and re-select the artifact
+    - **Guideline violations** — Review Apple's App Store Review Guidelines
+  </Step>
+  <Step title="Make corrections">
+    If code changes are needed, go back through the pipeline with a new build. If only metadata changes are needed, update and re-submit.
+  </Step>
+</Steps>
+
+---
+
+### Approver Not Receiving Emails
+
+**Symptom:** A reviewer reports not getting the approval notification email.
+
+- Email may be in spam/junk folder — ask the reviewer to check
+- The approver's email address may be incorrect in the application registry — verify the owner records
+- Email delivery issues are logged by the system but don't block the approval workflow
+- The approval link can be shared manually if email delivery fails
+
+---
+
+### Version Number Conflict
+
+**Symptom:** You can't create a version because the version number already exists.
+
+- Each version number must be unique per connected app
+- Check the version list to see if a version with that number already exists
+- Use a different version number, or delete the existing version if it's no longer needed (see [Manage Versions](/developers/release-management/versions/manage-versions))
+
+---
+
+### Can't Submit for App Store Review
+
+**Symptom:** The "Submit for Review" button is not available or is disabled.
+
+**Checklist to verify:**
+- All six approvals are in **Approved** status
+- App Store Connect configuration is complete (Application Name, Bundle ID)
+- A build artifact is selected and uploaded to TestFlight
+- Global settings are filled in (Support URL, Privacy Policy URL, etc.)
+
+## Frequently Asked Questions
+
+### General
+
+**Q: Can I have multiple rollouts for the same application?**
+
+No. Each ASK ID can have only one rollout. If a rollout already exists for your application, use the existing one.
+
+**Q: Can I have multiple versions in progress at the same time?**
+
+Yes. You can have multiple versions at different pipeline stages simultaneously. For example, you might be testing v1.3.0 while v1.2.6 is in App Store review.
+
+**Q: What platforms are supported?**
+
+The module supports iOS and Android. iOS releases go through App Store Connect (TestFlight + App Store Review). Android releases go through Google Play Console.
+
+---
+
+### Versions
+
+**Q: Can I change the version number after creation?**
+
+No. The version number is set when the version is created and cannot be changed. If you need a different number, create a new version.
+
+**Q: What happens if I delete a version that's in progress?**
+
+All data is permanently removed — the version record, all approval records, and the linked Bitrise release. Any approval progress is lost.
+
+**Q: What's the difference between "Draft" and "In Progress"?**
+
+**Draft** means the version was just created and is in the Release Candidate stage (no artifact selected yet). **In Progress** means the version is actively moving through the pipeline (artifact selected, testing, approvals, or review underway).
+
+---
+
+### Approvals
+
+**Q: Who are the default approvers?**
+
+System approvers (Legal, ESRO, OSPO) are configured by the platform team. Business approvers (Service Owner, Technical Owner, Product Owner) are pulled from your application record in the Immerse application registry.
+
+**Q: Can I change who approves my version?**
+
+Business approvers are determined by your application's ownership record. Update the owner fields in the Applications module to change who receives approval requests. System approvers are managed centrally.
+
+**Q: What does "hotfix" change about approvals?**
+
+Marking a version as a hotfix automatically approves the Legal approval. All other approvals still require their normal sign-off.
+
+**Q: Can I re-submit an approval that was rejected?**
+
+Yes. After addressing the reviewer's feedback, coordinate with them for re-submission. The approval can be re-reviewed.
+
+---
+
+### OSPO Compliance
+
+**Q: What triggers the OSPO scan?**
+
+The scan is triggered automatically when the approvals stage is reached, using the branch from your selected build artifact.
+
+**Q: How long does the OSPO scan take?**
+
+Typically a few minutes, depending on the number of dependencies. Large projects may take longer.
+
+**Q: What if I disagree with a license classification?**
+
+Contact the OSPO team to discuss. License policies are managed centrally and may be updated if a classification is incorrect.
+
+---
+
+### App Store
+
+**Q: How long does Apple's review take?**
+
+Typically 24-48 hours, though it can vary. During busy periods (holidays, major iOS releases), reviews may take longer.
+
+**Q: Can I have phased release and a specific release date?**
+
+Yes. You can schedule a release date and also enable phased release. The app will begin its phased rollout on the scheduled date.
+
+**Q: What happens if I cancel a phased release?**
+
+Users who already received the update keep it. The rollout stops and no additional users receive the update.
+
+## Getting Help
+
+If your issue isn't covered here:
+
+1. Check the relevant stage guide for stage-specific troubleshooting
+2. Review your Bitrise project for CI/CD-related issues
+3. Check App Store Connect for Apple-specific issues
+4. Contact the Immerse platform team for module-specific support

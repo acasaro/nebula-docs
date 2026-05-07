@@ -1,0 +1,9 @@
+{
+  "$schema": "https://nebula-docs.uhg.com/theme.schema.json",
+  "extends": "mcoe-default",
+  "tokens": {},
+  "codeBlock": {
+    "dark": "dark-plus",
+    "light": "light-plus"
+  }
+}

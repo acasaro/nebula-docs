@@ -1,0 +1,64 @@
+---
+title: Enterprise Pipelines
+sidebarTitle: "Enterprise Pipelines"
+description: "How to contribute to the Enterprise Pipeline Library (EPL) — reusable CI/CD workflows for mobile apps."
+---
+
+The Enterprise Pipeline Library (EPL) provides reusable GitHub Actions workflows that orchestrate the CI/CD process for mobile applications. When a team creates a pipeline in Immerse, these shared workflows are committed to their repository and handle everything from dependency installation to Bitrise build triggering.
+
+## How Enterprise Pipelines Work
+
+Enterprise Pipelines connect three systems:
+
+1. **Immerse** provisions the pipeline — creating the Bitrise project and committing shared workflow files to the team's GitHub repository
+2. **GitHub Actions** runs the CI workflow on push or pull request — installing dependencies, running tests, performing code quality scans, and triggering Bitrise builds
+3. **Bitrise** executes mobile-specific build workflows (iOS/Android), producing signed artifacts
+
+The mobile workflow (React Native EPL) reads the project's `.jfrog/config.yml` and triggers builds via the Bitrise API, either through an API token or OIDC-based authentication.
+
+## Supported Pipeline Types
+
+| Pipeline Type | Platform | Description |
+|--------------|----------|-------------|
+| **React Native** | iOS + Android | The primary mobile pipeline — handles both iOS and Android builds from a single React Native codebase |
+| **iOS Native** | iOS | Native iOS builds using Xcode via Bitrise |
+| **Android Native** | Android | Native Android builds using Gradle via Bitrise |
+| **Node** | N/A | Node.js project pipelines |
+| **Java** | N/A | Java project pipelines |
+| **Docker Image** | N/A | Container image build pipelines |
+| **Python** | N/A | Python project pipelines |
+
+## Contributing to EPL Workflows
+
+<Steps>
+  <Step title="Understand the workflow structure">
+    EPL workflows are reusable GitHub Actions workflows (using `workflow_call`) that app teams reference from their own repositories. Changes to an EPL workflow affect all repositories that consume it.
+  </Step>
+  <Step title="Test changes carefully">
+    Because EPL workflows are shared across many repositories, any change has a wide blast radius. Test thoroughly against representative projects before merging.
+  </Step>
+  <Step title="Maintain backward compatibility">
+    When modifying workflow inputs, outputs, or behavior, ensure existing consumers are not broken. Add new inputs with sensible defaults rather than changing existing ones.
+  </Step>
+  <Step title="Document changes">
+    Update workflow documentation and release notes so consuming teams understand what changed and whether they need to take any action.
+  </Step>
+</Steps>
+
+## Key Workflow: React Native CI
+
+The [React Native CI workflow](/developers/mobile-ci/mobile-workflows/react-native-ci) is the most widely used EPL workflow. It handles:
+
+- Dependency installation and caching
+- Linting and code quality checks
+- Unit and integration test execution
+- Bitrise build triggering for iOS and Android
+- Artifact management
+
+See the [React Native CI documentation](/developers/mobile-ci/mobile-workflows/react-native-ci) for full details on configuration and customization.
+
+## Guidelines
+
+- **Blast radius awareness** — EPL workflows are consumed by many app teams. Treat every change as a shared-library change with broad impact.
+- **Versioning** — Follow the team's versioning strategy for workflow releases so consuming teams can pin to stable versions.
+- **Security** — Workflows handle sensitive operations (API tokens, signing credentials, store submissions). Follow security best practices for secrets management and least-privilege access.

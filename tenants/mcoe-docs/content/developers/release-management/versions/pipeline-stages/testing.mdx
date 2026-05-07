@@ -1,0 +1,77 @@
+---
+title: "Testing Stage"
+description: "Uploading your build to TestFlight for beta testing."
+sidebarTitle: "2. Testing"
+---
+
+The Testing stage is the second step in the version pipeline. Here, you upload your selected build artifact to TestFlight for beta testing before moving on to approvals.
+
+## What This Stage Does
+
+This stage uploads your release candidate to Apple's TestFlight platform, where beta testers can install and test the build before it's submitted for App Store review.
+
+## Prerequisites
+
+- A build artifact must be selected in the [Release Candidate](/developers/release-management/versions/pipeline-stages/release-candidate) stage
+- Your App Store Connect configuration must be set up (see [Settings](/developers/release-management/manage-rollout/settings))
+
+## Upload to TestFlight
+
+The Testing stage moves through two states:
+
+<Steps>
+  <Step title="Review the upload state">
+    When you first reach this stage, you'll see:
+    - An info banner: **"Upload the release candidate first to start beta testing"**
+    - The selected artifact details (filename, version, build number)
+    - An **"Upload Version"** button
+
+    <Frame caption="The Testing stage in Ready to Upload state">
+      ![testing-ready-upload](/images/image-place-holder.png)
+    </Frame>
+  </Step>
+  <Step title="Upload the build">
+    Click **"Upload Version"** to upload the build to TestFlight.
+  </Step>
+  <Step title="Confirm upload success">
+    After a successful upload, the stage shows:
+    - A success banner: **"Ready for Testing"**
+    - The uploaded artifact details
+    - A note: **"Manage in TestFlight or continue to Approvals"**
+
+    <Frame caption="The Testing stage showing Ready for Testing status">
+      ![testing-ready-for-testing](/images/image-place-holder.png)
+    </Frame>
+  </Step>
+</Steps>
+
+<Note>Currently, auto-upload is on by default and this stage will be completed automatically.</Note>
+
+At this point, the stage is **complete** and the Approvals stage becomes available.
+
+## Managing Beta Testing
+
+Once the build is uploaded to TestFlight:
+
+- **Beta testers** can install the build through the TestFlight app on their devices
+- **Test feedback** is managed directly in App Store Connect / TestFlight — the Rollouts module doesn't track individual test results
+- You can continue to the Approvals stage while testing is ongoing
+
+<Tip>You don't need to wait for all beta testing to finish before moving to the Approvals stage. The approval process can run in parallel with ongoing beta testing.</Tip>
+
+## Troubleshooting
+
+**Upload fails:**
+- Verify your App Store Connect configuration in [Settings](/developers/release-management/manage-rollout/settings) (Bundle ID, Team ID, etc.)
+- Ensure the build artifact is a valid, signed `.ipa` file
+- Check that your App Store Connect account has the necessary permissions
+
+**Build doesn't appear in TestFlight after upload:**
+- TestFlight processing can take several minutes after upload
+- Check App Store Connect for any processing errors (e.g., missing compliance information, invalid provisioning profile)
+
+## What's Next
+
+- [Approvals](/developers/release-management/versions/pipeline-stages/approvals) — Next step: get required approvals
+- [Release Candidate](/developers/release-management/versions/pipeline-stages/release-candidate) — Previous step: select your build artifact
+- [Pipeline Overview](/developers/release-management/pipeline-overview) — See all five stages

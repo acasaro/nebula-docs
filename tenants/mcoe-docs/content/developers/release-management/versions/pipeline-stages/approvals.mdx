@@ -1,0 +1,192 @@
+---
+title: "Approvals Stage"
+description: "Understanding the 6 approval types, submission process, and how to manage approval workflows."
+sidebarTitle: "3. Approvals"
+---
+
+The Approvals stage is the third step in the version pipeline. Before your app can be submitted for App Store review, it must receive sign-off from six reviewers across compliance and business categories.
+
+## How Approvals Work
+
+Approvals are organized into two groups that must be completed in order:
+
+### Group 1: Compliance (Order 0)
+
+These must be completed **first** before business approvals can proceed.
+
+| Approval  | Reviewer   | Method                                                          |
+| --------- | ---------- | --------------------------------------------------------------- |
+| **OSPO**  | Automated  | Automated open-source license scan — no manual reviewer needed  |
+| **Legal** | Legal team | Manual form submission and review                               |
+| **ESRO**  | ESRO team  | Manual form submission and review (Export/Sanctions compliance) |
+
+### Group 2: Business (Order 1)
+
+These become available **after** all compliance approvals are approved.
+
+| Approval            | Reviewer                   | Method                                                      |
+| ------------------- | -------------------------- | ----------------------------------------------------------- |
+| **Service Owner**   | Your app's service owner   | Routed automatically — reviewer receives email notification |
+| **Technical Owner** | Your app's technical lead  | Routed automatically — reviewer receives email notification |
+| **Product Owner**   | Your app's product manager | Routed automatically — reviewer receives email notification |
+
+<Note>
+  Business approvals cannot be submitted until all three compliance approvals (OSPO, Legal, ESRO)
+  are approved. This dependency is enforced by the system.
+</Note>
+
+Each approval task syncs back to Bitrise Release Management automatically. You don't need to update approvals in both systems.
+
+## Viewing Approvals
+
+In the Approvals stage card on the Version Details page, you'll see a table with columns:
+
+| Column           | Description                                                            |
+| ---------------- | ---------------------------------------------------------------------- |
+| **Requirement**  | The approval type (e.g., OSPO, Legal, Service Owner)                   |
+| **Assigned to**  | The person responsible (or "Automated" for OSPO)                       |
+| **Submitted by** | Who submitted the form (dash for OSPO and not-yet-submitted approvals) |
+| **Status**       | Current status badge                                                   |
+| **Actions**      | "View" link to the approval detail page                                |
+
+<Frame caption='The Approvals stage showing all six approval tasks and their status'>
+  ![approvals-table](/images/image-place-holder.png)
+</Frame>
+
+## Approval Statuses
+
+| Status                      | Meaning                                           |
+| --------------------------- | ------------------------------------------------- |
+| **Draft**                   | Not yet submitted — form can be edited            |
+| **Pending Review**          | Submitted and waiting for the reviewer's decision |
+| **Scanning**                | OSPO automated scan is in progress                |
+| **Complete** / **Approved** | Reviewer has approved                             |
+| **Rejected**                | Reviewer has rejected — changes needed            |
+| **Changes Requested**       | Reviewer wants specific changes before re-review  |
+
+## Submitting Legal / ESRO Approvals
+
+Legal and ESRO approvals require you to fill out a compliance form before sending it to the reviewer.
+
+<Steps>
+  <Step title="Open the approval">
+    In the approvals table, click **"View"** next to the approval (e.g., Legal).
+  </Step>
+  <Step title="Review the approval page">
+    You'll see:
+    - Application name, version number, and target release date in the header
+    - The approval form with editable fields grouped by category
+
+      ![approval-form](/images/image-place-holder.png)
+
+  </Step>
+  <Step title="Fill in the required fields">
+    Complete all required fields in the form.
+  </Step>
+  <Step title="Save or submit">
+    You have two options:
+    - **"Save Draft"** (top-right) — Save your progress without sending. You can return later to finish.
+    - **"Send Request"** (top-right) — Submit the form and notify the reviewer via email.
+  </Step>
+</Steps>
+
+<Tip>
+  Save drafts frequently if you're gathering information over time. Your progress is preserved
+  between sessions.
+</Tip>
+
+After submitting, the approval status changes to **Pending Review** and the assigned reviewer receives an email notification with a link to review and approve or reject.
+
+## How OSPO Approval Works
+
+OSPO (Open Source Program Office) approval is **fully automated** — no manual form is needed.
+
+1. The system triggers an open-source license compliance scan using your selected build artifact
+2. The scan runs in the background
+3. Results show directly on the approval page:
+   - **Scanning** status while the scan is running
+   - **Approved** if the scan passes (no license violations)
+   - **Rejected** if violations are found
+
+See [OSPO Compliance](/developers/release-management/versions/pipeline-stages/ospo-compliance) for full details on reading scan results, understanding violations, and downloading the SBOM.
+
+## How Business Owner Approvals Work
+
+Service Owner, Technical Owner, and Product Owner approvals are **automatically routed** to the respective owners listed in your application record.
+
+<Steps>
+  <Step title="Compliance approvals complete">
+    Once all compliance approvals are approved, business approvals become active.
+  </Step>
+  <Step title="Owners receive email notifications">
+    Each owner receives an **email notification** with a link to review.
+  </Step>
+  <Step title="Owner reviews and decides">
+    The owner clicks the link and can choose to:
+    - **Approve** — Signs off on the release
+    - **Reject** — Rejects the release with a reason
+    - **Request Changes** — Asks for specific changes before re-review
+
+    <Frame caption="The business owner approval page with approve/reject options">
+      ![approval-business-owner](/images/image-place-holder.png)
+    </Frame>
+
+  </Step>
+</Steps>
+
+You don't need to submit a form for business approvals — the system routes them automatically based on your application's ownership configuration.
+
+## Hotfix Approval Fast Track
+
+When a version is marked as a **hotfix** during creation:
+
+- **Legal approval is automatically approved** — no form submission or manual review needed
+- All other approvals proceed normally (ESRO, OSPO, business owners still require sign-off)
+
+This speeds up critical fixes that need to reach production quickly.
+
+## Email Notifications
+
+The system sends email notifications to approvers at key points:
+
+- **When a form is submitted** (Legal/ESRO) — Reviewer receives notification to review
+- **When business approvals become active** — Owners are notified they need to review
+
+Each email contains a direct link to the approval page. Reviewers can click the link to view the submission and make their decision.
+
+## When All Approvals Are Complete
+
+Once all six approvals show **Approved** status:
+
+- The Approvals stage is marked as **Complete**
+- The **App Store Review** stage becomes available
+- You can submit your app to Apple for review
+
+## Troubleshooting
+
+**Business approvals won't activate:**
+
+- Check that all three compliance approvals (OSPO, Legal, ESRO) are approved
+- Compliance approvals must be completed first due to the ordering dependency
+
+**An approval was rejected:**
+
+- View the rejection reason on the approval detail page
+- Address the feedback, then coordinate with the reviewer for re-submission
+
+**Approver not receiving emails:**
+
+- Verify the approver's email address is correct in the application registry
+- Check spam/junk folders
+- Email delivery issues are logged but don't block the approval workflow — the approval link can be shared manually
+
+<Note>
+  If an approval task is blocked or you're unsure who to contact, reach out to your MCOE
+  representative or check the [MCOE support channel](/resources/guides).
+</Note>
+
+## What's Next
+
+- [OSPO Compliance](/developers/release-management/versions/pipeline-stages/ospo-compliance) — Deep dive into the automated compliance scan
+- [App Store Review](/developers/release-management/versions/pipeline-stages/app-store-review) — Next step after all approvals
+- [Pipeline Overview](/developers/release-management/pipeline-overview) — See all five stages

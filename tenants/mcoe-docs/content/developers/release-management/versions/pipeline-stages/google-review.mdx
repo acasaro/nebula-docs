@@ -1,0 +1,95 @@
+---
+title: "Sending your Google Play Console Review"
+description: "Submit your Android app for Google Play Console review and configure release settings in Rollout."
+sidebarTitle: "4. Google Review"
+---
+
+The Google Review stage is the Android equivalent of the [App Store Review](/developers/release-management/versions/pipeline-stages/app-store-review) stage. Here, you submit your Android build to Google Play Console for review before releasing it to production.
+
+<Note>To send your app to Google Play Console review, you need to have the Release Manager role for your connected app.</Note>
+
+## Prerequisites
+
+Before you can submit for Google Play review:
+
+- All six approvals must be **Approved** (see [Approvals](/developers/release-management/versions/pipeline-stages/approvals))
+- Your Google Play Console configuration must be complete (see [Settings](/developers/release-management/manage-rollout/settings))
+- Your release candidate must have been uploaded to Google Play (see [Google Play Upload](/developers/release-management/versions/pipeline-stages/google-play-testing))
+
+## Submitting for Review
+
+<Steps>
+  <Step title="Open the Google Review stage">
+    Navigate to your version's pipeline view and expand the Google Review stage card.
+
+    <Frame caption="The Google Review stage in Ready for Review state">
+      ![google-review-ready](/images/image-place-holder.png)
+    </Frame>
+  </Step>
+  <Step title="Configure release settings">
+    Review the release settings section:
+
+    - **Staged Rollout** — Toggle on/off. When enabled, your app rolls out gradually to users over 7 days in percentage-based stages instead of all at once.
+    - **Release Type** — Choose between a full release to all users or a staged rollout.
+
+    <Frame caption="Google Play release settings with staged rollout options">
+      ![google-release-settings](/images/image-place-holder.png)
+    </Frame>
+  </Step>
+  <Step title="Review and update release notes (optional)">
+    Review the release notes that will appear on the Google Play listing. You can edit these before submission — the change only affects the current release, not your default presets.
+  </Step>
+  <Step title="Submit for review">
+    Click **"Send for Review"**. The build is submitted to Google for review.
+  </Step>
+</Steps>
+
+## Tracking Review Status
+
+After submission, the stage card shows the current Google Play review status:
+
+| Status | Meaning | What to Do |
+|--------|---------|------------|
+| **In Review** | Google is currently reviewing your app | Wait — Google reviews typically take a few hours to several days |
+| **Approved** | Google has approved your app | Move to the [Google Release](/developers/release-management/versions/pipeline-stages/google-release) stage |
+| **Rejected** | Google has rejected your submission | Review the rejection reason and address the issues |
+
+## If Your App Is Rejected
+
+If Google rejects your submission:
+
+<Steps>
+  <Step title="Review the rejection reason">
+    Read the rejection details shown in the stage card. Google provides specific policy violations or issues with each rejection.
+  </Step>
+  <Step title="Determine the type of fix needed">
+    - **Code changes needed** — Go back to the [Release Candidate](/developers/release-management/versions/pipeline-stages/release-candidate) stage to select a new build
+    - **Metadata changes only** — Update via the release notes editor
+  </Step>
+  <Step title="Make corrections">
+    Address the issues Google identified.
+  </Step>
+  <Step title="Re-submit for review">
+    Submit for review again after corrections are made.
+  </Step>
+</Steps>
+
+<Note>Common rejection reasons include: policy violations, crashes or ANRs detected during review, incomplete store listing information, and privacy policy issues.</Note>
+
+## Troubleshooting
+
+**"Send for Review" button not available:**
+- Ensure all six approvals are in Approved status
+- Verify Google Play Console configuration is complete
+- Confirm the release candidate has been uploaded to Google Play
+
+**Review taking longer than expected:**
+- Google Play reviews can vary from a few hours to several days
+- New apps and apps with significant changes may require longer review times
+- Check Google Play Console directly for any additional information requests
+
+## What's Next
+
+- [Google Release](/developers/release-management/versions/pipeline-stages/google-release) — Next step: release your approved app on Google Play
+- [Approvals](/developers/release-management/versions/pipeline-stages/approvals) — Previous step: approval workflows
+- [Pipeline Overview](/developers/release-management/pipeline-overview) — See all pipeline stages

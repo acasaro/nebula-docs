@@ -1,0 +1,64 @@
+---
+title: Request Access to Bitrise
+description: "How to get Bitrise access through Secure and request project‑level roles."
+sidebarTitle: "Request Access"
+---
+
+All Bitrise access starts with the `AZU_BITRISE_USERS` Secure group. Once approved, you can SSO into the platform and then request access to your specific project.
+
+## Get platform access
+
+<Steps>
+  <Step title="Submit a Secure request">
+    Request membership in the following group through Secure:
+
+    ```
+    AZU_BITRISE_USERS
+    ```
+  </Step>
+  <Step title="Confirm SSO login">
+    Once approved, sign in at [bitrise.io](https://bitrise.io) using your **Optum email** to verify SSO is working.
+  </Step>
+</Steps>
+
+<Note>
+Getting access to the `AZU_BITRISE_USERS` Secure group **will not** assign you to any project in Bitrise. You need to request project access separately.
+</Note>
+
+## Request project access
+
+After your team has completed the [onboarding process](/developers/bitrise-platform/onboarding), request access to your Bitrise project:
+
+<Steps>
+  <Step title="Go to the MCoE Teams channel">
+    Head to the **Bitrise Support** channel inside MCoE on Microsoft Teams.
+  </Step>
+  <Step title="Post an access request">
+    Tag `@BitriseSupport` with the following:
+
+    1. Tag your team's **Bitrise migration lead**
+    2. Include the project name and desired role:
+
+    ```
+    Requesting access to MOBILE_APP_NAME project in Bitrise as: Owner | Developer | Viewer
+    ```
+  </Step>
+</Steps>
+
+## Roles and permissions
+
+| Role | Description |
+|---|---|
+| **Owner** | Full project control — workflows, secrets, team management. Assigned to Platform Engineers. |
+| **Developer** | Can trigger builds and view results. Cannot modify project settings. |
+| **Viewer** | Read‑only access to build logs and artifacts. Useful for QA and Testers. |
+
+Access groups are set up per app during onboarding:
+
+- `[App Name]__OWNERS` — Platform Engineer access
+- `[App Name]__CONTRIBUTORS` — Tester / QA access (onboarded at a later date)
+
+## What's next
+
+- [Onboarding Guide](/developers/bitrise-platform/onboarding) — Get your project set up in Bitrise
+- [Bitrise Platform Overview](/developers/bitrise-platform) — Understand the migration and timeline

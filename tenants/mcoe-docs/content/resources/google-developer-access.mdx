@@ -1,0 +1,35 @@
+---
+title: Google Developer Access
+sidebarTitle: "Google Developer Access"
+description: "Security groups governing team access to Google Play Console, managed by MCoE."
+---
+
+Security groups for governing external team access to Google Play Console, managed by the MCoE team. All groups are children of the parent group `mcoe_developer_program`.
+
+## Requesting Access
+
+Request group membership through [Secure](https://secure.uhc.com/). Search for the group name that corresponds to your organization and submit an access request.
+
+<Frame>
+  ![platform-access-secure](/images/docs/resources/platform-access-secure.png)
+</Frame>
+
+## Google Play Console Groups
+
+Assign each `mcoe_gpc_*` group to the Play Console with the least-privilege role required.
+
+| Group Name | Description | Parent |
+|---|---|---|
+| `mcoe_gpc_uhc` | Access for UNITED HEALTHCARE SERVICES, INC. | `mcoe_developer_program` |
+| `mcoe_gpc_optum` | Access for Optum Inc | `mcoe_developer_program` |
+| `mcoe_gpc_uhg` | Access for UnitedHealth Group | `mcoe_developer_program` |
+| `mcoe_gpc_soultran` | Access for Soultran | `mcoe_developer_program` |
+
+## Play Console Role Reference
+
+| Role | What It Allows |
+|---|---|
+| **Release Manager** | Create and manage releases, upload builds, manage tracks |
+| **Viewer** | Read-only access to analytics, releases, and reports |
+
+<Note>Assign the least-privilege role required. Teams that only need analytics should use Viewer. Release Manager is reserved for teams actively uploading and managing releases.</Note>

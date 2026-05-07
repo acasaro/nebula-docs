@@ -1,0 +1,130 @@
+---
+title: "Mobile CI"
+description: "MCOE empowers mobile teams via Bitrise to ship apps faster by automating repetitive mobile workflows, delivering ready-to-use integrations tailored for iOS and Android, accelerating testing cycles across real-device environments, and ensuring consistently high-quality releases."
+sidebarTitle: "About Mobile CI"
+---
+
+import { PlatformCard } from '@tenant/components/PlatformCard';
+
+MCOE's Mobile CI platform empowers mobile teams to ship apps faster by automating repetitive workflows, delivering ready-to-use integrations for iOS and Android, accelerating testing cycles, and ensuring consistently high-quality releases. The platform is built on top of three connected systems: **Immerse**, **GitHub**, and **Bitrise**.
+
+## Architecture Overview
+
+The Enterprise Mobile CI/CD architecture connects three systems that work together to take your code from commit to production:
+
+<Frame caption='Enterprise Pipelines CI Overview — Immerse, GitHub, and Bitrise working together'>
+  ![enterprise-ci-overview](/images/image-place-holder.png)
+</Frame>
+
+### Immerse
+
+Immerse is the central hub where teams manage their CI/CD configuration:
+
+- **Pipelines** — Create and manage mobile pipelines for your applications
+- **Mobile Pipelines** — Pre-configured pipeline templates for React Native, iOS Native, and Android Native projects
+- **Other Pipelines** — Support for Node, Java, Docker Image, and Python projects
+- **Release Management** — Full release lifecycle management through [Rollouts](/developers/release-management/getting-started)
+
+When you create a pipeline in Immerse, it commits shared workflow configuration directly to your GitHub repository.
+
+### GitHub
+
+GitHub hosts your application source code and the shared CI workflows:
+
+- **Mobile App Projects** — Your team's repositories (e.g., Optum Mobile, Optum RX, UHC Mobile) each receive a shared React Native Workflow
+- **EPL Workflows** — Enterprise Pipeline Library workflows that orchestrate the CI process. The mobile workflow (React Native EPL) calls your `.jfrog/config.yml` and triggers builds via the Bitrise API
+- **Other Workflows** — Node, Java, Docker, and Python workflow templates for non-mobile projects
+
+### Bitrise
+
+Bitrise handles mobile-specific build, test, and release operations:
+
+- **Projects** — Each application has a Bitrise project containing both Bitrise CI and Release Management
+- **Workflows** — Pre-configured workflows for each build type:
+  - iOS Build (Dev / Test / Prod)
+  - Android Build (Dev / Test / Prod)
+  - Release Candidate
+  - Android Native Build
+  - iOS Native Build
+- **Release Management** — Enterprise Approvals, App Store Connect integration, and Google Play Store integration
+
+<Note>
+  Bitrise downloads build artifacts from the CI pipeline and manages them through the release
+  process. See [Release Management](/developers/release-management/getting-started) for details on
+  the release workflow.
+</Note>
+
+## How It All Connects
+
+<Steps>
+  <Step title='Immerse creates the pipeline'>
+    When you create a mobile pipeline in Immerse, it provisions the necessary Bitrise project and
+    commits shared workflow files to your GitHub repository.
+  </Step>
+  <Step title='GitHub Actions runs the CI workflow'>
+    On push or pull request, the shared [React Native CI
+    workflow](/developers/mobile-ci/mobile-workflows/react-native-ci) runs — installing
+    dependencies, running tests, performing code quality scans, and triggering Bitrise builds.
+  </Step>
+  <Step title='Bitrise builds your app'>
+    Bitrise executes the mobile-specific build workflow (iOS/Android), producing signed artifacts
+    (`.ipa` or `.aab` files).
+  </Step>
+  <Step title='Artifacts flow back'>
+    Build artifacts are downloaded from Bitrise and can be uploaded to JFrog or used directly in the
+    Release Management pipeline.
+  </Step>
+  <Step title='Release Management takes over'>
+    Once artifacts are ready, the [Rollouts module](/developers/release-management/getting-started)
+    manages the full release lifecycle — testing, approvals, store review, and production release.
+  </Step>
+</Steps>
+
+## Supported Platforms
+
+<PlatformCard platform="ios">
+
+- **Build Tool:** Xcode via Bitrise
+- **Artifact:** Signed `.ipa` file
+- **Distribution:** TestFlight + App Store Connect
+- **Workflows:** iOS Build (Dev/Test/Prod), iOS Native Build, Release Candidate
+
+</PlatformCard>
+
+<PlatformCard platform="android">
+
+- **Build Tool:** Gradle via Bitrise
+- **Artifact:** Signed `.aab` file
+- **Distribution:** Google Play Console
+- **Workflows:** Android Build (Dev/Test/Prod), Android Native Build, Release Candidate
+
+</PlatformCard>
+
+## Getting Started
+
+<Steps>
+  <Step title='Ensure your project is in Bitrise'>
+    Your application needs a Bitrise project. If you don't have one yet, the [Enterprise
+    Pipelines](/developers/mobile-ci/mobile-workflows) flow in Immerse will create one for you.
+  </Step>
+  <Step title='Set up your CI workflow'>
+    Add the [React Native CI reusable
+    workflow](/developers/mobile-ci/mobile-workflows/react-native-ci) to your repository's GitHub
+    Actions configuration.
+  </Step>
+  <Step title='Configure Bitrise authentication'>
+    Set up either a Bitrise API token or OIDC-based authentication for secure build triggering.
+  </Step>
+  <Step title='Create a Rollout (optional)'>
+    If you want to manage releases through Immerse, [create a
+    Rollout](/developers/release-management/manage-rollout/create-rollout) and connect it to your
+    Bitrise project.
+  </Step>
+</Steps>
+
+## What's Next
+
+- [Enterprise Pipelines](/developers/mobile-ci/mobile-workflows) — Create and manage pipelines in Immerse
+- [React Native CI Workflow](/developers/mobile-ci/mobile-workflows/react-native-ci) — Configure the reusable CI workflow for your project
+- [Migrating to Bitrise](/developers/mobile-ci/migrate-github-to-bitrise) — Move your existing CI from GitHub Actions to Bitrise
+- [Release Management](/developers/release-management/getting-started) — Manage your full release lifecycle

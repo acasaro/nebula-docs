@@ -1,0 +1,111 @@
+---
+title: "Managing Versions"
+description: "Editing, deleting, and browsing versions in your rollout."
+sidebarTitle: "Manage Versions"
+---
+
+This guide covers how to browse your version list, edit version metadata, understand version statuses, and delete versions.
+
+## Version List Page
+
+The version list shows all versions for a rollout, located at:
+
+```
+/beta/rollouts/{askId}/{rolloutName}/versions
+```
+
+Navigate here from the rollout's checklist page by clicking **"Versions"** in the navigation.
+
+<Frame caption="The version list showing multiple versions at different pipeline stages">
+  ![version-list](/images/image-place-holder.png)
+</Frame>
+
+### What the List Shows
+
+Each version in the list displays:
+
+- **Version number** (e.g., 1.2.6)
+- **Platform** (iOS or Android)
+- **Status badge** (Draft, In Progress, Completed, Rejected)
+- **Current pipeline stage**
+- **Creation date**
+
+### Actions
+
+- **Click a version** to open its pipeline view (Version Details page)
+- **"Create Version"** button (top-right) to start a new release
+
+## Version Statuses
+
+| Status | Meaning | Typical Situation |
+|--------|---------|-------------------|
+| **Draft** | Version was just created | In the Release Candidate stage, before an artifact is selected |
+| **In Progress** | Actively moving through the pipeline | Working through Testing, Approvals, or App Store Review |
+| **Completed** | Released to production | App is live on the App Store |
+| **Rejected** | Rejected during approvals or review | An approver rejected, or Apple rejected the App Store review |
+
+## Editing Version Metadata
+
+You can update a version's metadata at any time using the **Version Configure** page.
+
+<Steps>
+  <Step title="Open the version's pipeline view">
+    Click on the version from the version list to open the Version Details page.
+  </Step>
+  <Step title="Click Configuration">
+    Click the **"Configuration"** button in the top-right corner of the page header.
+
+    <Frame caption="The Version Configure page with editable metadata fields">
+      ![version-configure](/images/image-place-holder.png)
+    </Frame>
+  </Step>
+  <Step title="Edit the metadata fields">
+    | Field | Description |
+    |-------|-------------|
+    | **What's New** | Release notes visible to end users in the app store |
+    | **Release Description** | Internal description for your team |
+    | **Target Release Date** | When you aim to release this version |
+    | **Version Application Name** | The app name for this specific version |
+  </Step>
+  <Step title="Save or discard changes">
+    - **Save** (top-right) — Saves your edits
+    - **Discard** (top-right) — Reverts to the last saved state
+  </Step>
+</Steps>
+
+<Note>Version number and hotfix status are set at creation and displayed as read-only on this page.</Note>
+
+## Deleting a Version
+
+Versions can be deleted from the Version Configure page.
+
+<Steps>
+  <Step title="Open the Version Configure page">
+    Navigate to the version and click **"Configuration"** in the header.
+  </Step>
+  <Step title="Scroll to the Danger Zone">
+    At the bottom of the page, find the **Danger Zone** section.
+  </Step>
+  <Step title="Click Delete Version">
+    Click the **"Delete Version"** button (red).
+  </Step>
+  <Step title="Confirm deletion">
+    A confirmation dialog appears. Type the version number to confirm, then click **Confirm**.
+
+    <Frame caption="The delete version confirmation dialog">
+      ![delete-version-confirm](/images/image-place-holder.png)
+    </Frame>
+  </Step>
+</Steps>
+
+<Warning>Deleting a version cannot be undone. All approval progress, form submissions, and release data for this version will be permanently removed. The version record, all associated approval records, and the linked Bitrise release will be deleted.</Warning>
+
+## Multiple Versions
+
+You can have multiple versions for the same rollout, each at different stages. This lets you manage overlapping releases — for example, working on a feature release while also pushing a hotfix.
+
+## What's Next
+
+- [Create Version](/developers/release-management/versions/create-version) — How to create a new version
+- [Pipeline Overview](/developers/release-management/pipeline-overview) — Understanding the pipeline stages
+- [Settings](/developers/release-management/manage-rollout/settings) — Rollout-level configuration

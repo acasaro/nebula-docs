@@ -1,0 +1,175 @@
+---
+title: "OSPO Compliance"
+description: "Automated open-source license scanning, scan results, and SBOM downloads."
+sidebarTitle: "OSPO Compliance"
+---
+
+OSPO (Open Source Program Office) compliance is an automated approval that scans your build artifact for open-source license violations. Unlike other approvals, OSPO doesn't require manual form submission — the scan runs automatically and reports results directly in the Rollouts module.
+
+## What OSPO Checks
+
+The OSPO compliance scan examines all third-party packages and dependencies in your build to verify that their open-source licenses comply with organizational policy. It categorizes each package as:
+
+| Category | Meaning |
+|----------|---------|
+| **Compliant** | Package license is approved for use |
+| **Warning** | Package license needs review but isn't a blocker |
+| **Violation** | Package license is not approved — must be resolved before release |
+
+## How the Scan Is Triggered
+
+The OSPO compliance scan is triggered automatically using the branch from your selected build artifact:
+
+<Steps>
+  <Step title="Build request sent">
+    The system sends a build request to your Bitrise CI app.
+  </Step>
+  <Step title="Compliance workflow runs">
+    The `ospo-compliance-check` workflow runs against the specified branch.
+  </Step>
+  <Step title="Dependencies analyzed">
+    The scan analyzes all dependencies and their licenses.
+  </Step>
+  <Step title="Results reported">
+    Results are reported back to the Rollouts module.
+  </Step>
+</Steps>
+
+<Note>Your Bitrise App Slug must be configured in the rollout settings (see [Setup Checklist](/developers/release-management/manage-rollout/setup-checklist)). This identifies which Bitrise CI app runs the compliance scan.</Note>
+
+## Viewing the OSPO Approval
+
+From the **Approvals** stage on the Version Details page, click **"View"** next to the OSPO row. The OSPO approval page shows:
+
+### Scan Status Bar
+
+At the top, you'll see the current scan state:
+
+| Status | What You See |
+|--------|-------------|
+| **Scanning** | "Scan in Progress..." with the build number. Wait for it to complete. |
+| **Passed** | Green checkmark — all packages are compliant |
+| **Failed** | Red X — violations were found that must be resolved |
+
+The **"Last checked"** timestamp shows when the scan last ran, along with a **refresh button** to re-trigger the scan.
+
+<Frame caption="The OSPO approval page showing scan status, compliance chart, and results">
+  ![ospo-scan-results](/images/image-place-holder.png)
+</Frame>
+
+### Compliance Summary Chart
+
+A **radial chart** labeled "Licenses Found" shows the breakdown:
+
+- **Green segment** — Compliant packages (count shown)
+- **Yellow segment** — Warning packages (count shown)
+- **Red segment** — Violation packages (count shown)
+- **Center number** — Total packages scanned
+
+### Scan Results Table
+
+Below the chart, a table lists packages that have violations or warnings:
+
+| Column | Description |
+|--------|-------------|
+| **Package** | The name of the package |
+| **License** | The license type detected |
+| **Severity** | Whether it's a violation or warning |
+| **Remediation** | Suggested action to resolve the issue |
+
+## Understanding the Results
+
+### Passed (Compliant)
+
+- All packages have approved licenses
+- The OSPO approval is automatically marked as **Approved**
+- No action needed — proceed with other approvals
+
+### Passed with Warnings
+
+- Some packages have licenses that may need attention
+- The scan still passes — the OSPO approval is marked as **Approved**
+- Review the warnings for awareness, but they won't block your release
+
+### Failed (Violations Found)
+
+- One or more packages have unapproved licenses
+- The OSPO approval is marked as **Rejected**
+- You must resolve the violations before the approval can pass
+
+<Warning>If violations are found, you cannot proceed to business owner approvals until they are resolved.</Warning>
+
+**To resolve violations:**
+
+<Steps>
+  <Step title="Review the violation details">
+    Check the scan results table for the specific packages and license types flagged.
+  </Step>
+  <Step title="Update your dependencies">
+    Replace or remove non-compliant packages in your project.
+  </Step>
+  <Step title="Create a new build">
+    Build your project with the updated dependencies.
+  </Step>
+  <Step title="Re-select the artifact">
+    Go back to the [Release Candidate](/developers/release-management/versions/pipeline-stages/release-candidate) stage and select the new artifact.
+  </Step>
+  <Step title="Scan re-runs automatically">
+    The OSPO scan will re-run with the updated build.
+  </Step>
+</Steps>
+
+## Downloading the SBOM
+
+When scan results are available, you can download the **Software Bill of Materials (SBOM)** — a complete inventory of all packages and their licenses.
+
+<Steps>
+  <Step title="Navigate to the OSPO approval page">
+    Open the OSPO approval from the Approvals stage.
+  </Step>
+  <Step title="Click Download SBOM">
+    Click the **"Download SBOM"** button. The SBOM file is downloaded to your computer.
+  </Step>
+</Steps>
+
+<Note title="What is an SBOM?">A Software Bill of Materials is a formal record of all components, libraries, and dependencies in your software. It's used for compliance auditing, security analysis, and supply chain transparency.</Note>
+
+## Re-Triggering a Scan
+
+You can re-run the OSPO scan at any time:
+
+- Click the **refresh icon** next to the "Last checked" timestamp on the OSPO approval page
+- The scan will re-run using the current build artifact's branch
+
+**When to re-trigger:**
+- After updating dependencies to fix violations
+- If you suspect the scan results are stale
+- After changing the build artifact source (the scan resets automatically in this case)
+
+<Note>The refresh button is disabled while a scan is already in progress. Wait for the current scan to complete before triggering a new one.</Note>
+
+## How OSPO Affects the Pipeline
+
+- OSPO is a **compliance approval** (order 0) — it must be approved before business approvals can begin
+- If OSPO fails, you cannot proceed to business owner approvals
+- Changing your build artifact source in the Release Candidate stage **resets** the OSPO scan — it must be re-run
+
+## Troubleshooting
+
+**Scan stuck in "Scanning" for a long time:**
+- Check the Bitrise build status — the compliance workflow may have failed
+- Click the refresh button to re-trigger the scan
+- Verify that the `ospo-compliance-check` workflow exists in your Bitrise configuration
+
+**"Download SBOM" button not available:**
+- The SBOM is only available after a successful scan completes
+- If the scan is still running or hasn't been triggered, the button won't appear
+
+**Violations found but packages are approved internally:**
+- The scan uses organizational license policy — contact the OSPO team if you believe a license classification is incorrect
+
+## What's Next
+
+- [Approvals](/developers/release-management/versions/pipeline-stages/approvals) — Overview of all six approval types
+- [Release Candidate](/developers/release-management/versions/pipeline-stages/release-candidate) — How artifact source affects the OSPO scan
+- [Pipeline Overview](/developers/release-management/pipeline-overview) — See all five stages

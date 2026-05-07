@@ -1,0 +1,53 @@
+---
+title: "Google Play Upload Stage"
+description: "Upload and distribute your release candidate to Google Play testing tracks in Rollout."
+sidebarTitle: "2. Google Play"
+---
+
+After selecting a release candidate and creating tasks for approvals, the release process of an Android app reaches the stage where it must access Google Play:
+
+1. [Google Play upload](#uploading-the-release-candidate-to-google-play): Upload the release candidate to Google Play.
+2. [Distribute for testing](#distributing-android-release-candidates-for-testing): You can distribute the release candidate to Google Play testing tracks.
+
+Once you [selected a release candidate](/pages/rollouts/03-version-stages/02-release-candidate-stage) in Rollouts, you can continue with uploading your app to Google Play.
+
+<Note>If you set up [auto-upload](../configuring-a-release/configuring-auto-upload) during the release configuration or as a [release preset](../release-presets), this stage will be completed automatically.</Note>
+
+
+<Steps>
+  <Step title="Open your release">
+    Open your release.
+  </Step>
+  <Step title="Select Google Play on the left navigation bar">
+    Select Google Play on the left navigation bar.
+  </Step>
+  <Step title="In the Upload to Google Play section, click Upload">
+    ![ready-to-upload.png](/images/image-place-holder.png)
+  </Step>
+  <Step title="Wait for the upload to finish">
+    Wait for the upload to finish.
+  </Step>
+</Steps>
+
+## Distributing Android release candidates for testing
+
+<Steps>
+  <Step title="Open your release and go to the Beta testing in Google Play section">
+    ![testing-google-play-processing-finished.png](/images/image-place-holder.png)
+  </Step>
+  <Step title="Choose a testing track">
+    Rollout supports open, internal, and closed testing. For more information about Google Play testing, check out the [Google Play Console documentation](https://support.google.com/googleplay/android-developer/answer/9845334).
+
+    <Note>
+    If there is a newer build (a build with a higher `version_code` number) on the testing track, you can't replace that build with your release candidate and the **Start** button will not be available.
+
+    If there is an older build on the testing track, your release candidate will replace it.
+
+    ![testing-google-play-cant-replace.png](/images/image-place-holder.png)
+    </Note>
+  </Step>
+  <Step title="Click the Start button next to the name of your track to start the distribution">
+    If all goes well, the **Status** of the build should change to **Testing**.
+  </Step>
+</Steps>
+

@@ -1,0 +1,105 @@
+---
+title: "Releasing your App on Google Play"
+description: "Release your Android app on Google Play, including configuring staged rollout in Rollout."
+sidebarTitle: "5. Google Release"
+---
+
+After your app has gone through all previous stages, it is ready for release. You can release your app to all users at the same time, or configure staged rollout for Google Play.
+
+## Configuring staged rollout
+
+You can release your app to Google Play in staged rollouts. With staged rollout, you release your apps in several different stages, with only a certain percentage of users getting the new version with each stage. Users aren't notified that they are in a staged release. Automating the process means you don't have to manually release the app at each stage to a different segment of users: Rollout takes care of that automatically.
+
+If you choose this option, your version update will be released over a seven-day period to a percentage of your users. Users aren't notified that they're in a staged release of your app.
+
+<Note>If the rollout stage fails for any reason, we'll try it again later, until it succeeds, or you cancel or pause the automation. We try the failed rollout three times in an hour.</Note>
+
+
+### Clearing the rollout schedule
+
+You can clear the scheduled automation at any time before the first stage of the rollout has started. After the first stage is completed, you can only pause the automation, or [cancel it](#cancelling-an-automated-staged-rollout).
+
+![google_clear_shedule.gif](/images/image-place-holder.png)
+
+<Steps>
+  <Step title="Open your release">
+  </Step>
+  <Step title="Go to the Release stage">
+  </Step>
+  <Step title="Find the Release summary section">
+  </Step>
+  <Step title="Click the Clear schedule button">
+  </Step>
+</Steps>
+
+### Cancelling an automated staged rollout
+
+You can cancel the automated rollout at any time after the first stage of the rollout is completed. However, once the automation is cancelled, you can't resume it and you can only update it manually in Rollout.
+
+<Steps>
+  <Step title="Open your release">
+  </Step>
+  <Step title="Go to the Release app version stage">
+  </Step>
+  <Step title="Find the Release summary section">
+  </Step>
+  <Step title="Click the Cancel automation button">
+    ![phased-rollout-cancel.png](/images/image-place-holder.png)
+  </Step>
+</Steps>
+
+### Pausing and resuming an automated staged rollout
+
+You can pause and resume the automated rollout at any time after the first stage of the rollout is completed. Once paused, you can resume the automation. When you resume, you have to set a new time for the pause.
+
+<Steps>
+  <Step title="Open your release">
+  </Step>
+  <Step title="Go to the Release stage">
+  </Step>
+  <Step title="Find the Release summary section">
+  </Step>
+  <Step title="Click the Resume automation button">
+    ![resume-rollout.png](/images/image-place-holder.png)
+  </Step>
+  <Step title="Select the resume time and date">
+    <Note>The time and date must be at least ten minutes after the current time.</Note>
+  </Step>
+</Steps>
+
+## Releasing your app
+
+Once everything is configured, you can release your app. Depending on your settings, you can either release the app to all your users at the same time, or do a staged rollout.
+
+<Note>To release your app, you need to have the Release Manager role for your connected app.</Note>
+
+<Steps>
+  <Step title="Open your release">
+  </Step>
+  <Step title="Select Release on the left navigation bar">
+  </Step>
+  <Step title="Click Release app to release your app">
+    It either releases your app to all users or starts a staged rollout, depending on your settings.
+  </Step>
+</Steps>
+
+## Editing Android release notes
+
+
+If you wish to release an app with a different release note than [what's already set in Rollout presets](../configuring-a-release/release-automation#configuring-automations-as-a-release-preset), you can manually edit the note before rolling out a new app version. This change will not override the default configuration of the **Rollout presets**, it only affects the current release.
+
+<Note>Please note that only [Release Managers](https://docs.bitrise.io/en/release-management/getting-started-with-release-management/release-management-concepts) can edit release notes.</Note>
+
+<Steps>
+  <Step title="Go through the Release candidate, Google Play, and Approvals stages, then click Release app version on the left">
+  </Step>
+  <Step title="Scroll down to Release note and click Edit">
+    You can see the default release note content in the text box.
+  </Step>
+  <Step title="Make your changes to the text">
+    This new content will apply for the localization under **Language**.
+  </Step>
+  <Step title="Copy the new content to additional localizations">
+    Click **Copy to** and select other localizations.
+  </Step>
+</Steps>

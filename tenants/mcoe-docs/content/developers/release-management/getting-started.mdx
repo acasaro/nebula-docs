@@ -1,0 +1,118 @@
+---
+title: "Getting Started with Rollouts"
+description: "Overview of the Rollouts module, key concepts, prerequisites, and how to access it."
+sidebarTitle: "Getting Started"
+---
+import { BitrisePrereq } from "@tenant/components/BitrisePrereq";
+import { StageStatus } from "@tenant/components/StageStatus";
+import { PlatformNav } from "@tenant/components/PlatformNav";
+
+The Rollouts module in Immerse helps you manage mobile app releases from build selection through App Store submission and production release. It provides a structured pipeline with built-in compliance checks, approval workflows, and integration with Bitrise CI/CD and Apple App Store Connect.
+
+<BitrisePrereq feature="Rollouts" />
+
+## What Is a Rollout?
+
+A **rollout** is a container that represents a mobile application's release process. Each rollout is tied to a specific application (identified by its ASK ID) and holds:
+
+- **Configuration** — App Store Connect and Google Play Console settings
+- **Versions** — Individual releases that move through the pipeline
+- **Approvals** — Compliance and business sign-offs required before release
+- **Connected Apps** — Links to your Bitrise CI projects
+
+Think of a rollout as the "home base" for all releases of a particular mobile app.
+
+## Key Concepts
+
+### Version
+
+A **version** represents a single release (e.g., v1.2.6). Each version moves through a 5-stage pipeline from build selection to production release. You can have multiple versions for the same rollout, each at different stages.
+
+### Pipeline Stages
+
+Every version passes through these stages in order:
+
+<StageStatus stages={[
+{ name: "Release Candidate", status: "completed", label: "Select build" },
+{ name: "Testing", status: "completed", label: "TestFlight / Google Play" },
+{ name: "Approvals", status: "active", label: "Team sign-off" },
+{ name: "Store Review", status: "upcoming", label: "Apple / Google" },
+{ name: "Release", status: "upcoming", label: "Go live" },
+]} />
+
+See [Pipeline Overview](/developers/release-management/pipeline-overview) for details on each stage.
+
+### Approvals
+
+Six approval types are required before a version can be submitted for App Store review:
+
+| Type | Category | Description |
+| --- | --- | --- |
+| OSPO | Compliance | Automated open-source license scan |
+| Legal | Compliance | Legal review and sign-off |
+| ESRO | Compliance | Export/sanctions compliance review |
+| Service Owner | Business | Sign-off from the service owner |
+| Technical Owner | Business | Sign-off from the technical lead |
+| Product Owner | Business | Sign-off from the product manager |
+
+See [Approvals](/developers/release-management/versions/pipeline-stages/approvals) for the full approval workflow.
+
+### Connected Apps
+
+A **connected app** is a Bitrise project linked to your rollout. Connected apps provide the build artifacts (`.ipa` or `.apk` files) that become your release candidates. Each connected app has a platform (iOS or Android).
+
+## Prerequisites
+
+Before using the Rollouts module, make sure you have:
+
+<Steps>
+<Step title="An application registered in Immerse">
+Your application must have a valid ASK ID in the Immerse application registry.
+</Step>
+
+<Step title="A Bitrise CI project">
+Your application's source code repository must be connected to a Bitrise CI project. If you haven't migrated yet, see [Migrating from GitHub](/developers/mobile-ci/migrate-github-to-bitrise).
+</Step>
+
+<Step title="App Store Connect access (iOS)">
+For iOS releases, your team must be configured in App Store Connect with the necessary API key credentials.
+</Step>
+
+<Step title="Appropriate permissions">
+You need permissions to create rollouts and manage versions in Immerse.
+</Step>
+</Steps>
+
+<Note>Application ownership information (Service Owner, Technical Owner, Product Owner) is pulled automatically from the application registry. These owners will be assigned as approvers for your versions.</Note>
+
+## Accessing the Rollouts Module
+
+<PlatformNav product="Rollouts" />
+
+From here you'll see all Rollouts created by your team, or the option to create your first one. The Rollouts module is located at `/beta/rollouts/` in the portal.
+
+<Video src="https://firebasestorage.googleapis.com/v0/b/mcoe-d.firebasestorage.app/o/dev%2F1%2Fvideos%2F0db6ee1ab1c06aa6.mp4?alt=media&token=6668a3a9-2441-4d54-8242-2b0753057cc9" caption="The Rollout Select page with the Create Rollout button" loop maxLoops={3} />
+
+## Your First Rollout — Quick Path
+
+<Steps>
+<Step title="Create a Rollout">
+[Create a Rollout](/developers/release-management/manage-rollout/create-rollout) to link your application.
+</Step>
+
+<Step title="Complete the Checklist">
+[Complete the Setup Checklist](/developers/release-management/manage-rollout/setup-checklist) to configure required settings.
+</Step>
+
+<Step title="Configure Settings">
+[Add App Store Connect details](/developers/release-management/manage-rollout/settings) and other platform-specific configuration.
+</Step>
+
+<Step title="Create a Version">
+[Create your first version](/developers/release-management/versions/create-version) to start a release.
+</Step>
+
+<Step title="Work through the pipeline">
+Move through the [pipeline stages](/developers/release-management/pipeline-overview) — Build, Test, Approve, Review, Release.
+</Step>
+</Steps>

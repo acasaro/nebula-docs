@@ -1,0 +1,64 @@
+---
+title: "What Are Rollout Versions?"
+description: "Learn about versions, how they work, and the release stages for each platform."
+sidebarTitle: "About Versions"
+---
+
+import { PlatformCard } from '@tenant/components/PlatformCard';
+
+A **version** represents a single release of your mobile app (e.g., v1.2.6). Each version moves through a multi-stage release pipeline from build selection to production release. You can only move to the next stage after completing the current one.
+
+## Version Stages
+
+<PlatformCard platform="ios">
+
+1. **[Release Candidate](/developers/release-management/versions/pipeline-stages/release-candidate)**: Specify the release branch and select the Workflow that generates an IPA file.
+2. **[TestFlight](/developers/release-management/versions/pipeline-stages/testing)**: Upload the release candidate to TestFlight, and distribute it for testing.
+3. **[Approvals](/developers/release-management/versions/pipeline-stages/approvals)**: Complete all 6 required approval tasks — compliance (OSPO, Legal, ESRO) followed by business (Service Owner, Technical Owner, Product Owner).
+4. **[App Store Review](/developers/release-management/versions/pipeline-stages/app-store-review)**: Submit your update for review in the App Store, and track the approval progress.
+5. **[Release on the App Store](/developers/release-management/versions/pipeline-stages/release)**: Release your app to all users at the same time, or configure a phased release.
+
+</PlatformCard>
+
+<PlatformCard platform="android">
+
+1. **[Release Candidate](/developers/release-management/versions/pipeline-stages/release-candidate)**: Specify the release branch and select the Workflow that generates an AAB file.
+2. **[Google Play Upload & Testing](/developers/release-management/versions/pipeline-stages/google-play-testing)**: Upload the release candidate to Google Play, and distribute it for testing.
+3. **[Approvals](/developers/release-management/versions/pipeline-stages/approvals)**: Complete all 6 required approval tasks — compliance (OSPO, Legal, ESRO) followed by business (Service Owner, Technical Owner, Product Owner).
+4. **[Release on Google Play](/developers/release-management/versions/pipeline-stages/google-release)**: Release your app to all users at the same time, or configure a staged rollout.
+
+</PlatformCard>
+
+## Version Statuses
+
+| Status | Meaning | Typical Situation |
+|--------|---------|-------------------|
+| **Draft** | Version was just created | In the Release Candidate stage, before an artifact is selected |
+| **In Progress** | Actively moving through the pipeline | Working through Testing, Approvals, or App Store Review |
+| **Completed** | Released to production | App is live on the App Store |
+| **Rejected** | Rejected during approvals or review | An approver rejected, or Apple rejected the App Store review |
+
+## Multiple Versions
+
+You can have multiple versions for the same rollout, each at different stages:
+
+- **Version 1.2.5** — Completed (released)
+- **Version 1.2.6** — In Approvals stage
+- **Version 1.3.0** — In Release Candidate stage
+
+This lets you manage overlapping releases — for example, working on a feature release while also pushing a hotfix.
+
+## Hotfix Versions
+
+Marking a version as a **hotfix** during creation enables a faster approval path:
+
+- **Legal approval is automatically approved** — no manual review needed
+- All other approvals still require their normal sign-off
+
+Use hotfix mode when you need to push a critical fix quickly and Legal has pre-approved the release pattern. See [Create Version](/developers/release-management/versions/create-version) for details.
+
+## What's Next
+
+- [Create Version](/developers/release-management/versions/create-version) — Start a new release
+- [Pipeline Overview](/developers/release-management/pipeline-overview) — Understand the full pipeline lifecycle
+- [Manage Versions](/developers/release-management/versions/manage-versions) — Edit, delete, and browse versions

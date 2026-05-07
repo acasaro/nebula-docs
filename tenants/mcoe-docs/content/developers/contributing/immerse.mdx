@@ -1,0 +1,254 @@
+---
+title: Contributing to Immerse
+sidebarTitle: "Immerse"
+description: "How to contribute to the Immerse platform — architecture overview, local setup, and contribution guidelines."
+---
+
+Immerse is the enterprise internal developer portal that provides a unified interface for managing repositories, pipelines, deployments, certificates, and other services across the software lifecycle. It currently has 18 modules, including the Rollouts module owned by MCOE.
+
+## Platform Architecture
+
+Immerse follows a modular architecture where each module operates with:
+
+- **UI Layer** — React-based frontend rendered within the shared Immerse portal shell
+- **Subgraph** — A dedicated GraphQL subgraph for each module's business logic, composed into a federated gateway
+- **Data Layer** — MongoDB for module-specific data storage
+- **External Integrations** — Each module wraps external service APIs (Bitrise, GitHub, JFrog, etc.) with its own data layer and business logic
+
+<Note>MCOE contributes to Immerse primarily through the Rollouts module. For Rollouts-specific contribution guidance, see [Contributing to Rollouts](/developers/contributing/rollouts).</Note>
+
+## Immerse's Wrapper Pattern
+
+Immerse wraps third-party APIs with its own data layer, business logic, and UI so teams get a consistent experience without context-switching into external tools directly. Each module:
+
+1. Stores its own records in MongoDB
+2. Syncs with the external service as the source of truth
+3. Applies enterprise policies and governance on top of the raw functionality
+4. Presents a unified UI consistent with other Immerse modules
+
+## Immerse Workspace
+
+### Prompting Claude
+
+To give Claude context on the Immerse ecosystem, use this prompt at the start of each Claude session:
+
+> "Please read ARCHITECTURE.md and CLAUDE.md to understand this repository's ecosystem and architecture."
+
+### Installation
+
+<Steps>
+  <Step title="Install pnpm globally">
+    This workspace requires `pnpm` as the package manager. Install it globally before proceeding:
+
+    ```bash
+    npm install -g pnpm@10.17.0
+    ```
+  </Step>
+  <Step title="Install dependencies">
+    ```bash
+    pnpm install
+    ```
+
+    If you run into package errors:
+
+    ```bash
+    pnpm install --force
+    ```
+  </Step>
+</Steps>
+
+### Running the Application
+
+All processes run in parallel in a single terminal with color-coded, prefixed output.
+
+#### Option 1: Unified Development Orchestration (Recommended)
+
+```bash
+pnpm dev
+```
+
+<Note>If you've previously run `pnpm install` locally, see [Stale dist folder issues](#stale-dist-folder-issues) for troubleshooting steps.</Note>
+
+**Configuration**
+
+Edit `immerse.dev.config.ts` at the project root to control which services run:
+
+```typescript
+export default {
+  gateway: true,
+  portal: true,
+  services: ['applications', 'deployments', 'rollouts', 'pipelines', 'users'],
+};
+```
+
+**Personal Overrides:** Create `immerse.dev.config.local.ts` (gitignored) to customize without affecting the team:
+
+```typescript
+export default {
+  gateway: true,
+  portal: true,
+  services: ['users', 'applications'],
+};
+```
+
+#### Option 2: Individual Service Commands
+
+You will need at least 4 terminals open:
+
+1. Terminal 1 (root): `pnpm run web`
+2. Terminal 2 (root): `pnpm run api`
+3. Terminal 3 (root): `pnpm run api:users`
+4. Terminal 4 (root): `pnpm run api:applications`
+
+Add additional terminals for any other services you need.
+
+**Available service scripts:**
+
+```bash
+pnpm run api:applications    # Applications service
+pnpm run api:certificates    # Certificates service
+pnpm run api:deployments     # Deployments service
+pnpm run api:platforms       # Platforms service
+pnpm run api:repositories    # Repositories service
+pnpm run api:resources       # Resources service
+pnpm run api:teams           # Teams service
+pnpm run api:users           # Users service
+pnpm run api:vaults          # Vaults service
+```
+
+### Environment Configuration
+
+This workspace uses a centralized configuration system via `.immerse/env.json`:
+
+```json
+{
+  "env": {
+    "APP_NAME": "Volcan - API",
+    "GITHUB_APP_ID": "254230"
+  },
+  "env.local": {
+    "MONGODB_DATABASE": "immerse-dev",
+    "MONGODB_SERVER": "immerse-db-nonprod.uhg.com:443"
+  },
+  "env.dev": {
+    "MONGODB_DATABASE": "immerse-dev"
+  }
+}
+```
+
+| Level | Purpose |
+|---|---|
+| `env` | Base configuration shared across all environments |
+| `env.local` | Local development overrides (gitignored) |
+| `env.dev` | Development environment specific settings |
+
+Environment variables are automatically loaded from `.immerse/env.json` when running services via `pnpm dev` or individual service commands.
+
+### Workspace Structure
+
+```
+immerse-workspace/
+├── docs/                   # Documentation for code migrations
+├── modules/                # Feature modules
+│   └── {moduleName}/
+│       └── src/
+│           ├── frontend/   # UI components and routes
+│           └── subgraph/   # API client and GraphQL
+├── packages/               # Shared packages
+├── services/               # Backend services
+│   └── {moduleName}-service/
+└── sandbox/                # Development environment
+    ├── gateway/            # Sandbox API
+    └── portal/             # Sandbox portal app
+```
+
+### Useful pnpm Commands
+
+```bash
+# Run a script in a specific service
+pnpm --filter vaults-service dev
+
+# Run a script in a specific module
+pnpm --filter @uhg-immerse/module-teams-api dev
+
+# Install a dependency to a specific package
+pnpm --filter vaults-service add express
+
+# Install a dependency to the root workspace
+pnpm add -w typescript
+
+# List all workspace packages
+pnpm list --depth 0
+```
+
+## Contribution Guidelines
+
+<Steps>
+  <Step title="Understand the module boundary">
+    Each Immerse module has clear ownership. Before making changes, confirm which team owns the module you're modifying. MCOE owns the Rollouts module; other modules are owned by their respective teams.
+  </Step>
+  <Step title="Follow the established patterns">
+    Immerse has standardized patterns for UI components, GraphQL schema design, and data modeling. Match the conventions used in the module you're working in. Use `origins`, `deployments`, or `applications` modules as reference implementations.
+  </Step>
+  <Step title="Coordinate across teams">
+    Changes to shared infrastructure (the portal shell, federated gateway, authentication, etc.) require coordination with the Immerse platform team.
+  </Step>
+  <Step title="Test end-to-end">
+    Verify your changes work within the full Immerse portal, not just in isolation. Module interactions and navigation should remain intact.
+  </Step>
+</Steps>
+
+## Troubleshooting
+
+### Stale dist folder issues
+
+If you've previously run `pnpm install` locally and are experiencing issues with the gateway or services not starting properly:
+
+```bash
+rm -rf sandbox/gateway/dist
+pnpm install
+pnpm dev
+```
+
+### Cache issues
+
+```bash
+pnpm store prune
+rm -rf .turbo node_modules/.cache
+```
+
+### Package resolution issues
+
+```bash
+pnpm install --force
+pnpm list <package-name>
+```
+
+### Node version issues
+
+Make sure you're using Node.js >= 18:
+
+```bash
+node --version
+```
+
+### @uhg-immerse/cli auto-update issues
+
+If the CLI tries to auto-update to an unpublished version, open `.npmrc` and comment out the `minimum-release-age` field:
+
+```
+registry=https://centraluhg.jfrog.io/artifactory/api/npm/immerse-npm-vir/
+# minimum-release-age=8640
+```
+
+Then install the latest version:
+
+```bash
+pnpm install @uhg-immerse/cli@latest
+```
+
+## Key Resources
+
+- [Mobile CI Overview](/developers/mobile-ci/about-mobile-ci) — How Immerse, GitHub, and Bitrise connect in the CI/CD architecture
+- [Contributing to Rollouts](/developers/contributing/rollouts) — MCOE-specific contribution guide for the Rollouts module
+- [Enterprise Pipelines](/developers/contributing/enterprise-pipelines) — Contributing to the Enterprise Pipeline Library

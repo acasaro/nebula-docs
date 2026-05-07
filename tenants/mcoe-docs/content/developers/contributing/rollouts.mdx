@@ -1,0 +1,292 @@
+---
+title: Contributing to Rollouts
+sidebarTitle: "Rollouts"
+description: "How to contribute to the Rollouts module — architecture, schema design, workflows, and development guidelines."
+---
+
+The Rollouts module is the Immerse module owned by MCOE that manages the mobile app release lifecycle. It orchestrates the complete lifecycle from version creation through approval workflows to app store deployment, with deep integration into Bitrise Release Management.
+
+## Core Capabilities
+
+- **Release Orchestration** — Create and track iOS/Android releases through Bitrise
+- **Approval Workflows** — Multi-stage approval process (OSPO, Legal, ESRO, Business owners)
+- **Stage Tracking** — Monitor releases through standard stages (Release Candidate → Testing → Approvals → App Store Review → Release)
+- **Repository Integration** — Connect mobile apps to Immerse Repository entities
+- **Compliance Automation** — Automated OSPO compliance scanning via Bitrise workflows
+
+## Architecture
+
+### Technology Stack
+
+- **Frontend** — React + GraphQL Apollo Client + Zustand state management
+- **Backend** — Node.js/Express + GraphQL Federation
+- **Database** — MongoDB (operational data) + MeiliSearch (indexed search/metadata)
+- **External Integration** — Bitrise Release Management API
+- **Infrastructure** — GraphQL subgraph with federated schema
+
+### Module Structure
+
+```
+Rollouts Module
+├── Frontend (React)
+│   ├── Routes (Select, Create, Checklist, Settings pages)
+│   ├── Components (Entity wrappers, modals)
+│   └── State Management (GraphQL hooks, service slices)
+│
+├── Subgraph (GraphQL Federation)
+│   ├── Schema (Type definitions)
+│   ├── Resolvers (Query/Mutation handlers)
+│   └── Client (Business logic layer)
+│
+└── Service (Backend API)
+    ├── MongoDB Adapters (CRUD operations)
+    ├── MeiliSearch Integration (Indexed queries)
+    ├── Bitrise Client (External API integration)
+    └── Express Routes (REST endpoints)
+```
+
+### Integration Points
+
+**Within Immerse Platform:**
+- **Repositories Module** — Links rollouts to GitHub repositories
+- **MeiliSearch** — Queries application metadata, organization data
+- **GraphQL Gateway** — Federation with other Immerse modules
+
+**External Systems:**
+- **Bitrise Release Management** — App registration, release creation, approval task management, automated workflow triggers, webhook notifications
+- **MeiliSearch** — Application catalog data (owners, departments, business units), repository information, cross-module relationship queries
+
+## Key Concepts
+
+Before diving into the codebase, understand these fundamentals:
+
+- **Rollout** — A container tied to an ASK ID that connects a Bitrise project to its connected apps (iOS/Android). One rollout per organization.
+- **Version** — A single release flowing through the 5-stage pipeline (Release Candidate → Testing → Approvals → Store Review → Release)
+- **Approval Chain** — Six approval tasks in a strict dependency order: OSPO (order 0, automated) → Legal + ESRO (order 1, parallel) → Service + Technical + Product Owners (order 2, parallel)
+- **Connected App** — An iOS or Android app linked to a rollout via Bitrise. tvOS is explicitly filtered out.
+- **Bitrise as Source of Truth** — Stage details are always fetched from Bitrise on page load. Local records are reconciled against Bitrise state.
+- **Computed Compliance** — Checklist `isCompliant` flags are never stored. They are always computed from entity state.
+
+## Data Architecture
+
+### Design Principles
+
+1. **askId Isolation** — All collections filtered by organization (`askId`)
+2. **Audit Trail** — `createdBy`, `updatedBy`, timestamps on all documents
+3. **Computed State** — Checklist compliance calculated dynamically, not stored
+4. **Bitrise Integration** — Store Bitrise IDs, fetch details on-demand
+5. **Relationship Pattern** — Follow Immerse standard `{MODULE}Relationships` model
+
+### MongoDB Collections
+
+**`rolloutEntities`** — Core rollout configuration per organization (one per askId). Stores Bitrise app slugs, cached owner/department info from MeiliSearch, and approver mappings.
+
+**`rolloutConnectedApps`** — Local index of iOS/Android apps linked to the rollout. `bitriseConnectedAppId` is unique. No preset IDs — configuration is embedded inline at release creation.
+
+**`rolloutVersions`** — Individual release versions with stage-based workflow state. `currentStage` is a cache for filtering only; actual stage details are always reconciled from Bitrise on page load.
+
+**`rolloutApprovals`** — Approval workflow state with Bitrise sync. Tracks dependency order, assigned approvers, submitted values, and decision history.
+
+**`rolloutRelationships` (MeiliSearch)** — Connections to other Immerse modules (e.g., Repository). Stored in MeiliSearch (not MongoDB) to enable fast cross-module queries.
+
+### Data Flow Strategy
+
+| Data | Where Stored | Why |
+|---|---|---|
+| Rollout config, connected apps, versions, approvals | MongoDB | Transactional workflow state |
+| Approval workflow decisions | MongoDB | Audit trail |
+| Repository relationships | MeiliSearch | Cross-module filtered queries |
+| App metadata (owners, department, classification) | MeiliSearch (fetched on-demand) | Avoid duplicating app catalog |
+| Release stage details (dates, artifacts) | Bitrise API (fetched on-demand) | Bitrise controls progression |
+
+### MongoDB Indexes
+
+```javascript
+// rolloutEntities
+db.rolloutEntities.createIndex({ askId: 1 }, { unique: true });
+db.rolloutEntities.createIndex({ bitriseAppSlug: 1 }, { sparse: true });
+
+// rolloutConnectedApps
+db.rolloutConnectedApps.createIndex({ rolloutId: 1, platform: 1 });
+db.rolloutConnectedApps.createIndex({ bitriseConnectedAppId: 1 }, { unique: true });
+
+// rolloutVersions
+db.rolloutVersions.createIndex({ connectedAppId: 1, versionNumber: 1 }, { unique: true });
+db.rolloutVersions.createIndex({ rolloutId: 1, currentStage: 1 });
+db.rolloutVersions.createIndex({ bitriseReleaseId: 1 }, { unique: true, sparse: true });
+
+// rolloutApprovals
+db.rolloutApprovals.createIndex({ versionId: 1, approvalType: 1 }, { unique: true });
+db.rolloutApprovals.createIndex({ versionId: 1, order: 1 });
+db.rolloutApprovals.createIndex({ assignedTo: 1, status: 1 });
+```
+
+### Approval State Machine
+
+```
+OSPO (order=0, automated):
+  not-started → pending → approved | rejected
+
+Legal / ESRO (order=1, manual — blocked until OSPO approved):
+  not-started → pending → approved | rejected | changes-requested
+
+Business Owners (order=2, simple notification — blocked until order 1 complete):
+  not-started → pending → approved | rejected
+```
+
+## Key Workflows
+
+### 1. Rollout Setup (5 Steps)
+
+<Steps>
+  <Step title="Create Rollout">
+    User provides rollout name. A `rolloutEntities` document is created with `bitriseAppSlug: null` and empty `approverMappings`. One rollout per `askId` is enforced.
+  </Step>
+  <Step title="Configure General Settings">
+    Fetch app metadata from MeiliSearch by `askId`. Cache frequently-used fields (`owners`, `department`, `businessUnit`) in `rolloutEntities`. Initialize `approverMappings` from cached owner employee IDs.
+  </Step>
+  <Step title="Connect Bitrise Project">
+    User provides GitHub repo URL. Register the app with Bitrise via `/apps/register`, then finish registration. Store the returned `bitriseAppSlug` and `bitriseProjectId` in `rolloutEntities`.
+  </Step>
+  <Step title="Fetch Connected Apps">
+    Fetch connected apps from Bitrise using `bitriseAppSlug`. Filter to iOS and Android only (tvOS excluded). Upsert records into `rolloutConnectedApps`.
+  </Step>
+  <Step title="Connect Repository">
+    User selects an Immerse Repository entity. Create a relationship document in the MeiliSearch `rollout-relationships` index using the standard Immerse relationship pattern.
+  </Step>
+</Steps>
+
+### 2. Version Creation
+
+When a user creates a version, five operations happen in sequence:
+
+1. **Create local version record** — Validate unique `versionNumber` per `connectedAppId`, insert into `rolloutVersions` with `currentStage: 'release-candidate'`
+2. **Create Bitrise release** — `POST /release-management/v1/releases` with inline `automation` and `approvals` arrays. **No presets** — configuration is embedded on every release.
+3. **Fetch Bitrise approval task IDs** — Retrieve the created approval tasks from Bitrise to map them to local records
+4. **Create approval records** — Insert 6 `rolloutApprovals` documents mapping each Bitrise task to an approval type and order. Copy `approverMappings` from `rolloutEntities` at this point in time.
+5. **Trigger OSPO scan** — Runs automatically via the `automation` config sent in step 2. No manual trigger needed.
+
+**Hotfix handling**: If `isHotfix: true`, the Legal approval record is created with `status: 'approved'` and immediately synced to Bitrise.
+
+**Why no presets?** Embedding automation and approvals inline in each release eliminates preset synchronization complexity and guarantees correct configuration every time.
+
+### 3. Approval Submission
+
+When a user submits an approval form:
+
+1. Validate all lower-order approvals are `approved` before allowing submission
+2. Update approval record to `status: 'pending'` with `submittedValues`
+3. Update `rolloutVersions.approvalStatus` to `'in-progress'`
+4. Generate a JWT token scoped to the `approvalId` and send an email to the approver with a decision URL
+
+### 4. Approval Decision
+
+When an approver clicks the decision URL:
+
+1. Validate and decode the JWT token
+2. Update `rolloutApprovals` status to `'approved'` or `'rejected'`
+3. If approved, sync to Bitrise: `PATCH /releases/:id/approvals/:taskId` with `{ completed: true }`
+4. If all approvals complete, update version to `approvalStatus: 'approved'`, `currentStage: 'app-store-review'`, and notify business owners
+5. If any rejection, update version `approvalStatus: 'rejected'`
+
+### 5. Bitrise Synchronization
+
+**OSPO Webhook** — Bitrise POSTs to `/api/webhooks/bitrise` when the `ospo-compliance-check` workflow completes. Validate webhook signature, find version by `bitriseReleaseId`, and update the OSPO approval record accordingly.
+
+**Page Load Reconciliation** — On every version list or detail page load:
+1. Fetch all local versions for the rollout
+2. Fetch Bitrise releases for the `bitriseAppSlug`
+3. For each local version, compare `currentStage` with Bitrise's active stage and update if different
+4. Log orphaned records (exist in Immerse but not Bitrise) — don't auto-create missing records
+
+### 6. Checklist Compliance
+
+Checklist compliance is **always computed**, never stored. The `getRolloutsChecklistData` function fetches the rollout entity, relationships, and connected apps, then returns:
+
+| Section | `isCompliant` when |
+|---|---|
+| Repository Connection | A `rollout-relationships` document exists for this rollout |
+| Bitrise Connection | `bitriseAppSlug` and `bitriseProjectId` are both set |
+| Connected Apps | At least one `rolloutConnectedApps` record exists |
+| Approver Configuration | All 6 approver types have entries in `approverMappings` |
+
+## GraphQL Patterns
+
+**Schema extension pattern:**
+
+```typescript
+export const RolloutSchema = gql`
+  extend type Query {
+    getRolloutEntity(rolloutId: String!): Rollout
+    getRolloutsChecklistData(rolloutId: String!): RolloutChecklistData
+  }
+
+  extend type Mutation {
+    createRolloutEntity(rolloutName: String!, askId: String!): Rollout
+    createRolloutRelationship(rolloutId: String!, repositoryId: String!): RolloutRelationship
+  }
+
+  type ChecklistSection {
+    isCompliant: Boolean!
+    data: JSON
+  }
+`;
+```
+
+Resolvers delegate to `rolloutsClient` functions. Business logic lives in client functions, not resolvers.
+
+## Error Handling
+
+All database operations use `ImmerseError` with HTTP status codes, structured error codes, and contextual data. Use the dual error handling pattern everywhere — check for `response.error` AND wrap in try/catch:
+
+```typescript
+try {
+  const response = await serviceCall();
+  if ((response as any).error) throw new Error((response as any).error);
+  return response;
+} catch (error: any) {
+  return { error: error?.message || 'Unknown error' };
+}
+```
+
+**Bitrise API failures** — `bitriseClient` handles retry with exponential backoff. If the circuit is open, surface `BITRISE_UNAVAILABLE` to the user.
+
+**Orphaned records** — Log warnings, don't fail. Mark records as orphaned in the UI if needed.
+
+## Local Development
+
+<Steps>
+  <Step title="Set up immerse-workspace">
+    Follow the [Immerse workspace setup guide](/developers/contributing/immerse) to install dependencies and configure your environment.
+  </Step>
+  <Step title="Configure environment variables">
+    Environment variables are loaded from `.immerse/env.json`. Ensure `MONGODB_SERVER`, `MONGODB_DATABASE`, and Bitrise API credentials are set in `env.local`.
+  </Step>
+  <Step title="Run the Rollouts service">
+    ```bash
+    # Option 1: Run everything
+    pnpm dev
+
+    # Option 2: Run Rollouts service individually
+    pnpm run api:rollouts
+    ```
+  </Step>
+  <Step title="Access the module">
+    The Rollouts module is available at `/beta/rollouts/` in the local dev server.
+  </Step>
+</Steps>
+
+## Development Guidelines
+
+- **GraphQL first** — Define schema changes in `RolloutSchema.graphql.ts` before implementing resolvers or services
+- **Reference modules** — Use `origins`, `deployments`, or `applications` as reference implementations for patterns
+- **Platform parity** — Features should work for both iOS and Android unless inherently platform-specific (e.g., TestFlight is iOS only)
+- **MCOE policies** — Any feature enforcing governance (approval requirements, role restrictions) should clearly document which policy it implements
+- **Bitrise is source of truth** — Never trust local `currentStage` as final — always reconcile with Bitrise on page load
+- **No stored compliance flags** — `isCompliant` must always be computed, never persisted
+
+## Key Resources
+
+- [Getting Started](/developers/release-management/getting-started) — End-user overview of the Rollouts module
+- [Contributing to Immerse](/developers/contributing/immerse) — Workspace setup and Immerse architecture patterns
+- [Enterprise Pipelines](/developers/contributing/enterprise-pipelines) — Contributing to the Enterprise Pipeline Library

@@ -1,0 +1,86 @@
+---
+title: "Glossary"
+description: "Definitions of key terms used in the Mobile Center of Excellence (MCoE)."
+sidebarTitle: "Glossary"
+---
+
+## MCOE
+
+The **Mobile Center of Excellence** is the organizational team that sets standards, tooling, and governance for all mobile app teams within UnitedHealth Group. MCOE owns the Rollouts module within Immerse and manages Bitrise Release Management access on behalf of app teams.
+
+## Immerse
+
+The enterprise internal developer portal — a unified interface for managing repositories, pipelines, deployments, certificates, and other services across the software lifecycle. Immerse has 18 modules, including the Rollouts module owned by MCOE.
+
+## Bitrise
+
+The mobile-specific CI/CD platform used for building, testing, and releasing iOS and Android applications. Bitrise has two distinct products used by MCOE and app teams:
+
+**Bitrise CI:**
+
+1. **Projects**: Each application has a Bitrise project containing workflows for building and testing
+2. **Workflows**: Pre-configured build pipelines for iOS (Xcode) and Android (Gradle) apps, including Dev, Test, and Prod variants
+3. **Artifacts**: Signed build outputs (`.ipa` for iOS, `.aab` for Android) produced by CI workflows
+
+**Bitrise Release Management:**
+
+1. **Release Lifecycle**: End-to-end management of the release process from build selection to store submission
+2. **Enterprise Approvals**: Approval workflows that enforce compliance and business sign-offs before release
+3. **Store Integration**: Direct integration with App Store Connect (iOS) and Google Play Console (Android)
+
+<Note>Bitrise CI is broadly available to app teams. Bitrise Release Management is restricted to MCOE members — Rollouts exists to bridge this access gap for all teams.</Note>
+
+## Rollouts
+
+The Immerse module that wraps Bitrise Release Management and extends release functionality to mobile app teams. Rollouts provides a structured release pipeline with built-in compliance checks, approval workflows, and store integration — while keeping MCOE's guardrails and oversight in place. Each rollout is tied to an application via its ASK ID.
+
+## Version
+
+A single release (e.g., v1.2.6) that moves through the 5-stage pipeline from build selection to production release. Each version belongs to a rollout and progresses through Release Candidate, Testing, Approvals, Store Review, and Release stages in order.
+
+## Connected App
+
+A Bitrise project linked to a rollout. Connected apps provide the build artifacts that become release candidates. Each connected app has a platform (iOS or Android) and is identified by its Bitrise project slug.
+
+## ASK ID
+
+The unique application identifier in the Immerse application registry. Every rollout is tied to an ASK ID, which connects it to application metadata including ownership information (Service Owner, Technical Owner, Product Owner).
+
+## Pipeline Stages
+
+The five sequential stages every version passes through:
+
+1. **Release Candidate** — Select a signed build artifact from Bitrise CI
+2. **Testing** — Upload to TestFlight (iOS) or Google Play testing tracks (Android) for beta testing
+3. **Approvals** — Six required sign-offs: OSPO (automated), Legal, ESRO, Service Owner, Technical Owner, Product Owner
+4. **Store Review** — Submit to Apple App Store review or Google Play Console review
+5. **Release** — Deploy to production, with options for phased/staged rollout
+
+## Approval Types
+
+| Type | Category | Description |
+|------|----------|-------------|
+| **OSPO** | Compliance | Automated open-source license scan (runs automatically, order 0) |
+| **Legal** | Compliance | Legal review and sign-off (order 1) |
+| **ESRO** | Compliance | Export/sanctions compliance review (order 1, parallel with Legal) |
+| **Service Owner** | Business | Sign-off from the service owner (order 2) |
+| **Technical Owner** | Business | Sign-off from the technical lead (order 2) |
+| **Product Owner** | Business | Sign-off from the product manager (order 2) |
+
+<Note>Approvals follow a dependency chain: order 0 must complete before order 1 tasks unlock, and order 1 must complete before order 2 tasks unlock. Tasks within the same order level run in parallel.</Note>
+
+## Enterprise Pipelines (EPL)
+
+The Enterprise Pipeline Library — reusable GitHub Actions workflows that orchestrate the CI process. The mobile workflow (React Native EPL) reads your `.jfrog/config.yml` and triggers builds via the Bitrise API.
+
+## TestFlight
+
+Apple's beta testing service for iOS apps. During the Testing stage, build artifacts are uploaded to TestFlight for distribution to internal and external beta testers before store submission.
+
+## Phased Release
+
+A release strategy where the app rolls out gradually to users over 7 days instead of all at once. Available for both iOS (App Store phased release) and Android (Google Play staged rollout).
+
+## Release Manager
+
+A role assigned to users who have permission to submit apps for store review, manage releases, and edit release notes. Required for key actions in the Store Review and Release stages.

@@ -63,6 +63,12 @@
   --ring: var(--mcoe-brand-primary);
   --radius: 0.625rem;
 
+  /* Chrome surfaces (navbar + footer). Slightly off the page background so
+   * the sticky header and bottom rail read as their own band against the
+   * white content. Dark-mode value lives in the [data-theme="dark"] block
+   * below. */
+  --nebula-chrome-bg: #f4f7fa;
+
   color-scheme: light;
 }
 
@@ -88,6 +94,11 @@
   --mcoe-text-link: var(--mcoe-brand-primary);
   --mcoe-border-default: #44403c;    /* stone-700 — clearly visible borders */
   --mcoe-border-muted: #292524;      /* stone-800 — subtle dividers */
+
+  /* Dark-mode chrome surface — stone-900, the same elevated tone used for
+   * cards/popovers, so the navbar + footer read as their own band against
+   * the stone-950 page bg. */
+  --nebula-chrome-bg: #1c1917;
 }
 
 /* Tailwind v4 wiring: expose the shadcn tokens above as Tailwind color
@@ -341,6 +352,20 @@ body {
    `> [data-fullbleed]` rule; the component itself re-applies a 80rem
    inner container with Tailwind utilities so its content stays aligned
    with whatever sits above and below. */
+
+/* Astro wraps `client:*` components in an `<astro-island>` element. That
+   wrapper is `display: inline` by default (custom elements default to
+   inline), which breaks two things at once:
+     1. The `.nebula-custom-container > [data-fullbleed]` selector no
+        longer matches because the section is no longer a direct child.
+     2. Layout flow under inline gets cramped — the hero collapses to
+        intrinsic content width.
+   `display: contents` removes the wrapper from the box tree entirely so
+   children behave as if they were direct children of the layout. Same
+   trick the wider Astro community uses for slot-shaped islands. */
+astro-island {
+  display: contents;
+}
 
 /* Typography for MDX content — applied uniformly across both consumers
  * (the Platform's read-only renderer + Tiptap surface, AND this CLI build).

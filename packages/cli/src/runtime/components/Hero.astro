@@ -1,0 +1,20 @@
+---
+import { Hero as HeroReact, type HeroProps } from '@nebula-docs/components';
+
+/**
+ * Hero is interactive when it has 2+ slides — pagination clicks and
+ * auto-advance both rely on `useState` / `useEffect` running in the
+ * browser. Astro's MDX `components={...}` prop renders React components
+ * server-only (no hydration), so the bundled HTML ships without click
+ * handlers and the pagination is dead. Wrapping in this Astro component
+ * lets us attach `client:visible` so the React island hydrates the first
+ * time the hero scrolls into view.
+ *
+ * Add this Astro variant to BOTH the page-route components map AND the
+ * `astro.config.mjs` auto-import skip list — otherwise the auto-import
+ * plugin shadows the map with a raw React import and the static variant
+ * wins.
+ */
+const props = Astro.props as HeroProps;
+---
+<HeroReact client:load {...props} />

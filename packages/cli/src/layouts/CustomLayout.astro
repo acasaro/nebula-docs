@@ -34,7 +34,7 @@ const docs = loadDocsConfig();
   <body>
     <Navbar docs={docs} currentSlug={currentSlug} />
     <main class="nebula-custom-shell">
-      <div class="nebula-custom-container">
+      <div class="nebula-custom-container mdx-prose">
         <slot />
       </div>
     </main>
@@ -102,8 +102,14 @@ const docs = loadDocsConfig();
          tagged with `data-fullbleed` breaks out to viewport width while
          staying in document flow. Components that own their internal
          centering (Hero) use this; their inner wrapper re-applies the same
-         80rem container so content stays aligned with the rest of the page. */
-      .nebula-custom-container > [data-fullbleed] {
+         80rem container so content stays aligned with the rest of the page.
+         The second selector handles components rendered as Astro client
+         islands — `<astro-island>` sits between the container and the
+         section, and `display: contents` (in global.css) makes it
+         transparent to layout but NOT to CSS combinators, so we have to
+         match through it explicitly. */
+      .nebula-custom-container > [data-fullbleed],
+      .nebula-custom-container > astro-island > [data-fullbleed] {
         width: 100vw;
         margin-inline: calc(50% - 50vw);
         max-width: none;

@@ -382,8 +382,12 @@ export const SLASH_ITEMS: SlashItem[] = [
           type: 'mdxHero',
           attrs: {
             variant: 'banner',
-            title: 'Headline',
-            description: 'Supporting copy beneath the title.',
+            slides: [
+              {
+                title: 'Headline',
+                description: 'Supporting copy beneath the title.',
+              },
+            ],
           },
         })
         .run();

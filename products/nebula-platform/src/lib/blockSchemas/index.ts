@@ -7,7 +7,6 @@ import { cardGroupSchema } from './cardGroup';
 import { columnsSchema } from './columns';
 import { expandableSchema } from './expandable';
 import { frameSchema } from './frame';
-import { heroSchema } from './hero';
 import { imageSchema } from './image';
 import { paramFieldSchema } from './paramField';
 import { profileSchema } from './profile';
@@ -29,7 +28,6 @@ const REGISTRY: Record<string, BlockAttrSchema> = {
   [columnsSchema.blockType]: columnsSchema,
   [expandableSchema.blockType]: expandableSchema,
   [frameSchema.blockType]: frameSchema,
-  [heroSchema.blockType]: heroSchema,
   [imageSchema.blockType]: imageSchema,
   [paramFieldSchema.blockType]: paramFieldSchema,
   [profileSchema.blockType]: profileSchema,

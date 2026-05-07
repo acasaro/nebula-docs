@@ -41,6 +41,7 @@ import {
   type Tab,
 } from "@/lib/docsConfig";
 import { useThemeConfig, type ThemeConfig } from "@/lib/themeConfig";
+import { getThemeById } from "@nebula-docs/theme";
 import {
   addressOfEntry,
   appendTab,
@@ -713,6 +714,68 @@ export function RepoBrowser() {
     }
     return themeConfigState.config;
   }, [files, themeConfigState.config]);
+
+  // Mirror the tenant's resolved theme onto `.mdx-prose` so the editor
+  // preview renders with the same accent colors a published page would.
+  // Resolution mirrors `composeTokensCss` on the CLI:
+  //
+  //   getThemeById(theme.json.extends ?? 'mcoe-default')   ← base
+  //     ⊕ theme.json.tokens                                ← overrides
+  //
+  // Scoped to mdx-prose (NOT the document root) so editor chrome —
+  // sidebar, dialogs, source toggle — keeps Nebula's own `--brand`.
+  // Inside mdx-prose, `--primary` is rebound to the tenant's brand,
+  // which the Hero CTAs and other primary-driven components pick up
+  // via the normal cascade.
+  useEffect(() => {
+    const baseId = liveThemeConfig?.extends ?? 'mcoe-default';
+    const base = getThemeById(baseId);
+    const overrideTokens = liveThemeConfig?.tokens ?? {};
+    const tokenAt = (key: keyof typeof base): string | null => {
+      const o = overrideTokens[key];
+      if (typeof o === 'string' && o.length > 0) return o;
+      const b = base[key];
+      return typeof b === 'string' && b.length > 0 ? b : null;
+    };
+    const brand = tokenAt('brandPrimary');
+    const brandLight = tokenAt('brandPrimaryLight');
+    const brandDark = tokenAt('brandPrimaryDark');
+    if (!brand && !brandLight && !brandDark) return;
+    const decls: string[] = [];
+    // The platform's `--primary` resolves through `--brand`; the CLI's
+    // resolves through `--mcoe-brand-primary`. Set every link in either
+    // chain so this preview override is consumer-agnostic.
+    if (brand) {
+      decls.push(`--mcoe-brand-primary: ${brand};`);
+      decls.push(`--brand: ${brand};`);
+      decls.push(`--brand-text: ${brand};`);
+      decls.push(`--primary: ${brand};`);
+      // The platform's `:where(.mdx-prose) a { color: var(--brand-text) }`
+      // rule wins specificity over Tailwind's `text-primary-foreground`,
+      // so without an explicit foreground override the button text would
+      // pick up Nebula's `--brand-text` despite our `--primary` swap.
+      // White is a deliberate fallback that pairs with any saturated
+      // brand bg — the CLI uses the equivalent (`--mcoe-bg-primary`) for
+      // primary CTA text. Tenants with a light brand should override via
+      // a custom theme.json key once we expose one.
+      decls.push('--primary-foreground: #fff;');
+    }
+    if (brandLight) {
+      decls.push(`--mcoe-brand-primary-light: ${brandLight};`);
+      decls.push(`--brand-soft: ${brandLight};`);
+    }
+    if (brandDark) {
+      decls.push(`--mcoe-brand-primary-dark: ${brandDark};`);
+      decls.push(`--brand-hover: ${brandDark};`);
+    }
+    const styleEl = document.createElement('style');
+    styleEl.dataset.nebulaTenantPreview = '';
+    styleEl.textContent = `.mdx-prose { ${decls.join(' ')} }`;
+    document.head.appendChild(styleEl);
+    return () => {
+      styleEl.remove();
+    };
+  }, [liveThemeConfig]);
 
   const handleThemeChange = useCallback(
     (updater: (config: ThemeConfig) => ThemeConfig) => {

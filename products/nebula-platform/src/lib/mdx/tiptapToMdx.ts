@@ -297,17 +297,47 @@ interface ImgAttrs {
 }
 
 function serializeHero(node: TiptapNode): string {
-  // Hero attrs are a flat blob: drop nulls/empties, hand the rest to
-  // `serializeAttrs` so it formats strings, numbers, and the preserved
-  // `slides` expression consistently with every other JSX block.
-  const a = (node.attrs ?? {}) as Record<string, unknown>;
+  // Editor model is always `slides[]`. Source emission flips between two
+  // shapes for readability:
+  //   - 1 slide  → shorthand top-level attrs (`<Hero title="..." />`)
+  //   - 2+ slides → explicit `slides={[...]}` JSX expression
+  const a = (node.attrs ?? {}) as {
+    variant?: string | null;
+    interval?: number | null;
+    padded?: boolean | null;
+    slides?: Array<Record<string, unknown>> | null;
+  };
+  const slides = Array.isArray(a.slides) && a.slides.length > 0 ? a.slides : [{}];
+  const top: Record<string, unknown> = {};
+  if (a.variant) top.variant = a.variant;
+  if (typeof a.interval === 'number' && Number.isFinite(a.interval)) {
+    top.interval = a.interval;
+  }
+  if (a.padded === false) top.padded = false;
+
+  if (slides.length === 1) {
+    const slide = pruneSlide(slides[0] ?? {});
+    Object.assign(top, slide);
+    return `<Hero${serializeAttrs(top)} />`;
+  }
+
+  // Multi-slide: emit slides as a JSON-compatible JS array literal so the
+  // round-trip parser (which uses JSON.parse on JSX expressions) can read
+  // it back without an eval fallback.
+  const slidesPruned = slides.map((s) => pruneSlide(s ?? {}));
+  top.slides = { __expression: JSON.stringify(slidesPruned, null, 2) };
+  return `<Hero${serializeAttrs(top)} />`;
+}
+
+function pruneSlide(slide: Record<string, unknown>): Record<string, unknown> {
   const out: Record<string, unknown> = {};
-  for (const [k, v] of Object.entries(a)) {
+  for (const [k, v] of Object.entries(slide)) {
     if (v == null) continue;
     if (typeof v === 'string' && v.length === 0) continue;
+    if (Array.isArray(v) && v.length === 0) continue;
     out[k] = v;
   }
-  return `<Hero${serializeAttrs(out)} />`;
+  return out;
 }
 
 function serializeProfile(node: TiptapNode): string {
@@ -391,7 +421,10 @@ function serializeAttrs(attrs: Record<string, unknown> | undefined): string {
     if (v === true) {
       parts.push(k);
     } else if (typeof v === 'string') {
-      parts.push(`${k}="${v.replace(/"/g, '\\"')}"`);
+      // JSX attribute values are NOT JS string literals — backslash escapes
+      // (`\"`) aren't honored by the MDX parser. Embedded double quotes have
+      // to be HTML-entity-encoded so the value survives a round trip.
+      parts.push(`${k}="${escapeJsxAttr(v)}"`);
     } else if (
       typeof v === 'object' &&
       v !== null &&

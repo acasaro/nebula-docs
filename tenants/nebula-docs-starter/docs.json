@@ -4,7 +4,9 @@
   "description": "Full kitchen-sink Nebula Docs starter — the AcmeCloud SDK reference site exercises every component, nav pattern, and frontmatter field.",
   "favicon": "/assets/favicon.svg",
   "logo": {
-    "href": "/"
+    "href": "/",
+    "dark": "https://firebasestorage.googleapis.com/v0/b/mcoe-d.firebasestorage.app/o/dev%2F1%2Fimages%2Ffd247fc1db3dab70.svg?alt=media&token=f474c5f0-3f71-45ca-b812-e9a9359b95dc",
+    "light": "https://firebasestorage.googleapis.com/v0/b/mcoe-d.firebasestorage.app/o/dev%2F1%2Fimages%2F1e862befc15c4d9a.svg?alt=media&token=a009ad30-1777-400c-ab86-67a34289d20a"
   },
   "versions": [
     {

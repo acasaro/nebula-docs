@@ -114,7 +114,8 @@ const autoImportComponents = {
   Danger: NEBULA_COMPONENTS,
   Expandable: NEBULA_COMPONENTS,
   Frame: NEBULA_COMPONENTS,
-  Hero: NEBULA_COMPONENTS,
+  // Hero intentionally skipped — Astro variant in src/runtime/components
+  // attaches `client:visible` so pagination clicks hydrate.
   Icon: NEBULA_COMPONENTS,
   Info: NEBULA_COMPONENTS,
   // Mermaid intentionally omitted — see comment above (Astro wrapper attaches `client:visible`).

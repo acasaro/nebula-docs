@@ -360,7 +360,7 @@ export function MdxEditor({
     <div className={cn('mdx-prose mx-auto max-w-3xl py-10', className)}>
       {fmTitle || fmDescription ? (
         <header
-          className="mb-8 border-b border-border pb-6 px-16"
+          className="mb-8 border-b border-border pb-6"
           data-component-part="page-header"
         >
           {fmTitle ? (
@@ -381,9 +381,7 @@ export function MdxEditor({
         </header>
       ) : null}
       <EditorWithBlockHandle editor={onSourceChange ? editor : null}>
-        <div className="px-16">
-          <EditorContent editor={editor} />
-        </div>
+        <EditorContent editor={editor} />
       </EditorWithBlockHandle>
 
       <MediaPickerDialog

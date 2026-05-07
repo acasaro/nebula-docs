@@ -408,8 +408,12 @@ function BlockHandleUI({
   // grip is easier to land on — the previous ~24px target was the main
   // source of "missed grabs" when the user reached for it.
   const HANDLE_W = 64;
-  const ideal = block.rect.left - containerRect.left - HANDLE_W;
-  const left = Math.max(ideal, 0);
+  // Handles intentionally render outside the prose container (negative
+  // left for the +/grip, beyond-right for the kebab). The container is
+  // `overflow: visible`, so the absolute children paint into the
+  // surrounding editor canvas margin instead of stealing gutter from
+  // the writing area.
+  const left = block.rect.left - containerRect.left - HANDLE_W;
   const rightLeft = block.rect.right - containerRect.left + 8;
 
   const insertBelow = () => {

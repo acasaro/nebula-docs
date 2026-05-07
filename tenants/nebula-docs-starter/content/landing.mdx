@@ -3,15 +3,57 @@ title: "Landing"
 description: "Demo of mode: custom — full-bleed Hero followed by container-width content."
 mode: "custom"
 ---
-<Hero variant="banner" eyebrow="AcmeCloud SDK" title="Ship faster, run anywhere." description="Edge-first APIs for shipping multi-tenant applications without owning servers." background="linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #ec4899 100%)" textColor="#fff" />
+<Hero variant="banner" slides={[
+  {
+    "eyebrow": "Mobile Center of Excellence",
+    "title": "The Standard for",
+    "accent": "Mobile Engineering",
+    "description": "Your team's single source of truth for CI/CD pipelines, release management, code signing, and everything mobile. Built by engineers, for engineers.",
+    "background": "url(\"https://firebasestorage.googleapis.com/v0/b/mcoe-d.firebasestorage.app/o/dev%2F1%2Fimages%2F0b4b27e7bce135e3.jpg?alt=media&token=dfd1a810-964b-4d53-bc96-32c8e92eb165\") center / cover no-repeat",
+    "textColor": "#697386",
+    "titleColor": "#5469d4",
+    "accentColor": "#7d89e0",
+    "actions": [
+      {
+        "label": "Get started",
+        "href": "",
+        "style": "primary"
+      },
+      {
+        "label": "Rollouts Guide",
+        "href": "",
+        "style": "secondary"
+      }
+    ]
+  },
+  {
+    "eyebrow": "Moblie CI",
+    "title": "Bitrise CI Onboarding",
+    "description": "Don't forget to migrate off your current macos-uhg runners before end of the month.",
+    "background": "url(\"https://firebasestorage.googleapis.com/v0/b/mcoe-d.firebasestorage.app/o/dev%2F1%2Fimages%2F512ca799411ced47.png?alt=media&token=f69ac29d-edf8-4fd7-95c2-660b2e6f28fc\") center / cover no-repeat",
+    "textColor": "#ffffff",
+    "titleColor": "#fff",
+    "accentColor": "#fff"
+  }
+]} />
 
-<CardGroup cols={2}>
-<Card title="Quickstart" icon="rocket" href="/quickstart">
-Mint a key and ship your first request in under five minutes.
+<br/>
+
+## Explore the Knowledge Base
+
+Jump into any area of the MCOE documentation.
+
+<CardGroup cols={3}>
+<Card title="Product" icon="rocket" href="/quickstart" cta="Explore">
+Product strategy, roadmaps, and initiative overviews for the MCoE platform.
 </Card>
 
-<Card title="API reference" icon="code" href="/api">
-Full surface area for the TypeScript, Python, and Go SDKs.
+<Card title="Developers" icon="code" href="/api" cta="Explore">
+Technical documentation for mobile CI, release management, code signing, and workflows.
+</Card>
+
+<Card title="Resources" icon="code" href="/api" cta="Explore">
+uides, glossary, announcements, and reference materials for the team.
 </Card>
 </CardGroup>
 
@@ -37,6 +79,8 @@ Full surface area for the TypeScript, Python, and Go SDKs.
 </Column>
 </Columns>
 
+<br/>
+
 <Columns cols="4">
 <Column>
 <Profile name="Suketu Vyas" title="Principal Architect" photo="https://firebasestorage.googleapis.com/v0/b/mcoe-d.firebasestorage.app/o/dev%2F1%2Fimages%2Fe498c8e856508250.png?alt=media&token=6b8eb757-a879-4fee-81e0-a06a95006cdd" />
@@ -55,6 +99,8 @@ Full surface area for the TypeScript, Python, and Go SDKs.
 </Column>
 </Columns>
 
+<br/>
+
 <Columns cols="4">
 <Column>
 <Profile name="Rosalee Hacker" title="Sr Platform Engineer" photo="https://firebasestorage.googleapis.com/v0/b/mcoe-d.firebasestorage.app/o/dev%2F1%2Fimages%2F4059f4499193561c.png?alt=media&token=61a3e381-b8c3-4b6b-af3a-00c8ae559b0f" />
@@ -72,3 +118,5 @@ Full surface area for the TypeScript, Python, and Go SDKs.
 
 </Column>
 </Columns>
+
+<Video src="https://firebasestorage.googleapis.com/v0/b/mcoe-d.firebasestorage.app/o/dev%2F1%2Fvideos%2F0db6ee1ab1c06aa6.mp4?alt=media&token=6668a3a9-2441-4d54-8242-2b0753057cc9" loop maxLoops={2} />

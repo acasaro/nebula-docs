@@ -17,6 +17,7 @@ export const heroSlideSchema = z.object({
   actions: z.array(heroActionSchema).optional(),
   background: z.string().optional(),
   textColor: z.string().optional(),
+  titleColor: z.string().optional(),
   accentColor: z.string().optional(),
   secondaryTitle: z.string().optional(),
   secondaryDescription: z.string().optional(),

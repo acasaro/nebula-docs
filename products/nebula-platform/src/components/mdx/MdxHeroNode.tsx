@@ -6,18 +6,16 @@ import {
 } from '@tiptap/react';
 import { EllipsisVertical, Layers } from 'lucide-react';
 import { useRef, useState } from 'react';
-import { Hero, type HeroVariant } from '@nebula-docs/components';
-import { AttributesForm } from '@/components/AttributesForm';
-import { AttributesPopover } from '@/components/AttributesPopover';
-import { heroSchema } from '@/lib/blockSchemas/hero';
+import { Hero, type HeroSlide, type HeroVariant } from '@nebula-docs/components';
+import { HeroSettingsDrawer } from '@/components/HeroSettingsDrawer';
 import { cn } from '@/lib/utils';
 
 /**
  * Atomic block node for `<Hero>`. The node view renders the runtime
- * `Hero` component directly. Multi-slide heroes (`slides={[...]}` in
- * source) round-trip via the `slides` opaque-expression attribute — the
- * editor preview shows a single-slide projection from the top-level
- * fields, with a notice in the settings panel.
+ * `Hero` component directly. All authoring lives on the per-slide level
+ * — the node's `slides` attribute is always a non-empty array, even for
+ * shorthand single-slide MDX (`<Hero title="..." />`). The serializer
+ * emits the shorthand back out when there's exactly one slide.
  */
 export const MdxHero = Node.create({
   name: 'mdxHero',
@@ -29,22 +27,12 @@ export const MdxHero = Node.create({
   addAttributes() {
     return {
       variant: { default: null },
-      eyebrow: { default: null },
-      title: { default: null },
-      accent: { default: null },
-      description: { default: null },
-      background: { default: null },
-      textColor: { default: null },
-      accentColor: { default: null },
-      secondaryTitle: { default: null },
-      secondaryDescription: { default: null },
-      sideImage: { default: null },
-      sideImageAlt: { default: null },
       interval: { default: null },
-      // Hand-authored multi-slide payload preserved as an opaque JSX
-      // expression. The editor doesn't render this directly — it only
-      // round-trips it through serialization.
-      slides: { default: null },
+      padded: { default: null },
+      // HeroSlide[] — always non-empty. Tiptap stores arbitrary JSON-
+      // serializable values here, which makes structured per-slide
+      // editing trivial (no opaque expression escape hatch needed).
+      slides: { default: [{}] as HeroSlide[] },
     };
   },
 
@@ -66,19 +54,9 @@ export const MdxHero = Node.create({
 
 interface HeroAttrs {
   variant: HeroVariant | null;
-  eyebrow: string | null;
-  title: string | null;
-  accent: string | null;
-  description: string | null;
-  background: string | null;
-  textColor: string | null;
-  accentColor: string | null;
-  secondaryTitle: string | null;
-  secondaryDescription: string | null;
-  sideImage: string | null;
-  sideImageAlt: string | null;
   interval: number | null;
-  slides: unknown;
+  padded: boolean | null;
+  slides: HeroSlide[];
 }
 
 function MdxHeroView({
@@ -89,18 +67,19 @@ function MdxHeroView({
   deleteNode,
 }: NodeViewProps) {
   const attrs = node.attrs as HeroAttrs;
-  const [attrOpen, setAttrOpen] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const kebabRef = useRef<HTMLButtonElement>(null);
 
-  const stopPm = (e: React.SyntheticEvent) => e.stopPropagation();
-  const hasAuthoredSlides = attrs.slides != null;
+  const slides = attrs.slides && attrs.slides.length > 0 ? attrs.slides : [{}];
+  const previewSlide = slides[0] ?? {};
 
+  const stopPm = (e: React.SyntheticEvent) => e.stopPropagation();
   const isEmpty =
-    !attrs.title &&
-    !attrs.eyebrow &&
-    !attrs.description &&
-    !attrs.background &&
-    !hasAuthoredSlides;
+    !previewSlide.title &&
+    !previewSlide.eyebrow &&
+    !previewSlide.description &&
+    !previewSlide.background &&
+    slides.length === 1;
 
   return (
     <NodeViewWrapper
@@ -113,7 +92,7 @@ function MdxHeroView({
       {isEmpty ? (
         <div className="flex w-full flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-border/60 bg-muted/20 px-6 py-10 text-sm text-muted-foreground">
           <Layers className="size-5" />
-          <span>Hero is empty — fill in a title to preview.</span>
+          <span>Hero is empty — add a title or open the settings drawer.</span>
           {editor.isEditable ? (
             <button
               type="button"
@@ -121,7 +100,7 @@ function MdxHeroView({
               onMouseDown={stopPm}
               onClick={(e) => {
                 stopPm(e);
-                setAttrOpen(true);
+                setDrawerOpen(true);
               }}
               className="text-xs font-medium text-primary underline-offset-2 hover:underline"
             >
@@ -132,17 +111,9 @@ function MdxHeroView({
       ) : (
         <Hero
           variant={attrs.variant ?? 'banner'}
-          eyebrow={attrs.eyebrow ?? undefined}
-          title={attrs.title ?? undefined}
-          accent={attrs.accent ?? undefined}
-          description={attrs.description ?? undefined}
-          background={attrs.background ?? undefined}
-          textColor={attrs.textColor ?? undefined}
-          accentColor={attrs.accentColor ?? undefined}
-          secondaryTitle={attrs.secondaryTitle ?? undefined}
-          secondaryDescription={attrs.secondaryDescription ?? undefined}
-          sideImage={attrs.sideImage ?? undefined}
-          sideImageAlt={attrs.sideImageAlt ?? undefined}
+          interval={attrs.interval ?? undefined}
+          padded={attrs.padded ?? undefined}
+          slides={slides}
         />
       )}
 
@@ -151,7 +122,7 @@ function MdxHeroView({
           contentEditable={false}
           className={cn(
             'pointer-events-none absolute right-3 top-3 z-40 transition-opacity',
-            attrOpen ? 'opacity-100' : 'opacity-0 group-hover/hero:opacity-100',
+            drawerOpen ? 'opacity-100' : 'opacity-0 group-hover/hero:opacity-100',
           )}
         >
           <button
@@ -161,7 +132,7 @@ function MdxHeroView({
             onMouseDown={stopPm}
             onClick={(e) => {
               stopPm(e);
-              setAttrOpen(true);
+              setDrawerOpen(true);
             }}
             className="pointer-events-auto flex size-7 items-center justify-center rounded-md bg-black/70 text-white shadow-sm backdrop-blur-sm transition-colors hover:bg-black/85"
           >
@@ -170,27 +141,13 @@ function MdxHeroView({
         </div>
       ) : null}
 
-      <AttributesPopover
-        open={attrOpen}
-        onOpenChange={setAttrOpen}
-        anchorEl={kebabRef.current}
-        title={heroSchema.title}
-        titleIcon={heroSchema.headerIcon}
+      <HeroSettingsDrawer
+        open={drawerOpen}
+        onOpenChange={setDrawerOpen}
+        attrs={attrs}
+        onChange={updateAttributes}
         onDelete={deleteNode}
-      >
-        {hasAuthoredSlides ? (
-          <div className="mb-3 rounded-md border border-amber-300 bg-amber-50 p-2 text-xs text-amber-900 dark:border-amber-700/60 dark:bg-amber-900/20 dark:text-amber-100">
-            This hero has authored <code>slides</code> in source. The fields below
-            edit the single-slide preview only — multi-slide content is
-            preserved on save but not editable here yet.
-          </div>
-        ) : null}
-        <AttributesForm
-          schema={heroSchema}
-          values={node.attrs}
-          onChange={updateAttributes}
-        />
-      </AttributesPopover>
+      />
     </NodeViewWrapper>
   );
 }

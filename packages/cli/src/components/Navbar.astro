@@ -141,7 +141,10 @@ const showSecondaryRow = tabs.length > 0 || navbarLinks.length > 0 || primary;
     position: sticky;
     top: 0;
     z-index: 30;
-    background: color-mix(in srgb, var(--mcoe-bg-primary) 85%, transparent);
+    /* 85% chrome color over `transparent` keeps the perceived hue ~#f4f7fa
+       while leaving enough translucency for backdrop-filter to actually
+       blur the page content scrolling underneath. */
+    background: color-mix(in srgb, var(--nebula-chrome-bg) 85%, transparent);
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
   }

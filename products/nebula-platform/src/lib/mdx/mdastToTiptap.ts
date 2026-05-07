@@ -918,12 +918,14 @@ function convertStandaloneInlineBadge(node: MdxJsxFlowElement): TiptapNode {
 
 function convertHero(node: MdxJsxFlowElement): TiptapNode {
   const raw = extractAttrs(node);
-  const str = (key: string): string | null =>
-    typeof raw[key] === 'string' ? (raw[key] as string) : null;
-  const num = (key: string): number | null =>
-    typeof raw[key] === 'number' && Number.isFinite(raw[key])
-      ? (raw[key] as number)
-      : null;
+  const str = (key: string, src: Record<string, unknown> = raw): string | undefined => {
+    const v = src[key];
+    return typeof v === 'string' ? v : undefined;
+  };
+  const num = (key: string, src: Record<string, unknown> = raw): number | null => {
+    const v = src[key];
+    return typeof v === 'number' && Number.isFinite(v) ? v : null;
+  };
   // Variant must be one of the known values; anything else falls back to
   // banner so the editor preview doesn't crash on a typo.
   const rawVariant = str('variant');
@@ -931,27 +933,84 @@ function convertHero(node: MdxJsxFlowElement): TiptapNode {
     rawVariant === 'banner' || rawVariant === 'compact' || rawVariant === 'split'
       ? rawVariant
       : null;
+
+  // Two authoring forms collapse to the same internal shape:
+  //   1. shorthand    `<Hero title="..." description="..." />`
+  //   2. multi-slide  `<Hero slides={[{ title: "..." }, ...]} />`
+  // When both forms are present, the explicit `slides` array wins; the
+  // top-level fields are dropped so the editor doesn't have two competing
+  // sources of truth.
+  const slidesAttr = raw.slides;
+  let slides: HeroSlideShape[];
+  if (Array.isArray(slidesAttr)) {
+    slides = slidesAttr.map(coerceSlide);
+  } else {
+    slides = [coerceSlide(raw)];
+  }
+  if (slides.length === 0) slides = [{}];
+
   return {
     type: 'mdxHero',
     attrs: {
       variant,
-      eyebrow: str('eyebrow'),
-      title: str('title'),
-      accent: str('accent'),
-      description: str('description'),
-      background: str('background'),
-      textColor: str('textColor'),
-      accentColor: str('accentColor'),
-      secondaryTitle: str('secondaryTitle'),
-      secondaryDescription: str('secondaryDescription'),
-      sideImage: str('sideImage'),
-      sideImageAlt: str('sideImageAlt'),
       interval: num('interval'),
-      // Slides come in as a JSX expression — preserve as-is so the
-      // serializer can re-emit them unchanged.
-      slides: raw.slides ?? null,
+      padded: typeof raw.padded === 'boolean' ? raw.padded : null,
+      slides,
     },
   };
+}
+
+interface HeroSlideShape {
+  eyebrow?: string;
+  title?: string;
+  accent?: string;
+  description?: string;
+  actions?: Array<{ label: string; href: string; style?: 'primary' | 'secondary' }>;
+  background?: string;
+  textColor?: string;
+  accentColor?: string;
+  secondaryTitle?: string;
+  secondaryDescription?: string;
+  sideImage?: string;
+  sideImageAlt?: string;
+}
+
+function coerceSlide(raw: unknown): HeroSlideShape {
+  if (!raw || typeof raw !== 'object') return {};
+  const r = raw as Record<string, unknown>;
+  const out: HeroSlideShape = {};
+  const strFields = [
+    'eyebrow',
+    'title',
+    'accent',
+    'description',
+    'background',
+    'textColor',
+    'titleColor',
+    'accentColor',
+    'secondaryTitle',
+    'secondaryDescription',
+    'sideImage',
+    'sideImageAlt',
+  ] as const;
+  for (const k of strFields) {
+    const v = r[k];
+    if (typeof v === 'string') out[k] = v;
+  }
+  if (Array.isArray(r.actions)) {
+    const acts: HeroSlideShape['actions'] = [];
+    for (const a of r.actions) {
+      if (!a || typeof a !== 'object') continue;
+      const o = a as Record<string, unknown>;
+      const label = typeof o.label === 'string' ? o.label : '';
+      const href = typeof o.href === 'string' ? o.href : '';
+      const style =
+        o.style === 'primary' || o.style === 'secondary' ? o.style : undefined;
+      acts.push({ label, href, ...(style ? { style } : {}) });
+    }
+    if (acts.length > 0) out.actions = acts;
+  }
+  return out;
 }
 
 function convertProfile(node: MdxJsxFlowElement): TiptapNode {

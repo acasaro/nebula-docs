@@ -133,6 +133,31 @@ export function localTenantPlugin(options: LocalTenantOptions): Plugin {
             return;
           }
 
+          // Resolve a tenant snippet path to a Vite-compiled ES module URL.
+          // Used by the editor's MdxSnippet NodeView to live-render `.tsx`
+          // snippets that live outside the platform's source tree. The
+          // 302 hands off to Vite's `/@fs` handler, which transforms the
+          // file on demand and resolves bare imports (`react`) against the
+          // platform's module graph.
+          if (req.method === 'GET' && url.pathname === '/snippet/module') {
+            const rel = url.searchParams.get('path');
+            if (!rel) {
+              sendJson(res, 400, { error: 'Missing path' });
+              return;
+            }
+            const abs = safeJoin(tenantRoot, rel);
+            try {
+              await fsp.access(abs);
+            } catch {
+              sendJson(res, 404, { error: `Not found: ${rel}` });
+              return;
+            }
+            res.statusCode = 302;
+            res.setHeader('Location', `/@fs${abs}`);
+            res.end();
+            return;
+          }
+
           if (req.method === 'POST' && url.pathname === '/commit') {
             const raw = await readBody(req);
             const body = JSON.parse(raw) as {

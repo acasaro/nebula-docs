@@ -383,10 +383,20 @@ export function MdxEditor({
     typeof frontmatter?.values.description === 'string'
       ? frontmatter.values.description
       : null;
+  // `mode: custom` pages own their entire layout — the runtime CustomLayout
+  // skips the auto title/description header and uses a 64rem container, so
+  // the editor matches both to stay WYSIWYG with the rendered output.
+  const isCustomMode = frontmatter?.values.mode === 'custom';
 
   return (
-    <div className={cn('mdx-prose mx-auto max-w-3xl py-10', className)}>
-      {fmTitle || fmDescription ? (
+    <div
+      className={cn(
+        'mdx-prose mx-auto py-10',
+        isCustomMode ? 'max-w-5xl' : 'max-w-3xl',
+        className,
+      )}
+    >
+      {!isCustomMode && (fmTitle || fmDescription) ? (
         <header
           className="mb-8 border-b border-border pb-6"
           data-component-part="page-header"

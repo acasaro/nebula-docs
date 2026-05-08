@@ -3,13 +3,13 @@ import { Input } from "@/components/ui/input";
 import { InlineSpinner } from "@/components/ui/NebulaLoader";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatBytes, useAssets, useAssetUpload, type Asset } from "@/lib/assets";
-import { useIconManifest } from "@/lib/iconManifest";
+import { fetchIconManifest, useIconManifest } from "@/lib/iconManifest";
 import { cn } from "@/lib/utils";
 import { Icon, type IconLibrary, type IconType } from "@nebula-docs/components";
 import * as Popover from "@radix-ui/react-popover";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { Link2, Plus, Search, Trash2, Upload } from "lucide-react";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 export interface IconValue {
   icon?: string;
@@ -105,6 +105,17 @@ export function IconPickerPopover({
   onChange,
   children,
 }: IconPickerPopoverProps) {
+  // Warm the manifest cache as soon as a picker trigger renders so the first
+  // click feels instant. Without this, the network round-trip to the icon CDN
+  // happens on click and the picker opens to a "Loading icons…" spinner.
+  // fetchIconManifest is in-flight + cache-deduped, so every additional
+  // trigger on the page is a free no-op.
+  useEffect(() => {
+    void fetchIconManifest("lucide").catch(() => {});
+    void fetchIconManifest("material").catch(() => {});
+    void fetchIconManifest("material-symbols").catch(() => {});
+  }, []);
+
   return (
     <Popover.Root open={open} onOpenChange={onOpenChange}>
       <Popover.Trigger asChild>{children}</Popover.Trigger>

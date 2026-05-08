@@ -1,3 +1,4 @@
+import { useEffect, useState, type ComponentType } from 'react';
 import { Node, mergeAttributes } from '@tiptap/core';
 import {
   NodeViewWrapper,
@@ -10,6 +11,7 @@ import {
   useSnippetContent,
   useSnippetRepoPath,
 } from '@/lib/mdx/snippetResolver';
+import { env } from '@/lib/env';
 import { cn } from '@/lib/utils';
 import { MdxFragment } from './MdxRenderer';
 
@@ -133,36 +135,37 @@ function MdxImportedSnippetView({ node, selected }: NodeViewProps) {
     navigate(`/editor/${branch}/~/${repoPath}`);
   };
 
-  // .jsx / .tsx React component snippets render live at build time (Astro +
-  // MDX picks them up natively). The editor can't safely eval arbitrary
-  // user JSX, so it shows a labeled placeholder instead.
+  // .jsx / .tsx React component snippets:
+  //  - LOCAL backend: dynamically import the compiled module via the
+  //    `/api/snippet/module` endpoint (which 302s to Vite's `/@fs` handler)
+  //    and render the component live. Same React tree as the editor.
+  //  - GitHub backend: source isn't on the Vite dev server's filesystem,
+  //    so fall back to the labeled placeholder card.
   if (isReact) {
     return (
       <NodeViewWrapper
         data-mdx-imported-snippet=""
-        data-state="react-placeholder"
+        data-state="react"
         className={cn(
-          'group/snippet relative my-4 rounded-md border border-dashed border-primary/40 bg-muted/30 p-4',
-          selected && 'ring-2 ring-primary/40',
+          'group/snippet relative my-4',
+          selected && 'rounded-md ring-2 ring-primary/40',
         )}
       >
         <div contentEditable={false} className="relative">
           <SourceLink branch={branch} onOpen={openSource} repoPath={repoPath} binding={binding} />
-          <div className="text-sm font-semibold text-foreground/80">
-            &lt;{binding} /&gt;
-          </div>
-          <div className="mt-1 text-xs text-muted-foreground">
-            React component from{' '}
-            <code className="rounded bg-background/60 px-1 py-0.5 font-mono">{path}</code>
-            . Renders at build time.
-          </div>
-          {Object.keys(jsxAttrs).length ? (
-            <pre className="mt-2 overflow-x-auto rounded border border-border/40 bg-background/60 p-2 text-xs text-foreground/80">
-              {Object.entries(jsxAttrs)
-                .map(([k, v]) => `${k}=${formatProp(v)}`)
-                .join('  ')}
-            </pre>
-          ) : null}
+          {env.isLocalBackend ? (
+            <ReactSnippetLive
+              binding={binding}
+              path={path}
+              jsxAttrs={jsxAttrs}
+            />
+          ) : (
+            <ReactSnippetPlaceholder
+              binding={binding}
+              path={path}
+              jsxAttrs={jsxAttrs}
+            />
+          )}
         </div>
       </NodeViewWrapper>
     );
@@ -215,6 +218,150 @@ function MdxImportedSnippetView({ node, selected }: NodeViewProps) {
         <MdxFragment source={bodyWithProps} />
       </div>
     </NodeViewWrapper>
+  );
+}
+
+interface ReactSnippetSubProps {
+  binding: string;
+  path: string;
+  jsxAttrs: Record<string, unknown>;
+}
+
+type LoadState =
+  | { status: 'loading' }
+  | { status: 'loaded'; Component: ComponentType<Record<string, unknown>> }
+  | { status: 'error'; error: string };
+
+/**
+ * Live-render a `.tsx` snippet by dynamically importing it through Vite's
+ * dev server. The module URL hits `/api/snippet/module?path=...` which the
+ * local-tenant Vite plugin redirects to `/@fs/<abs>?import` so Vite handles
+ * compilation and bare-import resolution against the platform's module
+ * graph. Falls back to the labeled placeholder card on any failure (build
+ * error, missing export, etc.) so the editor stays usable.
+ */
+function ReactSnippetLive({ binding, path, jsxAttrs }: ReactSnippetSubProps) {
+  const [state, setState] = useState<LoadState>({ status: 'loading' });
+
+  useEffect(() => {
+    let cancelled = false;
+    const cleaned = path.replace(/^\/+/, '');
+    const url = `/api/fs/snippet/module?path=${encodeURIComponent(cleaned)}`;
+    setState({ status: 'loading' });
+    import(/* @vite-ignore */ url)
+      .then((mod: Record<string, unknown>) => {
+        if (cancelled) return;
+        const candidate =
+          (mod.default as ComponentType<Record<string, unknown>> | undefined) ??
+          (mod[binding] as ComponentType<Record<string, unknown>> | undefined);
+        if (!candidate) {
+          setState({
+            status: 'error',
+            error: `Module ${path} exported neither a default nor a named "${binding}".`,
+          });
+          return;
+        }
+        setState({ status: 'loaded', Component: candidate });
+      })
+      .catch((err: unknown) => {
+        if (cancelled) return;
+        const message = err instanceof Error ? err.message : String(err);
+        setState({ status: 'error', error: message });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [binding, path]);
+
+  if (state.status === 'loading') {
+    return <SnippetSkeleton binding={binding} path={path} />;
+  }
+  if (state.status === 'error') {
+    return (
+      <ReactSnippetPlaceholder
+        binding={binding}
+        path={path}
+        jsxAttrs={jsxAttrs}
+        error={state.error}
+      />
+    );
+  }
+  // Errors during the snippet's own render bubble up here. Tiptap's
+  // ErrorBoundary doesn't wrap NodeViews, so we render plain — if a snippet
+  // throws, the editor surfaces a console error and the card disappears.
+  // That's acceptable for a tenant-authored escape hatch.
+  const Component = state.Component;
+  return <Component {...jsxAttrs} />;
+}
+
+/**
+ * Animated placeholder shown while a `.tsx` snippet is being compiled +
+ * fetched. Sized to roughly match the typical hero/strip dimensions so the
+ * page doesn't reflow on swap.
+ */
+function SnippetSkeleton({ binding, path }: { binding: string; path: string }) {
+  return (
+    <div
+      data-snippet-skeleton=""
+      className={cn(
+        'relative my-2 flex h-[240px] w-full items-center justify-center overflow-hidden rounded-md border border-border/40 bg-muted/30',
+      )}
+      role="status"
+      aria-busy="true"
+      aria-label={`Loading snippet ${binding}`}
+    >
+      <div
+        className="absolute inset-0 animate-pulse bg-gradient-to-r from-transparent via-muted/40 to-transparent"
+        aria-hidden
+      />
+      <div className="relative flex flex-col items-center gap-1 text-xs text-muted-foreground">
+        <span className="font-mono">&lt;{binding} /&gt;</span>
+        <span>{path}</span>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Static fallback card. Shown in non-LOCAL backends (where the snippet's
+ * source isn't on the Vite dev server's filesystem) and as the error state
+ * when live rendering fails.
+ */
+function ReactSnippetPlaceholder({
+  binding,
+  path,
+  jsxAttrs,
+  error,
+}: ReactSnippetSubProps & { error?: string }) {
+  return (
+    <div
+      data-state={error ? 'react-error' : 'react-placeholder'}
+      className={cn(
+        'rounded-md border border-dashed p-4',
+        error ? 'border-destructive/40 bg-destructive/5' : 'border-primary/40 bg-muted/30',
+      )}
+    >
+      <div className="text-sm font-semibold text-foreground/80">
+        &lt;{binding} /&gt;
+      </div>
+      <div className="mt-1 text-xs text-muted-foreground">
+        React component from{' '}
+        <code className="rounded bg-background/60 px-1 py-0.5 font-mono">{path}</code>
+        {error ? ' — failed to render in editor:' : '. Renders at build time.'}
+      </div>
+      {error ? (
+        <pre className="mt-2 overflow-x-auto whitespace-pre-wrap break-words rounded border border-destructive/30 bg-background/60 p-2 text-xs text-destructive">
+          {error}
+        </pre>
+      ) : null}
+      {Object.keys(jsxAttrs).length ? (
+        <pre className="mt-2 overflow-x-auto rounded border border-border/40 bg-background/60 p-2 text-xs text-foreground/80">
+          {Object.entries(jsxAttrs)
+            .map(([k, v]) => `${k}=${formatProp(v)}`)
+            .join('  ')}
+        </pre>
+      ) : null}
+    </div>
   );
 }
 

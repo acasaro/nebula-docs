@@ -1,0 +1,15 @@
+---
+// Renders the runtime bootstrap script for `@nebula-docs/analytics`.
+//
+// Used by both `DocsLayout.astro` and `CustomLayout.astro` so MDX pages
+// rendered with `mode: custom` get the same instrumentation as default
+// pages. We use `is:inline type="module"` and a dynamic `import()` so the
+// generated `.nebula/analyticsConfig.mjs` doesn't get tree-shaken by
+// Astro's hoisted-script bundler when the source is a single side-effect
+// import.
+---
+<script is:inline type="module">
+  import('/src/runtime/analytics/bootstrap.mjs').catch((err) => {
+    console.warn('[nebula] analytics bootstrap failed', err);
+  });
+</script>

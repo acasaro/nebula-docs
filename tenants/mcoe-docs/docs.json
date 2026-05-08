@@ -7,6 +7,9 @@
     "extends": "./theme.json",
     "switcherEnabled": false
   },
+  "analytics": {
+    "provider": "firebase"
+  },
   "navigation": {
     "tabs": [
       {
@@ -94,7 +97,10 @@
       },
       {
         "tab": "Product",
-        "icon": "shapes",
+        "icon": {
+          "name": "target",
+          "library": "lucide"
+        },
         "pages": [
           "product"
         ]

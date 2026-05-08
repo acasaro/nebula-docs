@@ -5,11 +5,14 @@ import Navbar from '../components/Navbar.astro';
 import Footer from '../components/Footer.astro';
 import TocSidebar from '../components/TocSidebar.astro';
 import Lightbox from '../runtime/components/Lightbox.astro';
+import SearchIsland from '../runtime/search/SearchIsland.astro';
+import AnalyticsBootstrap from '../runtime/analytics/AnalyticsBootstrap.astro';
 import {
   loadDocsConfig,
   findGroupForSlug,
   findBreadcrumbsForSlug,
 } from '../runtime/lib/loadDocsConfig.mjs';
+import { tabContainsSlug, withBase } from '../runtime/lib/nav.mjs';
 
 interface Heading {
   depth: number;
@@ -22,10 +25,41 @@ interface Props {
   description?: string;
   currentSlug: string;
   headings?: Heading[];
+  /** Per-page light-mode bg override. Falls through to the theme default if omitted. */
+  backgroundColor?: string;
+  /** Per-page dark-mode bg override. Falls through to the theme default if omitted. */
+  backgroundColorDark?: string;
 }
 
-const { title, description, currentSlug, headings = [] } = Astro.props as Props;
+const {
+  title,
+  description,
+  currentSlug,
+  headings = [],
+  backgroundColor,
+  backgroundColorDark,
+} = Astro.props as Props;
+
+// Inline-style each override as a CSS custom property on <body>. The static
+// CSS in this layout's <style is:global> block reads these vars and applies
+// them only in the matching theme (light vs dark) — so an unset side falls
+// back to the theme default rather than leaking the other side's color.
+const bodyStyleParts: string[] = [];
+if (backgroundColor) bodyStyleParts.push(`--page-bg-light: ${backgroundColor}`);
+if (backgroundColorDark) bodyStyleParts.push(`--page-bg-dark: ${backgroundColorDark}`);
+const bodyStyle = bodyStyleParts.length > 0 ? bodyStyleParts.join('; ') : undefined;
 const docs = loadDocsConfig();
+
+// The active tab is stamped onto the article as `data-pagefind-meta="tab:..."`
+// so the Pagefind index carries which tab each page belongs to. The search
+// modal reads `result.meta.tab` to group results by tab when scopeBy="tab".
+const activeTab = (docs.navigation?.tabs ?? []).find((t: any) =>
+  tabContainsSlug(t, currentSlug),
+);
+const tabLabel = activeTab?.tab ?? '';
+const searchConfig = docs.search ?? null;
+const searchScopeBy = (searchConfig?.scopeBy ?? 'tab') as 'tab' | 'page' | 'none';
+const siteBase = (import.meta.env.BASE_URL as string) || '/';
 
 // Eyebrow rendering — Mintlify `styling.eyebrows`. `"section"` (default)
 // shows the deepest group's name; `"breadcrumbs"` shows the full nav path
@@ -69,7 +103,7 @@ const hasToc = tocHeadings.length > 0;
       })();
     </script>
   </head>
-  <body>
+  <body style={bodyStyle}>
     <Navbar docs={docs} currentSlug={currentSlug} />
     <div class="nebula-shell">
       <aside class="nebula-aside">
@@ -77,7 +111,10 @@ const hasToc = tocHeadings.length > 0;
       </aside>
       <div class="nebula-content-area">
         <main class="nebula-main">
-          <article>
+          <article
+            data-pagefind-body={searchConfig ? '' : undefined}
+            data-pagefind-meta={searchConfig && tabLabel ? `tab:${tabLabel}` : undefined}
+          >
             <header class="nebula-page-header">
               {sectionEyebrow && <p class="nebula-eyebrow">{sectionEyebrow}</p>}
               {breadcrumbs.length > 0 && (
@@ -86,7 +123,7 @@ const hasToc = tocHeadings.length > 0;
                     <>
                       {i > 0 && <span class="nebula-breadcrumb-sep" aria-hidden="true">›</span>}
                       {b.href ? (
-                        <a class="nebula-breadcrumb-link" href={b.href}>{b.label}</a>
+                        <a class="nebula-breadcrumb-link" href={withBase(b.href, siteBase)}>{b.label}</a>
                       ) : (
                         <span>{b.label}</span>
                       )}
@@ -113,6 +150,8 @@ const hasToc = tocHeadings.length > 0;
     </div>
     <Footer docs={docs} />
     <Lightbox />
+    {searchConfig && <SearchIsland scopeBy={searchScopeBy} base={siteBase} />}
+    <AnalyticsBootstrap />
     {/* Copy-to-clipboard button on every fenced code block. Walks
         `.astro-code` pres after render and appends a button child;
         CSS in global.css positions it absolute top-right (over the
@@ -162,6 +201,19 @@ const hasToc = tocHeadings.length > 0;
         }
       })();
     </script>
+    <style is:global>
+      /* Per-page background override. Each rule is gated by the active
+         theme so a one-sided override (only light, or only dark) leaves
+         the other side falling through to the theme default rather than
+         painting it the wrong color. `:where()` keeps specificity equal
+         to the body's attribute selector, so source order tie-breaks. */
+      :where(:root:not([data-theme="dark"]):not(.dark)) body[style*="--page-bg-light"] {
+        background: var(--page-bg-light);
+      }
+      :where(:root[data-theme="dark"], :root.dark) body[style*="--page-bg-dark"] {
+        background: var(--page-bg-dark);
+      }
+    </style>
     <style>
       /* Full-width shell — sidebar pinned to the left, article + TOC live
          inside `.nebula-content-area` and are centered as a group within

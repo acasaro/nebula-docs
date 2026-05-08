@@ -169,3 +169,28 @@ export function tabHref(tab) {
   if (slug === 'index') return '/';
   return `/${slug}`;
 }
+
+/**
+ * Prefix a site-internal href with Astro's configured `base` so links resolve
+ * correctly under per-PR previews (`bucket/previews/<PR#>/`) and any other
+ * non-root deployment. Astro auto-prefixes asset URLs but does NOT rewrite
+ * `<a href="/foo">` — those have to be wrapped explicitly.
+ *
+ * Pass-throughs:
+ *   - external (`http:`, `https:`, `mailto:`, `tel:`, scheme-relative `//`)
+ *   - hash-only (`#section`)
+ *   - relative (no leading `/`)
+ *
+ * Anything else is treated as a site-rooted path and gets the base prepended.
+ * `base` is whatever `import.meta.env.BASE_URL` returns — Astro normalizes it
+ * to always end in `/`, but we accept both shapes (`/previews/42` and
+ * `/previews/42/`) and dedupe trailing slashes either way.
+ */
+export function withBase(href, base) {
+  if (typeof href !== 'string' || href.length === 0) return href;
+  if (href.startsWith('//') || /^[a-z][a-z0-9+.-]*:/i.test(href)) return href;
+  if (href.startsWith('#')) return href;
+  if (!href.startsWith('/')) return href;
+  const normBase = !base || base === '/' ? '' : base.replace(/\/+$/, '');
+  return normBase + href;
+}

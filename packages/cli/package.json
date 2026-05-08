@@ -27,12 +27,14 @@
   "dependencies": {
     "@astrojs/mdx": "^5.0.4",
     "@astrojs/react": "^5.0.4",
+    "@nebula-docs/analytics": "workspace:*",
     "@nebula-docs/components": "workspace:*",
     "@nebula-docs/mdx": "workspace:*",
     "@nebula-docs/schemas": "workspace:*",
     "@nebula-docs/theme": "workspace:*",
     "@tailwindcss/vite": "^4.2.4",
     "astro": "^6.2.2",
+    "pagefind": "^1.5.2",
     "react": "^19.2.3",
     "react-dom": "^19.2.3",
     "tailwindcss": "^4.2.4"

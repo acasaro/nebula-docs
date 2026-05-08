@@ -17,18 +17,17 @@ export function TopicLink({ label = '', href, className }: TopicLinkProps) {
   return (
     <Component
       href={href}
-      style={{ color: 'var(--brand-blue-mid)' }}
       className={cn(
-        'flex items-center justify-between gap-2 py-3 text-sm font-medium',
-        'border-b border-stone-200/60 last:border-b-0 dark:border-stone-700/40',
+        'flex items-center justify-between gap-2 py-3.5 text-sm font-medium',
+        'border-b border-stone-950/[.04] last:border-b-0 dark:border-white/[.06]',
         'no-underline transition-colors',
-        href && 'hover:underline',
+        'text-[var(--mcoe-brand-primary)] hover:text-[var(--mcoe-brand-primary-dark)] hover:underline',
         className,
       )}
       data-component-part="topic-link"
     >
       <span className="truncate">{label}</span>
-      <ChevronRight className="size-4 shrink-0 text-stone-200/60 dark:text-stone-700/40" />
+      <ChevronRight className="size-4 shrink-0 text-stone-950/[.18] dark:text-white/[.22]" />
     </Component>
   );
 }

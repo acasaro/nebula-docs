@@ -2,7 +2,7 @@
 import NebulaIcon from './NebulaIcon.astro';
 import SidebarGroup from './SidebarGroup.astro';
 import SidebarPageLink from './SidebarPageLink.astro';
-import { activeTabIndex, isHidden, isGroup, resolveIcon } from '../runtime/lib/nav.mjs';
+import { activeTabIndex, isHidden, isGroup, resolveIcon, withBase } from '../runtime/lib/nav.mjs';
 
 interface Props {
   docs: {
@@ -19,6 +19,7 @@ interface Props {
 }
 
 const { docs, currentSlug } = Astro.props as Props;
+const siteBase = (import.meta.env.BASE_URL as string) || '/';
 const tabs = docs.navigation?.tabs ?? [];
 const rootPages = docs.navigation?.pages ?? [];
 const rootGroups = docs.navigation?.groups ?? [];
@@ -65,7 +66,7 @@ const ariaLabel = activeTab?.tab ?? 'Documentation';
             return (
               <a
                 class="nebula-sidebar-anchor-link"
-                href={a.href}
+                href={withBase(a.href, siteBase)}
                 target={isExt ? '_blank' : undefined}
                 rel={isExt ? 'noopener noreferrer' : undefined}
               >
@@ -132,7 +133,7 @@ const ariaLabel = activeTab?.tab ?? 'Documentation';
             return (
               <a
                 class="nebula-sidebar-anchor-link"
-                href={d.href}
+                href={withBase(d.href, siteBase)}
                 target={isExt ? '_blank' : undefined}
                 rel={isExt ? 'noopener noreferrer' : undefined}
               >
@@ -212,7 +213,7 @@ const ariaLabel = activeTab?.tab ?? 'Documentation';
         return (
           <a
             class="nebula-sidebar-anchor-link"
-            href={m.href}
+            href={withBase(m.href, siteBase)}
             target={isExt ? '_blank' : undefined}
             rel={isExt ? 'noopener noreferrer' : undefined}
           >

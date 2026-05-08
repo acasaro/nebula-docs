@@ -46,10 +46,12 @@ const description = data.description;
 const currentSlug = entry.id;
 const isCustomMode = data.mode === 'custom';
 
-// Sanitize per-page background overrides (custom mode only). Tenants own
-// their MDX so this is a footgun guard, not a security boundary — a value
-// containing CSS terminators or HTML brackets would silently break the
-// inline-style declaration we emit, so we drop it instead.
+// Sanitize per-page background overrides. Tenants own their MDX so this is
+// a footgun guard, not a security boundary — a value containing CSS
+// terminators or HTML brackets would silently break the inline-style
+// declaration we emit, so we drop it instead. Available in both `mode:
+// custom` (full-bleed shell) and the default DocsLayout (article + sidebar
+// chrome), so any page can paint a branded background.
 const sanitizeColor = (raw: unknown): string | undefined => {
   if (typeof raw !== 'string') return undefined;
   const trimmed = raw.trim();
@@ -57,10 +59,8 @@ const sanitizeColor = (raw: unknown): string | undefined => {
   if (/[;{}\n\r<>]/.test(trimmed)) return undefined;
   return trimmed;
 };
-const backgroundColor = isCustomMode ? sanitizeColor(data.backgroundColor) : undefined;
-const backgroundColorDark = isCustomMode
-  ? sanitizeColor(data.backgroundColorDark)
-  : undefined;
+const backgroundColor = sanitizeColor(data.backgroundColor);
+const backgroundColorDark = sanitizeColor(data.backgroundColorDark);
 
 // Merge Astro variants over the React component map. Astro variants are
 // required for:
@@ -104,6 +104,8 @@ const components = {
     description={description}
     currentSlug={currentSlug}
     headings={headings}
+    backgroundColor={backgroundColor}
+    backgroundColorDark={backgroundColorDark}
   >
     <Content components={components} />
   </DocsLayout>

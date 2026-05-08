@@ -127,14 +127,17 @@ GitHub webhook handler that writes events to Firestore for the SPA to consume.
 
 **Firestore schema**
 
-- `builds/{run_id}` — keyed by GitHub workflow run ID; upserted as the run progresses (queued → in_progress → completed). Fields: `workflowName`, `branch`, `headSha`, `status`, `conclusion`, `htmlUrl`, `startedAt`, `completedAt`.
+- `builds/{run_id}` — keyed by GitHub workflow run ID; upserted as the run progresses (queued → in_progress → completed). Fields: `workflowName`, `branch`, `headSha`, `status`, `conclusion`, `htmlUrl`, `startedAt`, `completedAt`, `pullRequestNumber` (PR # for PR-triggered runs, `null` otherwise), `previewUrl` (only set when PR-triggered AND the tenant repo's docs.json declares `deploy.bucketBaseUrl` — see "Preview before merge" below).
 - `activity/{autoId}` — append-only feed for `pull_request`, `push`, `installation`, `installation_repositories`, plus a generic catch-all entry for other events. Each doc has `event`, `action`, `summary`, `repo`, `actor`, plus event-specific fields.
+
+**Preview URL resolution** — for PR-triggered `workflow_run` events the handler reads the tenant repo's `docs.json` via Octokit (using the same App-installation token mintGithubToken uses) and computes `previewUrl = ${docs.deploy.bucketBaseUrl}/previews/${prNumber}/`. Module-scoped cache keyed by `owner/repo` with a 5-minute TTL keeps consecutive workflow_run events for the same run (queued / in_progress / completed) from re-fetching docs.json. Tenants that haven't opted into preview builds simply omit `deploy.bucketBaseUrl`; the build doc lands without `previewUrl` and the dashboard button stays disabled.
 
 **PARKED**
 
 - SPA dashboard subscription to `activity/` and `builds/` (the mock-data → live-data swap on Home).
 - Verify Firestore rules on `nebula-docs-plat-dev` allow `activity` / `builds` reads. The default-DB rules are correct (auth'd reads, function bypasses via admin SDK); rules are per-database, so the dev DB needs the same applied either via the GCP console or by extending `firebase.json` for multi-database deploys.
 - Prod webhook URL / secret config in the `nebula-docs` (Enterprise) GitHub App settings — only when ready to roll out to prod.
+- Smoke test the preview-cleanup workflow on the dev tenant: the GH App token's bucket-write scope at PR-close time may differ from PR-open time depending on how `uhg-pipelines/immerse-actions/vaults/get-secrets@v2` resolves credentials.
 
 ---
 
@@ -154,6 +157,13 @@ Multi-tenant Astro-based static site generator. Design doc: [nebula-cli.md](nebu
 - Layout chrome: `src/layouts/DocsLayout.astro` + `src/components/{Navbar,Sidebar,SidebarGroup,Footer}.astro` consume `docs.json` for tabs/groups/pages, navbar primary + links, footer columns + copyright. Sidebar marks the current page via `aria-current="page"`.
 - JSON Schemas published as Phase 0 stubs at `packages/cli/schemas/{docs,theme}.schema.json`. Authoritative shape will be generated from `@nebula-docs/schemas` Zod definitions in Phase 3.
 - Component map at `src/runtime/components/registry.tsx` exposes the full `@nebula-docs/components` surface to MDX. Includes `CalloutShim` that accepts both `type` (Mintlify-style) and `variant` (our component API).
+
+**DONE — Preview before merge (`--base` flag + tenant workflow templates)**
+
+- `nebula build --base /previews/<PR#>` produces a bundle whose asset paths, sidebar links, navbar tabs, footer columns, breadcrumbs, and MDX-content `<a href>` / `<img src>` / Card href all resolve under that prefix. The flag is normalized (`/previews/42`, `/previews/42/`, and `previews/42` all collapse to `/previews/42`) before being passed to Astro's `base` config via `NEBULA_BASE`.
+- `withBase()` helper in `src/runtime/lib/nav.mjs` is the choke point for layout-emitted hrefs (Sidebar, SidebarGroup, SidebarPageLink, Navbar, Footer, DocsLayout breadcrumbs). External (`http:`/`mailto:`/scheme-relative `//`), hash-only, and relative URLs pass through; site-rooted paths get the base prepended.
+- MDX-content href/src rewriting: new `remarkBasePrefix` plugin in `@nebula-docs/mdx` walks the MDAST and rewrites `link` / `image` URLs plus string-valued `href` / `src` attributes on `mdxJsxFlowElement` / `mdxJsxTextElement`. Idempotent and a no-op when base is unset, so it's registered unconditionally in `astro.config.mjs`. Expression-valued attrs (`<Card href={someVar} />`) aren't rewritten — authors using those wrap with `withBase` themselves.
+- Tenant template at `packages/cli/template/.github/workflows/{deploy,cleanup-preview}.yml`. `deploy.yml` triggers on push-to-main (build with no base → ooss-deploy with sync-delete to bucket root) AND on pull_request (build with `--base /previews/<PR#>` → `aws s3 sync` to `previews/<PR#>/` with `--delete` scoped to the sub-prefix). `cleanup-preview.yml` triggers on PR close → `aws s3 rm --recursive` on the sub-prefix. Concurrency groups cancel in-flight runs for the same branch / PR. Bucket name is a `REPLACE_ME_BUCKET_NAME` env var the tenant fills in at scaffold time. Companion field `deploy.bucketBaseUrl` in `docs.json` (added to the JSON Schema stub + `@nebula-docs/schemas`'s `deployConfigSchema`) tells the webhook handler the public URL to construct preview URLs from.
 
 **OPEN — Phase 1 follow-ups**
 
@@ -175,17 +185,15 @@ Multi-tenant Astro-based static site generator. Design doc: [nebula-cli.md](nebu
 
 Five features designed but not yet implemented. Each fits into the existing seven-package framework — none requires a new top-level package. See [architecture.md](architecture.md) for how they fit together.
 
-### 1. Preview before merge
+### ~~1. Preview before merge~~ — DONE
 
-Per-PR builds at `bucket/previews/<PR-number>/`, surfaced via the dashboard's existing Preview button.
+Per-PR builds at `bucket/previews/<PR-number>/`, surfaced via the dashboard's existing Preview button. Split across:
 
-- **Where it lives**:
-  - `@nebula-docs/cli` — accept `--base /previews/<PR-number>/` flag, pass through to Astro's `base` config
-  - Tenant template (`packages/cli/template/.github/workflows/deploy.yml`) — PR-trigger → build with `--base` → upload to bucket sub-path; main-trigger → build with no base → bucket root
-  - Cleanup workflow (`packages/cli/template/.github/workflows/cleanup-preview.yml`) — PR-closed → delete `bucket/previews/<PR-number>/`
-  - `functions/src/githubWebhookHandler.ts` — compute `previewUrl` on `builds/{run_id}` for non-main `workflow_run` events
-  - `products/nebula-platform/` — Preview button reads `build.previewUrl` and opens in new tab
-- **Order**: CLI flag first (depends on Phase 2 bootstrap); workflow YAML in tenant template; webhook URL computation; Platform button wiring last.
+- **CLI** — `--base` flag, `withBase()` helper for layout chrome, `remarkBasePrefix` plugin for MDX-content href/src rewriting, tenant workflow templates at `packages/cli/template/.github/workflows/`. See "DONE — Preview before merge" under [CLI](#cli) above.
+- **Webhook** — `previewUrl` computed on `builds/{run_id}` for PR-triggered `workflow_run` events by reading `deploy.bucketBaseUrl` from the tenant's `docs.json` via Octokit (cached per-repo). See "Preview URL resolution" under [Webhook + activity feed](#webhook--activity-feed) above.
+- **Platform** — `PreviewExpandedDetails.tsx` and the Preview button already read `entry.previewUrl`. The mock-data → live-data swap on Home is the parked gating item; once it lands the button is live with no further changes.
+
+**Bucket URL choice (documented in code).** Three options were considered: (a) tenant exposes `deploy.bucketBaseUrl` in `docs.json`, function reads via Octokit; (b) function-side config map keyed by repo; (c) workflow writes a separate Firestore doc the function reads back. Picked (a) because the tenant repo is already the source of truth for everything else (navigation, theming, snippets), and the function already has installation-token machinery for `mintGithubToken` so reusing it adds no new auth surface. Cache TTL on the docs.json read is 5 minutes — a tenant flipping the field propagates within minutes.
 
 ### ~~2. Snippets~~ — DONE (Mintlify-aligned import model)
 
@@ -254,20 +262,44 @@ Read-side counterpart to `@nebula-docs/analytics` (write-side). Visitors, views,
   - `products/nebula-platform/` — new dashboard widgets (visitors / views / top pages cards) wired to `getAnalyticsSummary`. Degrades gracefully when no provider is configured (shows "Analytics not configured").
 - **Note**: provider-send-side and dashboard-read-side are different concerns. The send-side ships in `@nebula-docs/analytics`; the read-side is a Cloud Function + UI in the Platform.
 
-### 5. Search
+### ~~5. Search~~ — DONE (Pagefind)
 
-Pagefind. Build-time index, zero runtime dependency, multi-tenant by construction.
+Pagefind. Build-time index, zero runtime dependency, multi-tenant by construction. Tenants opt in via `docs.json.search`; omitting the key ships zero search JS / no Pagefind index.
 
-- **Where it lives**:
-  - `@nebula-docs/cli/src/runtime/search/` — Pagefind integration: build-time indexer + a small React island for the search UI
-  - Tenants opt in via `docs.json`: `"search": { "provider": "pagefind", "scopeBy": "tab" }`
-  - Tenants who omit the search section ship zero search JS
+**Landed:**
+
+- `@nebula-docs/schemas`:
+  - `src/docs/search.ts` — `searchConfigSchema` Zod schema with `provider: "pagefind"` (default) and `scopeBy: "tab" | "page" | "none"` (default `"tab"`). Re-exported from `src/docs/index.ts` and the package barrel.
+- `packages/cli/schemas/docs.schema.json` — JSON Schema stub tightened: `search` object now has `additionalProperties: false`, defaults documented, enum gates on both fields. Authoritative shape will be generated from the Zod schema in Phase 3.
+- `@nebula-docs/cli`:
+  - `src/integration/searchIntegration.mjs` — Astro integration. `astro:build:done` hook reads the tenant's `docs.json`, no-ops when `search` is absent, otherwise calls Pagefind's Node API (`createIndex` → `addDirectory` → `writeFiles`) against the built `dist/`. Output lands at `dist/pagefind/{pagefind.js, fragment/, index/, wasm.*.pagefind, ...}` next to the static HTML. Pagefind chosen over the CLI-spawn approach because errors surface as JS rejections instead of opaque exit codes.
+  - `astro.config.mjs` — registers the integration alongside `mdx()` and `react()`.
+  - `src/runtime/search/pagefindClient.ts` — typed wrapper around Pagefind's runtime entry. Resolves `<base>/pagefind/pagefind.js` once per page via `import(/* @vite-ignore */ url)` so Vite doesn't try to resolve at build time (the file only exists post-`astro build`). Calls `pagefind.options({ baseUrl })` so result URLs are correct under preview deploys at `/previews/<PR#>/`. Returns `null` when the index is missing (dev mode), letting the modal render an "available after build" placeholder.
+  - `src/runtime/search/SearchModal.tsx` — single React island. Listens for `nebula:search:open` events on `document`, plus global `/`, `Cmd-K`, `Ctrl-K`. The `/`-key heuristic (skip when `<INPUT>` / `<TEXTAREA>` / contenteditable is the event target) mirrors Algolia DocSearch's behavior so typing a slash inside any form field doesn't yank focus. Lazy-loads Pagefind on first open; on subsequent opens it's already in `pagefindRef.current`. Debounced search (`pf.debouncedSearch(query, {}, 80ms)`) → top 30 results resolved via `result.data()` → grouped by `meta.tab` when `scopeBy="tab"`, flat list otherwise. Active-row tracking + arrow-key nav + Enter to navigate. Body-scroll locked while open. Theming via the `--mcoe-*` CSS vars already emitted by `@nebula-docs/theme`; results' `<mark>` tags (Pagefind highlights matches automatically) restyled to use `--mcoe-brand-primary`.
+  - `src/runtime/search/SearchIsland.astro` — wraps the React island with `client:load` plus a `<style is:global>` block carrying the modal CSS. Single import surface for the layouts.
+  - `src/components/Navbar.astro` — search button gated on `Boolean(docs.search)`. Carries `data-nebula-search-trigger`; an inline `<script is:inline>` wires the click to `document.dispatchEvent(new CustomEvent('nebula:search:open'))`. Keeps the modal a single React island instead of forcing the whole navbar through React.
+  - `src/layouts/{DocsLayout,CustomLayout}.astro` — both layouts compute the active tab via `tabContainsSlug` and stamp `data-pagefind-meta="tab:<TabName>"` on the article body, gated on `searchConfig` so opt-out tenants emit no Pagefind attrs at all. `<SearchIsland>` is rendered only when `searchConfig` is non-null. Astro emits the SearchModal JS chunk to `_astro/` regardless (the import exists statically), but no HTML page references it on opt-out tenants, so browsers never fetch it.
+- Both starter fixtures (`tenants/nebula-docs-starter/docs.json` and `tenants/nebula-docs-starter-empty/docs.json`) opt in: `"search": { "provider": "pagefind", "scopeBy": "tab" }`. MCOE's `tenants/mcoe-docs/docs.json` opts in too.
+
+**Verified:**
+
+- `pnpm --filter @nebula-docs/cli build tenants/nebula-docs-starter-empty` → indexes 5 pages in ~80ms, writes `dist/pagefind/`. The kitchen-sink `nebula-docs-starter` builds 32 pages and produces an 832KB `dist/pagefind/` (5.5% of the 15MB total dist).
+- Typechecks: `pnpm --filter @nebula-docs/cli typecheck` and `pnpm --filter @nebula-docs/schemas typecheck` both pass.
+- Modal interaction tested via `nebula preview tenants/nebula-docs-starter`: navbar button + Cmd-K both open the modal, querying `callout` returned three correctly-grouped results under the "Components" tab heading, click-through navigated to the page.
+- Zero-cost opt-out: temporarily removed `search` from `nebula-docs-starter-empty/docs.json` and rebuilt. The integration logged "docs.json has no search block — skipping Pagefind index" and produced a `dist/` with **0** `data-nebula-search-trigger` buttons, **0** `data-pagefind-body` markers, **0** `astro-island` references for SearchModal, and **0** HTML pages referencing the SearchModal JS chunk. The chunk file is still emitted to `_astro/` as a side artifact (Vite tree-shaking can't remove it because the static `import` graph reaches it), but it's never loaded at runtime — disk-only cost, irrelevant for hosting bandwidth.
+
+**Open / known limitations:**
+
+- **Dev mode shows "available after build" placeholder.** Astro dev serves source modules, not built HTML, so there's no Pagefind index to query. The modal handles the missing-index 404 gracefully. A live dev index would require running Pagefind on each HMR rebuild — deferred until a tenant complains.
+- **The unreferenced SearchModal chunk in `_astro/`.** ~50KB on disk on opt-out tenants. Removing it cleanly would require a conditional import path (e.g. `astro.config` integration that skips registering the React island when no search config is found at build start). Not worth the complexity until a tenant flags it.
+- **`scopeBy: "page"` is wired in the schema but currently renders flat (no group headers) — same as `"none"`.** The original UX target ports MCOE's tab-scoped results (the `"tab"` mode), which is the only one a real tenant has asked for. `"page"`-mode result grouping (one entry per page with sub-snippets) would need the modal to fetch multi-snippet `data()` per result and re-render per-section — straightforward extension if anyone needs it.
+- **Analytics emission.** The schema already has a `search` event (per analytics workstream). Wiring `data-analytics-*` attributes onto the modal's input + result links is deferred until the analytics workstream lands its auto-tracker; the hook point is `SearchModal.tsx`'s input `onChange` and result `<a>` markup.
 
 ---
 
 ## Chat kickoff prompts for the next workstreams
 
-Two chats to spawn after this refactor lands. Each is self-contained — paste the kickoff into a fresh chat.
+Self-contained kickoffs — paste any of these into a fresh chat.
 
 ### Kickoff: Editor completion (finish Platform)
 
@@ -296,6 +328,98 @@ Two chats to spawn after this refactor lands. Each is self-contained — paste t
 > Don't relitigate Astro vs Next/Vite/Eleventy — settled in `nebula-cli.md`. Don't introduce new packages without flagging — the seven-package framework is the boundary (see `architecture.md`).
 >
 > Definition of done: `pnpm --filter @nebula-docs/cli dev tenants/nebula-docs-starter-empty` shows the synthetic tenant rendering with correct theme tokens, navigation from `docs.json`, all blocks (Card, Frame, Tabs, Steps, Callout, ParamField, etc.) rendering correctly. `pnpm --filter @nebula-docs/cli build tenants/nebula-docs-starter-empty` produces a static `tenants/nebula-docs-starter-empty/dist/` that opens in a browser.
+
+### Kickoff: Search (Pagefind)
+
+> Read `CLAUDE.md`, `.claude/architecture.md`, `.claude/nebula-cli.md` (especially the "Search" section starting line 505 — the provider decision is locked), and `.claude/status.md` (workstream "5. Search" at line 258).
+>
+> **Goal**: docs sites built by the CLI ship a working search box. `/` opens the modal, results group by tab, theming follows token-driven styling, and tenants who omit the `search` config in `docs.json` ship zero search JS.
+>
+> **Settled context — don't relitigate**
+>
+> - **Provider is Pagefind.** Multi-tenant by construction (each tenant builds → each tenant gets their own static index in their own `dist/`). Zero runtime dependencies. UI is wrapped in our own React island with token-driven styling. Algolia DocSearch was rejected (hosted, per-tenant index setup, scales with tenants). See `nebula-cli.md` lines 505–523.
+> - **Opt-in shape.** `docs.json` carries `"search": { "provider": "pagefind", "scopeBy": "tab" }`. Future providers (Algolia, Typesense) can land behind the same interface; Pagefind is the default. Schema lives in `@nebula-docs/schemas`.
+> - **UX target ports MCOE's existing nav search**: `/`-key shortcut to open, scoped results per tab, search shortcut chip in the navbar. The legacy site uses `@easyops-cn/docusaurus-search-local` — Pagefind replaces it.
+> - **Analytics already has a `search` event** in the schema (see `nebula-cli.md` line 535). Wire emission via the existing `data-analytics-*` attribute convention when the analytics workstream lands; for now just leave the hook.
+>
+> **Where it lives**
+>
+> - `packages/cli/src/runtime/search/` — the integration. Indexer (post-build) + a small React island for the modal UI.
+> - `packages/cli/src/components/Navbar.astro` — render the search trigger when `docs.json.search` is present.
+> - `packages/cli/astro.config.mjs` (or a new integration hook) — chain Pagefind's CLI after `astro build` so the index lands next to the static HTML.
+> - `packages/schemas/` — extend `docs.schema` with the `search` object.
+> - `packages/cli/template/docs.json` — enable Pagefind in the starter scaffold.
+>
+> **Order**
+>
+> 1. Schema first: extend `@nebula-docs/schemas` with the `search` config object; regenerate the JSON Schema stub at `packages/cli/schemas/docs.schema.json`.
+> 2. Build pipeline: run `pagefind --site dist` after Astro build inside the CLI's `build` command. Verify `dist/pagefind/` lands.
+> 3. UI island: React component using `@pagefind/default-ui` (or Pagefind's JS API directly if we want to fully own the markup — the latter is closer to "output owned"). Token-driven styling via the same CSS vars `@nebula-docs/theme` emits.
+> 4. Navbar trigger + `/` keybinding + Cmd/Ctrl-K. Scope filtering keyed off `scopeBy: "tab"` reading the current tab from the page metadata.
+> 5. Verify zero-cost opt-out: tenant deletes `search` from `docs.json` → the navbar trigger disappears AND no Pagefind JS/wasm is loaded on the page.
+>
+> **Edge cases to think through (not pre-decided)**
+>
+> - Pagefind run as a post-build CLI step vs. an Astro integration hook (`astro:build:done`). Integration hook is cleaner; CLI step is more debuggable. Prefer the integration unless something blocks it.
+> - The React island lives downstream of the SSR boundary that bit us with Tabs/Steps (status.md:161). The search modal is leaf-interactive (no `Children.toArray` introspection), so a single-island React component should be fine — but verify before assuming.
+> - Index size for the tenant fixture. Pagefind chunks well; sanity-check on `tenants/nebula-docs-starter` (the populated starter) and confirm the index doesn't dominate `dist/`.
+> - Theme switching: the modal must react to `documentElement.dark` like `SourceEditor` does (status.md:30 — MutationObserver pattern is already in the repo).
+>
+> **Definition of done**
+>
+> - `pnpm --filter @nebula-docs/cli build tenants/nebula-docs-starter` produces `dist/pagefind/` with a populated index.
+> - On the rendered site, `/` opens a styled modal; results filter as you type and group by tab.
+> - Setting `docs.json.search` to `null` (or removing the key) removes the trigger and ships no Pagefind JS.
+> - `pnpm --filter @nebula-docs/cli typecheck` and `pnpm --filter @nebula-docs/schemas typecheck` pass.
+> - Update `.claude/status.md` — move Search from "Upcoming workstreams" to its own DONE section under CLI.
+
+### Kickoff: Preview before merge
+
+> Read `CLAUDE.md`, `.claude/architecture.md` (especially the "End-to-end editing flow" starting line 99 — preview is step 7, and the upcoming-features table line 170), `.claude/nebula-cli.md`, and `.claude/status.md` (workstream "1. Preview before merge" at line 178, plus the "Webhook + activity feed" section at line 117 for the existing Firestore schema).
+>
+> **Goal**: every PR opened against a tenant repo produces a static build at `bucket/previews/<PR-number>/`, the Cloud Function records the URL on the corresponding `builds/{run_id}` doc, and the dashboard's existing Preview button opens it in a new tab.
+>
+> **Settled context — don't relitigate**
+>
+> - The flow is already documented as the canonical editing path: PR-triggered build with `--base /previews/<PR#>/`, main-triggered build to bucket root. See `architecture.md` line 112.
+> - The Platform UI already exists: `products/nebula-platform/src/components/dashboard/PreviewsTable.tsx` and `PreviewExpandedDetails.tsx` read `entry.previewUrl` and render the link. Today they read mock data; this workstream feeds them real data.
+> - The webhook handler (`functions/src/githubWebhookHandler.ts` line 79) already writes `builds/{run_id}` on `workflow_run` events. We extend the doc shape with `previewUrl` for PR-triggered runs.
+> - Hosting is per-tenant OOSS bucket. CI is `uhg-runner` for prod tenants. (`nebula-cli.md` line 150.)
+>
+> **Where it lives**
+>
+> - `@nebula-docs/cli` — accept `--base <path>` flag on `build`, pass through to Astro's `base` config. Verify the rendered HTML's asset paths resolve under that base.
+> - `packages/cli/template/` — **doesn't exist yet.** Created as part of the `nebula init` scaffold. This workstream stands up two workflow files inside it:
+>   - `.github/workflows/deploy.yml` — `on: push (main)` builds without base → bucket root; `on: pull_request` builds with `--base /previews/${{ github.event.pull_request.number }}/` → bucket sub-path.
+>   - `.github/workflows/cleanup-preview.yml` — `on: pull_request (closed)` deletes `bucket/previews/<PR-number>/`.
+> - `functions/src/githubWebhookHandler.ts` — when a `workflow_run` payload's `pull_requests[]` is non-empty (PR-triggered), compute `previewUrl = ${tenantBucketBase}/previews/${pr.number}/` and merge it into the `builds/{run_id}` write. Both prod (`githubWebhook.ts`) and dev (`dev/githubWebhookDev.ts`) wrappers pick it up since they share the factory.
+> - `products/nebula-platform/` — Preview button reads `build.previewUrl`. Already wired in the mock; the swap from `mockData.ts` to live Firestore subscriptions is the parallel parked item (status.md:111) — call it out as a dependency, not a blocker.
+>
+> **Order** (matches `status.md` line 188)
+>
+> 1. **CLI flag.** `nebula build --base /previews/123/` produces a `dist/` whose HTML, CSS, JS, and asset references resolve under that prefix. Verify by serving the dist/ at that prefix locally and clicking around — internal nav, image src, Pagefind paths if Search has landed.
+> 2. **Workflow YAML in the tenant template.** Two files. The deploy workflow needs to authenticate to the bucket; reuse the existing pattern from `products/docs/` if there's a precedent (it's the legacy site's deploy chain). The cleanup workflow needs the same auth.
+> 3. **Webhook URL computation.** This is the trickiest piece — see edge cases. Add `previewUrl` to the `builds/{run_id}` shape documented at `status.md:130`.
+> 4. **Platform button wiring.** Confirm the existing UI reads `previewUrl` correctly once real data flows. The mock-to-live Firestore swap is a separate parked item; if that lands first, this becomes a no-op.
+>
+> **Edge cases — flag, don't pre-decide**
+>
+> - **Bucket base URL is per-tenant.** The function needs to know the public base URL of each tenant's bucket to construct `previewUrl`. Options: (a) tenant exposes it in `docs.json`, function reads via Octokit on each webhook; (b) tenant-keyed config map in the function; (c) the workflow itself writes the URL to a separate Firestore doc on completion (`build_artifacts/{run_id}`) so the function reads it back. Pick one, document the choice.
+> - **PR number from `workflow_run`.** The payload carries `pull_requests[]` populated when the run is PR-triggered. Cross-check `head_branch !== default_branch` is not enough on its own.
+> - **Reopened PRs.** Index by PR number, not by run id, so a reopened PR redeploys to the same path.
+> - **Astro `base` trailing slash.** Astro's behavior with/without trailing slash matters for the bucket sub-path. Verify with the synthetic tenant before locking the flag shape.
+> - **Cleanup workflow auth.** The cleanup runs on PR close, which means the GH App's token may not have bucket-write at that moment depending on how secrets are scoped. Worth a smoke test on the dev tenant.
+> - **Dev-side parity.** Functions have prod/dev variants. The shared `githubWebhookHandler` factory means a single change covers both, but verify the dev path on the public-GH dev App + `nebula-docs-plat-dev` Firestore database before declaring done.
+>
+> **Definition of done**
+>
+> - `nebula build --base /previews/42/` produces a bundle that loads correctly when served from that prefix.
+> - `packages/cli/template/.github/workflows/{deploy,cleanup-preview}.yml` exist; a tenant scaffolded via `nebula init` ships with them.
+> - Open a test PR on a dev-app-installed tenant repo → `builds/{run_id}` in `nebula-docs-plat-dev` Firestore has a populated `previewUrl` field → manually visiting the URL shows the PR's content.
+> - Closing the PR deletes the sub-path from the bucket.
+> - The Platform Preview button opens the URL in a new tab (verifiable as soon as the parked Firestore-subscription swap lands; until then, sanity-check by injecting a synthetic `builds/` doc into the dev DB).
+> - `pnpm --filter @nebula-docs/cli typecheck` and `pnpm --filter @nebula-docs/functions typecheck` pass.
+> - Update `.claude/status.md` — move Preview before merge from "Upcoming workstreams" into the relevant DONE sections (split across CLI, Webhook, Platform).
 
 ---
 

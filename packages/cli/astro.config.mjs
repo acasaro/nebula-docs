@@ -1,6 +1,6 @@
 import mdx from "@astrojs/mdx";
 import react from "@astrojs/react";
-import { remarkAutoComponentImports } from "@nebula-docs/mdx";
+import { remarkAutoComponentImports, remarkBasePrefix } from "@nebula-docs/mdx";
 import tailwindcss from "@tailwindcss/vite";
 import { defineConfig } from "astro/config";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
@@ -8,6 +8,7 @@ import { createRequire } from "node:module";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { composeTokensCss } from "./src/runtime/lib/composeTokens.mjs";
+import searchIntegration from "./src/integration/searchIntegration.mjs";
 
 const require = createRequire(import.meta.url);
 
@@ -238,9 +239,18 @@ export default defineConfig({
   },
   integrations: [
     mdx({
-      remarkPlugins: [[remarkAutoComponentImports, { components: autoImportComponents }]],
+      // remarkBasePrefix runs AFTER auto-imports so the auto-injected
+      // imports themselves aren't affected (their paths target node_modules
+      // / Vite aliases, not site-rooted URLs). When `base` is unset or `/`
+      // the plugin returns a no-op transformer, so it's free to register
+      // unconditionally.
+      remarkPlugins: [
+        [remarkAutoComponentImports, { components: autoImportComponents }],
+        [remarkBasePrefix, { base: base ?? "" }],
+      ],
     }),
     react(),
+    searchIntegration(),
   ],
   vite: {
     plugins: [tailwindcss(), nebulaThemeHmrPlugin()],

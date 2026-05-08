@@ -1,7 +1,10 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
+import { createAppAuth } from '@octokit/auth-app';
+import { Octokit } from '@octokit/rest';
 import { getApps, initializeApp, type App } from 'firebase-admin/app';
 import { FieldValue, getFirestore, type Firestore } from 'firebase-admin/firestore';
 import { onRequest, type HttpsFunction } from 'firebase-functions/v2/https';
+import { logger } from 'firebase-functions/v2';
 import type { defineSecret } from 'firebase-functions/params';
 
 type SecretParam = ReturnType<typeof defineSecret>;
@@ -66,6 +69,20 @@ function senderOf(p: BaseEvent) {
   return s ? { login: s.login, avatarUrl: s.avatar_url } : null;
 }
 
+interface WorkflowRunPayload {
+  id: number;
+  name: string;
+  run_number: number;
+  head_branch: string;
+  head_sha: string;
+  status: string;
+  conclusion: string | null;
+  html_url: string;
+  run_started_at: string;
+  updated_at: string;
+  pull_requests?: Array<{ number: number }>;
+}
+
 function buildWrites(eventName: string, payload: Record<string, unknown>): FirestoreWrite[] {
   const base = payload as BaseEvent;
   const common = {
@@ -77,21 +94,9 @@ function buildWrites(eventName: string, payload: Record<string, unknown>): Fires
 
   switch (eventName) {
     case 'workflow_run': {
-      const run = payload.workflow_run as
-        | {
-            id: number;
-            name: string;
-            run_number: number;
-            head_branch: string;
-            head_sha: string;
-            status: string;
-            conclusion: string | null;
-            html_url: string;
-            run_started_at: string;
-            updated_at: string;
-          }
-        | undefined;
+      const run = payload.workflow_run as WorkflowRunPayload | undefined;
       if (!run) return [];
+      const prNumber = run.pull_requests?.[0]?.number ?? null;
       return [
         {
           collection: 'builds',
@@ -109,6 +114,7 @@ function buildWrites(eventName: string, payload: Record<string, unknown>): Fires
             htmlUrl: run.html_url,
             startedAt: run.run_started_at ? new Date(run.run_started_at) : null,
             completedAt: run.status === 'completed' ? new Date(run.updated_at) : null,
+            pullRequestNumber: prNumber,
             updatedAt: FieldValue.serverTimestamp(),
           },
         },
@@ -197,14 +203,98 @@ function buildWrites(eventName: string, payload: Record<string, unknown>): Fires
   }
 }
 
+/**
+ * Resolve the tenant's `deploy.bucketBaseUrl` from its `docs.json`. The
+ * function uses an App-installation token (already minted for `mintGithubToken`)
+ * to GET the file via Octokit. Returns `null` when the field is unset, the
+ * file is missing, or the request fails — the caller treats null as "no
+ * preview URL", which is intentional: tenants that haven't opted into
+ * preview builds simply omit the field.
+ *
+ * Cached per-repo at module scope with a short TTL. Cloud Function
+ * containers are reused across invocations, so consecutive workflow_run
+ * events for the same PR usually hit the cache (workflow_run fires 3+
+ * times per CI run: queued / in_progress / completed). The TTL is short
+ * enough that a tenant flipping bucketBaseUrl propagates within minutes.
+ */
+const docsConfigCache = new Map<string, { bucketBaseUrl: string | null; fetchedAt: number }>();
+const DOCS_CONFIG_TTL_MS = 5 * 60 * 1000;
+
+interface ResolveBucketBaseUrlArgs {
+  appId: string;
+  privateKey: string;
+  installationId: number;
+  owner: string;
+  repo: string;
+  ref?: string;
+}
+
+async function resolveBucketBaseUrl(args: ResolveBucketBaseUrlArgs): Promise<string | null> {
+  const cacheKey = `${args.owner}/${args.repo}`;
+  const cached = docsConfigCache.get(cacheKey);
+  if (cached && Date.now() - cached.fetchedAt < DOCS_CONFIG_TTL_MS) {
+    return cached.bucketBaseUrl;
+  }
+
+  try {
+    const auth = createAppAuth({ appId: args.appId, privateKey: args.privateKey });
+    const installationAuth = await auth({
+      type: 'installation',
+      installationId: args.installationId,
+    });
+    const octokit = new Octokit({ auth: installationAuth.token });
+    const response = await octokit.repos.getContent({
+      owner: args.owner,
+      repo: args.repo,
+      path: 'docs.json',
+      ...(args.ref ? { ref: args.ref } : {}),
+    });
+
+    const data = response.data as { content?: string; encoding?: string; type?: string };
+    if (data.type !== 'file' || typeof data.content !== 'string') {
+      docsConfigCache.set(cacheKey, { bucketBaseUrl: null, fetchedAt: Date.now() });
+      return null;
+    }
+
+    const decoded = Buffer.from(data.content, (data.encoding ?? 'base64') as BufferEncoding).toString('utf8');
+    const docs = JSON.parse(decoded) as { deploy?: { bucketBaseUrl?: string } };
+    const raw = docs.deploy?.bucketBaseUrl;
+    const bucketBaseUrl = typeof raw === 'string' && raw.length > 0 ? raw.replace(/\/+$/, '') : null;
+    docsConfigCache.set(cacheKey, { bucketBaseUrl, fetchedAt: Date.now() });
+    return bucketBaseUrl;
+  } catch (err) {
+    // Cache the miss too so a tenant without docs.json doesn't cause an
+    // Octokit call on every webhook event. The miss expires with the same
+    // TTL so an added file picks up within minutes.
+    docsConfigCache.set(cacheKey, { bucketBaseUrl: null, fetchedAt: Date.now() });
+    logger.warn('resolveBucketBaseUrl failed', {
+      repo: cacheKey,
+      message: err instanceof Error ? err.message : String(err),
+    });
+    return null;
+  }
+}
+
 export interface WebhookHandlerOptions {
   secret: SecretParam;
   databaseId?: string;
+  /**
+   * GitHub App credentials for resolving tenant `docs.json` on PR-triggered
+   * `workflow_run` events. Optional — when omitted, `previewUrl` computation
+   * is skipped and the build doc still lands without a preview link (which
+   * the dashboard renders as a disabled Preview button). Reuses the same
+   * App identity as `mintGithubToken` so no new App permissions are needed.
+   */
+  githubApp?: {
+    appId: SecretParam;
+    privateKey: SecretParam;
+  };
 }
 
 export function makeWebhookHandler(options: WebhookHandlerOptions): HttpsFunction {
-  const { secret, databaseId } = options;
-  return onRequest({ secrets: [secret] }, async (request, response) => {
+  const { secret, databaseId, githubApp } = options;
+  const secrets = [secret, ...(githubApp ? [githubApp.appId, githubApp.privateKey] : [])];
+  return onRequest({ secrets }, async (request, response) => {
     if (request.method !== 'POST') {
       response.status(405).send('Method Not Allowed');
       return;
@@ -227,6 +317,40 @@ export function makeWebhookHandler(options: WebhookHandlerOptions): HttpsFunctio
     const payload = (request.body ?? {}) as Record<string, unknown>;
 
     const writes = buildWrites(eventName, payload);
+
+    // For PR-triggered workflow_run events, look up the tenant's
+    // bucketBaseUrl from docs.json and stamp `previewUrl` onto the builds
+    // doc. Done here (not in buildWrites) so the lookup is async and
+    // doesn't fan out into every event type.
+    if (eventName === 'workflow_run' && githubApp && writes.length > 0) {
+      const run = payload.workflow_run as WorkflowRunPayload | undefined;
+      const base = payload as BaseEvent;
+      const prNumber = run?.pull_requests?.[0]?.number;
+      const installationId = base.installation?.id;
+      const repo = base.repository;
+      if (run && prNumber && installationId && repo) {
+        const appId = githubApp.appId.value();
+        const privateKey = githubApp.privateKey.value().replace(/\\n/g, '\n');
+        if (appId && privateKey) {
+          const bucketBaseUrl = await resolveBucketBaseUrl({
+            appId,
+            privateKey,
+            installationId,
+            owner: repo.owner.login,
+            repo: repo.name,
+            ref: run.head_sha,
+          });
+          if (bucketBaseUrl) {
+            for (const w of writes) {
+              if (w.collection === 'builds') {
+                w.data.previewUrl = `${bucketBaseUrl}/previews/${prNumber}/`;
+              }
+            }
+          }
+        }
+      }
+    }
+
     const target = db(databaseId);
     await Promise.all(
       writes.map((w) => {

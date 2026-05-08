@@ -138,8 +138,7 @@ export function TopicCard({
       {viewAllHref ? (
         inactive ? (
           <span
-            style={{ color: 'var(--brand-blue-mid)' }}
-            className="mt-auto inline-flex items-center gap-1 pt-3 text-sm font-semibold"
+            className="mt-auto inline-flex items-center gap-1 pt-3 text-[13px] font-semibold text-[var(--mcoe-brand-primary)]"
             data-component-part="topic-card-view-all"
           >
             View all
@@ -148,8 +147,7 @@ export function TopicCard({
         ) : (
           <a
             href={viewAllHref}
-            style={{ color: 'var(--brand-blue-mid)' }}
-            className="mt-auto inline-flex items-center gap-1 pt-3 text-sm font-semibold no-underline hover:underline"
+            className="mt-auto inline-flex items-center gap-1 pt-3 text-[13px] font-semibold text-[var(--mcoe-brand-primary)] no-underline hover:text-[var(--mcoe-brand-primary-dark)] hover:underline"
             data-component-part="topic-card-view-all"
           >
             View all

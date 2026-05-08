@@ -14,3 +14,7 @@ export {
   remarkAutoComponentImports,
   type RemarkAutoComponentImportsOptions,
 } from './auto-imports';
+export {
+  remarkBasePrefix,
+  type RemarkBasePrefixOptions,
+} from './base-prefix';

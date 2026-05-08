@@ -147,24 +147,20 @@ export function PageSettingsForm({
         options={MODE_OPTIONS}
         placeholder="Default"
       />
-      {values.mode === 'custom' ? (
-        <>
-          <ColorRow
-            label="BG Light"
-            icon={Sun}
-            value={values.backgroundColor}
-            onChange={(v) => onChange({ backgroundColor: v })}
-            placeholder="Theme default"
-          />
-          <ColorRow
-            label="BG Dark"
-            icon={Moon}
-            value={values.backgroundColorDark}
-            onChange={(v) => onChange({ backgroundColorDark: v })}
-            placeholder="Theme default"
-          />
-        </>
-      ) : null}
+      <ColorRow
+        label="BG Light"
+        icon={Sun}
+        value={values.backgroundColor}
+        onChange={(v) => onChange({ backgroundColor: v })}
+        placeholder="Theme default"
+      />
+      <ColorRow
+        label="BG Dark"
+        icon={Moon}
+        value={values.backgroundColorDark}
+        onChange={(v) => onChange({ backgroundColorDark: v })}
+        placeholder="Theme default"
+      />
     </div>
   );
 }

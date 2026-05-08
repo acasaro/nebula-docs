@@ -36,6 +36,15 @@
         "source ~/.nvm/nvm.sh && nvm use 22 >/dev/null && exec pnpm --filter @nebula-docs/cli dev tenants/mcoe-docs"
       ],
       "port": 4321
+    },
+    {
+      "name": "nebula-cli-starter-preview",
+      "runtimeExecutable": "/bin/bash",
+      "runtimeArgs": [
+        "-lc",
+        "source ~/.nvm/nvm.sh && nvm use 22 >/dev/null && exec pnpm --filter @nebula-docs/cli preview tenants/nebula-docs-starter --port 4322"
+      ],
+      "port": 4322
     }
   ]
 }

@@ -1,6 +1,6 @@
 ---
 import NebulaIcon from './NebulaIcon.astro';
-import { activeTabIndex, tabHref, resolveIcon } from '../runtime/lib/nav.mjs';
+import { activeTabIndex, tabHref, resolveIcon, withBase } from '../runtime/lib/nav.mjs';
 
 interface Props {
   docs: any;
@@ -8,17 +8,19 @@ interface Props {
 }
 
 const { docs, currentSlug } = Astro.props as Props;
+const siteBase = (import.meta.env.BASE_URL as string) || '/';
 const tabs = docs.navigation?.tabs ?? [];
 const activeIdx = activeTabIndex(tabs, currentSlug);
 const versions = docs.versions ?? [];
 const currentVersion = versions.find((v: any) => v.default) ?? versions[0];
 
-const logoHref = docs.logo?.href ?? '/';
+const logoHref = withBase(docs.logo?.href ?? '/', siteBase);
 const hasLogoImg = Boolean(docs.logo?.light || docs.logo?.dark);
 
 const navbarLinks = docs.navbar?.links ?? [];
 const primary = docs.navbar?.primary;
 const showSecondaryRow = tabs.length > 0 || navbarLinks.length > 0 || primary;
+const searchEnabled = Boolean(docs.search);
 ---
 <header class="nebula-navbar">
   <!-- Top utility row: brand + version + search/theme toggles -->
@@ -47,11 +49,18 @@ const showSecondaryRow = tabs.length > 0 || navbarLinks.length > 0 || primary;
     </div>
 
     <div class="nebula-navbar-actions">
-      <button type="button" class="nebula-search-btn" aria-label="Search docs">
-        <NebulaIcon name="search" size={14} />
-        <span class="nebula-search-placeholder">Search</span>
-        <kbd class="nebula-kbd">⌘K</kbd>
-      </button>
+      {searchEnabled && (
+        <button
+          type="button"
+          class="nebula-search-btn"
+          aria-label="Search docs"
+          data-nebula-search-trigger
+        >
+          <NebulaIcon name="search" size={14} />
+          <span class="nebula-search-placeholder">Search</span>
+          <kbd class="nebula-kbd">⌘K</kbd>
+        </button>
+      )}
       <button
         type="button"
         class="nebula-icon-btn"
@@ -72,7 +81,7 @@ const showSecondaryRow = tabs.length > 0 || navbarLinks.length > 0 || primary;
       <nav class="nebula-navbar-tabs" aria-label="Sections">
         {tabs.map((tab: any, i: number) => {
           const tabIcon = resolveIcon(tab.icon);
-          const href = tabHref(tab);
+          const href = withBase(tabHref(tab), siteBase);
           const isActive = i === activeIdx;
           return (
             <a
@@ -97,7 +106,7 @@ const showSecondaryRow = tabs.length > 0 || navbarLinks.length > 0 || primary;
         {navbarLinks.map((link: any) => {
           const linkIcon = resolveIcon(link.icon);
           return (
-            <a class="nebula-navbar-link" href={link.href}>
+            <a class="nebula-navbar-link" href={withBase(link.href, siteBase)}>
               {linkIcon && (
                 <NebulaIcon
                   name={linkIcon.name}
@@ -111,7 +120,7 @@ const showSecondaryRow = tabs.length > 0 || navbarLinks.length > 0 || primary;
           );
         })}
         {primary && (
-          <a class="nebula-navbar-primary" href={primary.href}>
+          <a class="nebula-navbar-primary" href={withBase(primary.href, siteBase)}>
             {primary.label}
           </a>
         )}
@@ -131,6 +140,15 @@ const showSecondaryRow = tabs.length > 0 || navbarLinks.length > 0 || primary;
         var current = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
         document.documentElement.setAttribute('data-theme', current);
         try { localStorage.setItem('nebula-theme', current); } catch (_) {}
+      });
+    });
+    // Dispatch the open event the SearchModal island listens for. We do
+    // this from a tiny inline script (rather than wiring onClick on the
+    // Astro template) so the modal stays a single React island instead
+    // of forcing the whole navbar through the React boundary.
+    document.querySelectorAll('[data-nebula-search-trigger]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        document.dispatchEvent(new CustomEvent('nebula:search:open'));
       });
     });
   })();

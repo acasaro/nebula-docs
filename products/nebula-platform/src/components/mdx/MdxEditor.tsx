@@ -388,7 +388,38 @@ export function MdxEditor({
   // the editor matches both to stay WYSIWYG with the rendered output.
   const isCustomMode = frontmatter?.values.mode === 'custom';
 
+  // Per-page background overrides. Mirror the CLI's render contract: the
+  // light/dark vars are emitted as inline custom properties on the editor
+  // surface, and Tailwind's arbitrary-value bg utilities paint each one
+  // only in the matching theme — `transparent` fallback so an unset side
+  // falls through to the platform's default surface instead of clobbering
+  // it. Same `[;{}\n\r<>]` guard the CLI uses, so a malformed value just
+  // gets dropped instead of breaking the inline-style declaration.
+  const sanitizeColor = (raw: unknown): string | undefined => {
+    if (typeof raw !== 'string') return undefined;
+    const trimmed = raw.trim();
+    if (!trimmed) return undefined;
+    if (/[;{}\n\r<>]/.test(trimmed)) return undefined;
+    return trimmed;
+  };
+  const fmBgLight = sanitizeColor(frontmatter?.values.backgroundColor);
+  const fmBgDark = sanitizeColor(frontmatter?.values.backgroundColorDark);
+  const bgStyle = (fmBgLight || fmBgDark)
+    ? ({
+        ...(fmBgLight ? { ['--page-bg-light' as never]: fmBgLight } : {}),
+        ...(fmBgDark ? { ['--page-bg-dark' as never]: fmBgDark } : {}),
+      } as React.CSSProperties)
+    : undefined;
+
   return (
+    <div
+      className={cn(
+        'min-h-full',
+        bgStyle &&
+          'bg-[var(--page-bg-light,transparent)] dark:bg-[var(--page-bg-dark,transparent)]',
+      )}
+      style={bgStyle}
+    >
     <div
       className={cn(
         'mdx-prose mx-auto py-10',
@@ -461,6 +492,7 @@ export function MdxEditor({
         onDismiss={upload.dismiss}
         onClear={upload.dismissCompleted}
       />
+    </div>
     </div>
   );
 }

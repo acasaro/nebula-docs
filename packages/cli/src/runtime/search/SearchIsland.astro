@@ -1,0 +1,161 @@
+---
+import SearchModal from './SearchModal';
+
+interface Props {
+  scopeBy: 'tab' | 'page' | 'none';
+  base: string;
+}
+
+const { scopeBy, base } = Astro.props as Props;
+---
+<SearchModal scopeBy={scopeBy} base={base} client:load />
+
+<style is:global>
+  .nebula-search-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    background: color-mix(in srgb, var(--mcoe-bg-primary) 60%, transparent);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 6rem 1rem 2rem;
+  }
+  .nebula-search-modal {
+    width: 100%;
+    max-width: 36rem;
+    background: var(--mcoe-bg-primary);
+    border: 1px solid var(--mcoe-border-default);
+    border-radius: 0.875rem;
+    box-shadow: 0 20px 60px -10px color-mix(in srgb, var(--mcoe-text-heading) 35%, transparent);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    color: var(--mcoe-text-primary);
+  }
+  .nebula-search-input-row {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    padding: 0.875rem 1rem;
+    border-bottom: 1px solid var(--mcoe-border-default);
+  }
+  .nebula-search-input-icon {
+    width: 1.125rem;
+    height: 1.125rem;
+    color: var(--mcoe-text-secondary);
+    flex-shrink: 0;
+  }
+  .nebula-search-input {
+    flex: 1;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    color: var(--mcoe-text-heading);
+    font-size: 1rem;
+    font-family: inherit;
+  }
+  .nebula-search-input::placeholder {
+    color: var(--mcoe-text-secondary);
+  }
+  /* Hide the WebKit search-cancel "x" — we handle close ourselves */
+  .nebula-search-input::-webkit-search-cancel-button {
+    display: none;
+  }
+  .nebula-search-close {
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+    padding: 0;
+  }
+  .nebula-search-results {
+    flex: 1;
+    min-height: 8rem;
+    max-height: min(60vh, 32rem);
+    overflow-y: auto;
+    padding: 0.5rem;
+  }
+  .nebula-search-empty {
+    padding: 2rem 1rem;
+    text-align: center;
+    color: var(--mcoe-text-secondary);
+    font-size: 0.875rem;
+    margin: 0;
+  }
+  .nebula-search-empty code {
+    background: color-mix(in srgb, var(--mcoe-text-heading) 8%, transparent);
+    padding: 0.0625rem 0.3125rem;
+    border-radius: 0.25rem;
+    font-family: var(--nebula-font-mono);
+    font-size: 0.8125rem;
+  }
+  .nebula-search-result-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .nebula-search-group {
+    list-style: none;
+  }
+  .nebula-search-group ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .nebula-search-group-label {
+    margin: 0.5rem 0.5rem 0.25rem;
+    font-size: 0.6875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-weight: 600;
+    color: var(--mcoe-text-secondary);
+  }
+  .nebula-search-result {
+    display: block;
+    padding: 0.625rem 0.75rem;
+    border-radius: 0.5rem;
+    color: var(--mcoe-text-primary);
+    text-decoration: none;
+  }
+  .nebula-search-result:hover {
+    text-decoration: none;
+  }
+  .nebula-search-result--active {
+    background: color-mix(in srgb, var(--mcoe-brand-primary) 12%, transparent);
+    color: var(--mcoe-text-heading);
+  }
+  .nebula-search-result-title {
+    display: block;
+    font-size: 0.9375rem;
+    font-weight: 500;
+    color: var(--mcoe-text-heading);
+    margin-bottom: 0.125rem;
+  }
+  .nebula-search-result-excerpt {
+    display: block;
+    font-size: 0.8125rem;
+    line-height: 1.45;
+    color: var(--mcoe-text-secondary);
+    /* Pagefind wraps query matches in <mark>; restyle to fit our palette. */
+  }
+  .nebula-search-result-excerpt mark {
+    background: color-mix(in srgb, var(--mcoe-brand-primary) 25%, transparent);
+    color: inherit;
+    border-radius: 0.1875rem;
+    padding: 0 0.125rem;
+  }
+  .nebula-search-footer {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.625rem 1rem;
+    border-top: 1px solid var(--mcoe-border-default);
+    font-size: 0.75rem;
+    color: var(--mcoe-text-secondary);
+  }
+  .nebula-search-footer .nebula-kbd {
+    margin-right: 0.25rem;
+  }
+</style>

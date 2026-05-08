@@ -121,9 +121,23 @@
     },
     "search": {
       "type": "object",
+      "additionalProperties": false,
+      "description": "Build-time docs search. Tenants who omit this key ship zero search JS. Provider defaults to pagefind; scopeBy controls how results group in the modal (tab = one section per tab in docs.json.navigation; page = flat list; none = flat list, no group headers).",
       "properties": {
-        "provider": { "type": "string", "enum": ["pagefind"] },
-        "scopeBy": { "type": "string", "enum": ["tab", "page", "none"] }
+        "provider": { "type": "string", "enum": ["pagefind"], "default": "pagefind" },
+        "scopeBy": { "type": "string", "enum": ["tab", "page", "none"], "default": "tab" }
+      }
+    },
+    "deploy": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Build / deploy metadata. Used by the Cloud Functions webhook handler to construct per-PR preview URLs. Tenants that don't opt into preview builds can omit this field.",
+      "properties": {
+        "bucketBaseUrl": {
+          "type": "string",
+          "format": "uri",
+          "description": "Public base URL of the tenant's OOSS bucket, without trailing slash. The webhook handler appends `/previews/<PR#>/` to construct the preview URL written to builds/{run_id}.previewUrl."
+        }
       }
     },
     "analytics": {

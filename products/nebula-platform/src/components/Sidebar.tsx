@@ -29,8 +29,8 @@ export function Sidebar() {
       // /editor/:branch/~/<path> should keep "Editor" highlighted
       activePrefix: '/editor/',
     },
-    { to: '/assets', label: 'Assets', icon: ImageIcon, end: false },
     { to: '/analytics', label: 'Analytics', icon: BarChart3, end: false },
+    { to: '/assets', label: 'Assets', icon: ImageIcon, end: false },
     { to: '/settings/git', label: 'Git settings', icon: GitBranch, end: false },
     { to: '/settings/github-app', label: 'GitHub app', icon: Github, end: false },
   ];

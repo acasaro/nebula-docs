@@ -6,6 +6,7 @@ export * from './icon';
 export * from './frame';
 export * from './hero';
 export * from './profile';
+export * from './sheet';
 export * from './video';
 export * from './step';
 export * from './steps';

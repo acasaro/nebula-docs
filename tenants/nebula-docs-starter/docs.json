@@ -90,6 +90,7 @@
             "pages": [
               "components/callout",
               "components/badge",
+              "components/tooltip",
               "components/icon",
               "components/steps",
               "components/update"

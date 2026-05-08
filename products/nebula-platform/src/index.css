@@ -25,6 +25,52 @@
    * read as "brand" without dropping below ~4.5:1 contrast. */
   --brand-text: #00665e;
 
+  /* Content palette — hue/shade tokens consumed by editor components
+   * (Sheet, FeatureCard, Stats, etc.). Distinct from `--brand` (the
+   * Nebula UI accent above). Each hue exposes lightest/light/mid/dark/
+   * darkest where applicable. Components pick a hue and select shades:
+   * `mid` for accents and icons, `lightest` for tile backgrounds,
+   * `dark` for high-contrast pills. Dark-mode "ghost" surfaces come
+   * from the same `mid` mixed at low alpha against the canvas — no
+   * separate dark-mode entry is needed. */
+  --brand-neutral-white: #ffffff;
+  --brand-neutral-light: #dbdbdb;
+  --brand-neutral-dark: #7c7c7c;
+  --brand-neutral-black: #000000;
+
+  --brand-purple-lightest: #f6eaff;
+  --brand-purple-light: #deb4ff;
+  --brand-purple-mid: #6a3c98;
+  --brand-purple-dark: #500e82;
+  --brand-purple-darkest: #3d125f;
+
+  --brand-blue-lightest: #d7f5ff;
+  --brand-blue-light: #88e3ff;
+  --brand-blue-mid: #005fbe;
+  --brand-blue-dark: #11258e;
+
+  --brand-teal-lightest: #dbfffd;
+  --brand-teal-light: #95ffec;
+  --brand-teal-mid: #10c0c0;
+  --brand-teal-dark: #106375;
+
+  --brand-green-lightest: #dbfff3;
+  --brand-green-light: #95ffcc;
+  --brand-green-mid: #0fc382;
+  --brand-green-dark: #107557;
+
+  --brand-yellow-lightest: #fff4cd;
+  --brand-yellow-light: #ffe27f;
+  --brand-yellow-mid: #ffc500;
+
+  --brand-orange-light: #ffd7c9;
+  --brand-orange-mid: #ffa17f;
+  --brand-orange-dark: #ff4400;
+
+  --brand-red-light: #ffd0ec;
+  --brand-red-mid: #ff9cd8;
+  --brand-red-dark: #e5113c;
+
   /* shadcn/ui surface tokens — neutral palette. */
   --background: oklch(1 0 0);
   --foreground: oklch(0.141 0.005 285.823);

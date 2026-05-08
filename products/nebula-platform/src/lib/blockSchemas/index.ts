@@ -13,9 +13,11 @@ import { profileSchema } from './profile';
 import { requestExampleSchema } from './requestExample';
 import { responseExampleSchema } from './responseExample';
 import { responseFieldSchema } from './responseField';
+import { sheetSchema } from './sheet';
 import { stepSchema } from './step';
 import { stepsSchema } from './steps';
 import { tabSchema } from './tab';
+import { tooltipSchema } from './tooltip';
 import { updateSchema } from './update';
 import { videoSchema } from './video';
 
@@ -34,9 +36,11 @@ const REGISTRY: Record<string, BlockAttrSchema> = {
   [requestExampleSchema.blockType]: requestExampleSchema,
   [responseExampleSchema.blockType]: responseExampleSchema,
   [responseFieldSchema.blockType]: responseFieldSchema,
+  [sheetSchema.blockType]: sheetSchema,
   [stepSchema.blockType]: stepSchema,
   [stepsSchema.blockType]: stepsSchema,
   [tabSchema.blockType]: tabSchema,
+  [tooltipSchema.blockType]: tooltipSchema,
   [updateSchema.blockType]: updateSchema,
   [videoSchema.blockType]: videoSchema,
 };

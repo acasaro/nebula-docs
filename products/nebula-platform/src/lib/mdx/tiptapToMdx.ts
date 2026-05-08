@@ -102,6 +102,8 @@ function serializeBlock(node: TiptapNode): string {
       return serializeJsxBlock(node, 'Card');
     case 'mdxFrame':
       return serializeJsxBlock(node, 'Frame');
+    case 'mdxSheet':
+      return serializeJsxBlock(node, 'Sheet');
     case 'mdxUpdate':
       return serializeJsxBlock(node, 'Update');
     case 'mdxSteps':
@@ -595,6 +597,7 @@ function serializeInline(content?: TiptapNode[]): string {
 function serializeInlineNode(node: TiptapNode): string {
   if (node.type === 'hardBreak') return '  \n';
   if (node.type === 'mdxBadge') return serializeBadge(node);
+  if (node.type === 'mdxTooltip') return serializeTooltip(node);
   if (node.type !== 'text') return '';
   let text = node.text ?? '';
   const marks = sortMarks(node.marks ?? []);
@@ -611,6 +614,18 @@ function serializeBadge(node: TiptapNode): string {
   const attrStr = serializeAttrs(rest);
   const text = (label ?? '').trim();
   return `<Badge${attrStr}>${text}</Badge>`;
+}
+
+function serializeTooltip(node: TiptapNode): string {
+  const { text, side, align, ...rest } = (node.attrs ?? {}) as Record<string, unknown> & {
+    text?: string;
+  };
+  const passthrough: Record<string, unknown> = { ...rest };
+  if (side && side !== 'top') passthrough.side = side;
+  if (align && align !== 'center') passthrough.align = align;
+  const attrStr = serializeAttrs(passthrough);
+  const inner = (text ?? '').trim();
+  return `<Tooltip${attrStr}>${inner}</Tooltip>`;
 }
 
 function sortMarks(marks: TiptapMark[]): TiptapMark[] {

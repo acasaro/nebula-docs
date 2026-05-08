@@ -205,6 +205,7 @@ const autoImportComponents = {
   ResponseField: NEBULA_COMPONENTS,
   // Steps/Step/Tabs/Tab/Tree intentionally skipped — see comment above.
   Tip: NEBULA_COMPONENTS,
+  Tooltip: NEBULA_COMPONENTS,
   Update: NEBULA_COMPONENTS,
   Warning: NEBULA_COMPONENTS,
 };

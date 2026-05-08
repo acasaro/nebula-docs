@@ -18,10 +18,10 @@
     "./schemas/theme": "./schemas/theme.schema.json"
   },
   "scripts": {
-    "dev": "node --import tsx ./bin/nebula.mjs dev",
-    "build": "node --import tsx ./bin/nebula.mjs build",
-    "preview": "node --import tsx ./bin/nebula.mjs preview",
-    "validate": "node --import tsx ./bin/nebula.mjs validate",
+    "dev": "tsx ./bin/nebula.mjs dev",
+    "build": "tsx ./bin/nebula.mjs build",
+    "preview": "tsx ./bin/nebula.mjs preview",
+    "validate": "tsx ./bin/nebula.mjs validate",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

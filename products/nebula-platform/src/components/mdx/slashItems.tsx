@@ -9,6 +9,7 @@ import {
   Heading1,
   Heading2,
   Heading3,
+  HelpCircle,
   Layers,
   ArrowDownLeft,
   ArrowUpRight,
@@ -19,6 +20,7 @@ import {
   Image,
   Info,
   LayoutGrid,
+  LayoutPanelLeft,
   LayoutPanelTop,
   Lightbulb,
   Maximize2,
@@ -279,6 +281,25 @@ export const SLASH_ITEMS: SlashItem[] = [
         .insertContent({
           type: 'mdxCard',
           attrs: { title: 'Card title' },
+          content: [{ type: 'paragraph' }],
+        })
+        .run();
+    },
+  },
+  {
+    id: 'sheet',
+    label: 'Sheet',
+    description: 'Labeled content wrapper with left accent',
+    Icon: LayoutPanelLeft,
+    keywords: ['sheet', 'panel', 'wrapper', 'aside', 'highlight', 'section'],
+    command: ({ editor, range }) => {
+      editor
+        .chain()
+        .focus()
+        .deleteRange(range)
+        .insertContent({
+          type: 'mdxSheet',
+          attrs: { color: 'blue' },
           content: [{ type: 'paragraph' }],
         })
         .run();
@@ -595,6 +616,32 @@ export const SLASH_ITEMS: SlashItem[] = [
         .insertContent({
           type: 'mdxBadge',
           attrs: { label: 'Badge', color: 'gray' },
+        })
+        .run();
+    },
+  },
+  {
+    id: 'tooltip',
+    label: 'Tooltip',
+    description: 'Inline trigger with hover popup',
+    Icon: HelpCircle,
+    keywords: ['tooltip', 'hover', 'hint', 'popover'],
+    command: ({ editor, range }) => {
+      editor
+        .chain()
+        .focus()
+        .deleteRange(range)
+        .insertContent({
+          type: 'mdxTooltip',
+          attrs: {
+            text: 'tooltip',
+            title: 'Tooltip title',
+            description: '',
+            cta: null,
+            href: null,
+            side: 'top',
+            align: 'center',
+          },
         })
         .run();
     },

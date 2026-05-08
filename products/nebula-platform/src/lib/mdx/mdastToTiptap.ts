@@ -178,6 +178,7 @@ function convertBlock(node: RootContent, ctx: ConvertCtx): TiptapNode | null {
       if (name && CALLOUT_NAMES.has(name)) return convertCallout(jsx, ctx);
       if (name === 'Card') return convertSimpleBlock(jsx, ctx, 'mdxCard');
       if (name === 'Frame') return convertSimpleBlock(jsx, ctx, 'mdxFrame');
+      if (name === 'Sheet') return convertSimpleBlock(jsx, ctx, 'mdxSheet');
       if (name === 'Update') return convertSimpleBlock(jsx, ctx, 'mdxUpdate');
       if (name === 'Steps') return convertSteps(jsx, ctx);
       if (name === 'Tabs') return convertTabs(jsx, ctx);
@@ -203,6 +204,10 @@ function convertBlock(node: RootContent, ctx: ConvertCtx): TiptapNode | null {
         const badge = convertStandaloneInlineBadge(jsx);
         return { type: 'paragraph', content: [badge] };
       }
+      if (name === 'Tooltip') {
+        const tip = convertStandaloneInlineTooltip(jsx);
+        return { type: 'paragraph', content: [tip] };
+      }
       if (name === 'img') {
         // JSX `<img>` (single, or the pre-merged light/dark pair from the
         // mergeAdjacentLightDarkImgs pre-pass).
@@ -227,7 +232,7 @@ function convertBlock(node: RootContent, ctx: ConvertCtx): TiptapNode | null {
 function convertSimpleBlock(
   node: MdxJsxFlowElement,
   ctx: ConvertCtx,
-  type: 'mdxCard' | 'mdxFrame' | 'mdxUpdate',
+  type: 'mdxCard' | 'mdxFrame' | 'mdxSheet' | 'mdxUpdate',
 ): TiptapNode {
   const attrs = extractAttrs(node);
   const content: TiptapNode[] = [];
@@ -871,6 +876,7 @@ function convertInlineNode(
     case 'mdxJsxTextElement': {
       const jsx = node as MdxJsxTextElement;
       if (jsx.name === 'Badge') return [convertInlineBadge(jsx)];
+      if (jsx.name === 'Tooltip') return [convertInlineTooltip(jsx)];
       return null;
     }
     default:
@@ -913,6 +919,44 @@ function convertStandaloneInlineBadge(node: MdxJsxFlowElement): TiptapNode {
   return {
     type: 'mdxBadge',
     attrs: { ...attrs, label: label.trim() },
+  };
+}
+
+function convertInlineTooltip(node: MdxJsxTextElement): TiptapNode {
+  const attrs: Record<string, unknown> = {};
+  for (const a of node.attributes ?? []) {
+    if (a.type !== 'mdxJsxAttribute') continue;
+    if (typeof a.value === 'string') attrs[a.name] = a.value;
+    else if (a.value === null) attrs[a.name] = true;
+  }
+  let text = '';
+  for (const child of node.children ?? []) {
+    if (child.type === 'text') text += child.value;
+  }
+  return {
+    type: 'mdxTooltip',
+    attrs: { ...attrs, text: text.trim() },
+  };
+}
+
+function convertStandaloneInlineTooltip(node: MdxJsxFlowElement): TiptapNode {
+  const attrs: Record<string, unknown> = {};
+  for (const a of node.attributes ?? []) {
+    if (a.type !== 'mdxJsxAttribute') continue;
+    if (typeof a.value === 'string') attrs[a.name] = a.value;
+    else if (a.value === null) attrs[a.name] = true;
+  }
+  let text = '';
+  for (const child of node.children ?? []) {
+    if (child.type === 'paragraph') {
+      for (const inline of child.children ?? []) {
+        if (inline.type === 'text') text += inline.value;
+      }
+    }
+  }
+  return {
+    type: 'mdxTooltip',
+    attrs: { ...attrs, text: text.trim() },
   };
 }
 

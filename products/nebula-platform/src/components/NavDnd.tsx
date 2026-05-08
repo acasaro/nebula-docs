@@ -65,13 +65,25 @@ export function DragRow({
   const isHovered = droppable && hover.overId === id;
   const showInto = isHovered && hover.side === 'into';
 
+  // Tabs and groups are containers — they should never shift during a drag.
+  // dnd-kit's `useSortable` applies transforms to non-source siblings to
+  // animate them aside as the cursor passes; that's the right behavior for
+  // page rows reordering inside a list, but tabs/groups receive 'into'
+  // drops where shifting only makes the drop target hard to land on. Lock
+  // their transforms to identity so they stay where they are no matter what
+  // the cursor is doing above them. Their `isDragging` (the source-of-drag
+  // dim) still applies via opacity below.
+  const isContainer = id.startsWith('tab:') || id.startsWith('group:');
+  const transformValue = isContainer ? undefined : CSS.Transform.toString(transform);
+  const transitionValue = isContainer ? 'none' : transition;
+
   return (
     <div
       ref={setNodeRef}
       data-dnd-id={id}
       style={{
-        transform: CSS.Transform.toString(transform),
-        transition,
+        transform: transformValue,
+        transition: transitionValue,
         opacity: isDragging ? 0.4 : 1,
         position: 'relative',
       }}
@@ -103,10 +115,15 @@ function DropLine({ position }: { position: 'top' | 'bottom' }) {
 }
 
 function DropZone() {
+  // Mintlify-style "drop into" indicator: low-opacity neutral pill plus a
+  // crisp solid 1px outline tracing the row. White-on-dark in dark mode,
+  // black-on-light in light mode. The pill fill is faint so the row's own
+  // text stays readable through the overlay; the solid border carries the
+  // "release here" signal.
   return (
     <div
       aria-hidden='true'
-      className='pointer-events-none absolute inset-0 rounded-xl bg-emerald-500/10 ring-2 ring-emerald-500/60'
+      className='pointer-events-none absolute inset-0 rounded-xl border border-foreground bg-foreground/[0.06] dark:border-white dark:bg-white/10'
     />
   );
 }

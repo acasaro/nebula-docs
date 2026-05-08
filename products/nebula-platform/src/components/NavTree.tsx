@@ -449,7 +449,11 @@ function TabSection({
   const settingsOpen = settingsOpenKey === settingsKey;
   const groupKeyBase = `tab${tabIndex}`;
   const [addingKind, setAddingKind] = useState<AddEntryKind | null>(null);
-  const [expanded, setExpanded] = useState(true);
+  // Default closed (VS Code pattern). The user expands what they want to
+  // work in; the tree starts compact instead of opening every section on
+  // every mount. Collapse-all signal still applies — it just no-ops when
+  // everything is already closed.
+  const [expanded, setExpanded] = useState(false);
 
   // Collapse-all signal: setting expanded=false on every signal bump (skip
   // the initial mount so we don't fight the default-open state). The header
@@ -578,7 +582,10 @@ function GroupSection({
   indent: number;
   keyPath: string;
 } & SectionCommon) {
-  const [expanded, setExpanded] = useState(group.expanded ?? true);
+  // Default closed (VS Code pattern). A tenant that explicitly opts a
+  // group into expanded-on-open via docs.json `"expanded": true` still
+  // wins; everything else collapses on mount.
+  const [expanded, setExpanded] = useState(group.expanded ?? false);
   const [addingKind, setAddingKind] = useState<AddEntryKind | null>(null);
   const pages = group.pages ?? [];
   const childIndent = indent + GROUP_TEXT_OFFSET;

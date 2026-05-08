@@ -41,6 +41,13 @@ export type AttrField =
       placeholder?: string;
     })
   | (BaseField & {
+      kind: 'swatch';
+      /** Each option is rendered as a clickable color square. `color`
+       *  accepts any valid CSS color (CSS var, hex, hsl, etc.). `label`
+       *  is used for tooltip + a11y. */
+      options: ReadonlyArray<{ value: string; color: string; label?: string }>;
+    })
+  | (BaseField & {
       kind: 'icon';
       /** Attribute key holding the icon library. */
       libraryKey: string;

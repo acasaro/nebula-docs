@@ -12,6 +12,8 @@ import { OrphanedPages, ORPHAN_ID_PREFIX } from "@/components/OrphanedPages";
 import { SourceEditor, languageForPath } from "@/components/SourceEditor";
 import {
   DndContext,
+  pointerWithin,
+  rectIntersection,
   DragOverlay,
   PointerSensor,
   useSensor,
@@ -620,20 +622,35 @@ export function RepoBrowser() {
   // source row dim in place, which reads as "nothing's happening." Both
   // cleared on drop / cancel.
   const [hover, setHover] = useState<HoverState>({ overId: null, side: null });
-  const [dragOverlay, setDragOverlay] = useState<{ id: string; html: string; width: number } | null>(null);
+  const [dragOverlay, setDragOverlay] = useState<{ id: string; label: string } | null>(null);
   const dndSensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
   );
+
+  // Custom collision detection: prefer pointer-within (cursor literally
+  // inside a row) for stable detection on container rows that don't shift
+  // during the drag. Falls back to rectIntersection when the pointer is
+  // between rows so the drag indicator never blanks out as the user moves
+  // through gaps.
+  const collisionDetection = useCallback((args: Parameters<typeof pointerWithin>[0]) => {
+    const pointerCollisions = pointerWithin(args);
+    if (pointerCollisions.length > 0) return pointerCollisions;
+    return rectIntersection(args);
+  }, []);
 
   const handleDragStart = useCallback((e: DragStartEvent) => {
     setHover({ overId: null, side: null });
     const id = e.active?.id;
     if (typeof id !== 'string') return;
     const ref = document.querySelector(`[data-dnd-id="${CSS.escape(id)}"]`);
-    if (ref instanceof HTMLElement) {
-      const rect = ref.getBoundingClientRect();
-      setDragOverlay({ id, html: ref.outerHTML, width: rect.width });
-    }
+    if (!(ref instanceof HTMLElement)) return;
+    // Capture only the row's label text — the DragOverlay below renders a
+    // compact Mintlify-style cursor pill rather than a full-width snapshot
+    // of the source row. The whole-row preview was visually heavy and made
+    // the drop target awkward to see.
+    const labelEl = ref.querySelector('span.truncate, span');
+    const label = labelEl?.textContent?.trim() || '';
+    setDragOverlay({ id, label });
   }, []);
 
   const handleDragOver = useCallback((e: DragOverEvent) => {
@@ -658,15 +675,16 @@ export function RepoBrowser() {
     const activeRect = e.active?.rect.current.translated;
     const pointerY = activeRect ? activeRect.top + activeRect.height / 2 : 0;
 
-    // Container targets (tab, group): use a three-zone hit-test so the user
-    // can either reorder the container itself (top/bottom 25%) OR drop into
-    // it as a child (middle 50%). Tabs aren't reorderable from non-tab
-    // drags, so a non-tab over a tab is always 'into'. Same for non-group
-    // over group when the source is a page.
+    // Container targets (tab, group): always 'into' for cross-kind drops,
+    // 'above'/'below' only for same-kind reorder. The earlier three-zone
+    // hit-test inside the container row turned out to be too jumpy — the
+    // dragged page's centerline crosses the 25%/75% boundaries with even
+    // tiny cursor moves, so the indicator flickered between 'into',
+    // 'above', and 'below' as the user tried to release. Pages dropped on
+    // a tab/group only ever mean "nest inside"; for above/below position
+    // control the user can drop on a sibling page that's already at the
+    // target position.
     if (overIsTab || overIsGroup) {
-      const sourceIsPage = !activeIsTab && !activeIsGroup;
-      // Same-kind drag: keep the existing sibling-reorder behavior across
-      // the full row. Pages dropped onto tabs/groups always nest.
       if (overIsTab && activeIsTab) {
         const midY = overRect.top + overRect.height / 2;
         setHover({ overId, side: pointerY < midY ? 'above' : 'below' });
@@ -677,18 +695,9 @@ export function RepoBrowser() {
         setHover({ overId, side: pointerY < midY ? 'above' : 'below' });
         return;
       }
-      // Cross-kind: only valid when source is a page (or a group dropped
-      // into a tab). Page-over-tab and page-over-group → 'into'.
+      const sourceIsPage = !activeIsTab && !activeIsGroup;
       if (sourceIsPage || (activeIsGroup && overIsTab)) {
-        const topZone = overRect.top + overRect.height * 0.25;
-        const bottomZone = overRect.top + overRect.height * 0.75;
-        if (pointerY < topZone) {
-          setHover({ overId, side: 'above' });
-        } else if (pointerY > bottomZone) {
-          setHover({ overId, side: 'below' });
-        } else {
-          setHover({ overId, side: 'into' });
-        }
+        setHover({ overId, side: 'into' });
         return;
       }
       // Other cross-kind combos (tab over group/page, etc.) — disallow.
@@ -771,16 +780,51 @@ export function RepoBrowser() {
         handleConfigChange((config) => reorderTabs(config, fromIndex, insertIndex));
         return;
       }
-      if (activeId.startsWith('tab:') || overId.startsWith('tab:')) return;
+      // Tab as source is only valid for tab-to-tab reorder (handled above).
+      // Any other tab-source path falls through here and exits.
+      if (activeId.startsWith('tab:')) return;
 
       const targetResolved = findEntry(liveDocsConfig, overId, resolveCtx);
       if (!targetResolved) return;
-      const baseAddr = addressOfEntry(targetResolved);
-      if (!baseAddr) return;
-      const dest: DocsInsertAddress = {
-        ...baseAddr,
-        index: side === "below" ? baseAddr.index + 1 : baseAddr.index,
-      };
+
+      // 'into' drops: nest the source as a child of the target container.
+      // For a tab target → append to `tab.pages` (or `tab.groups` if the
+      //   source is itself a group).
+      // For a group target → append to that group's own `pages` array.
+      let dest: DocsInsertAddress;
+      if (side === 'into') {
+        if (targetResolved.kind === 'tab') {
+          if (activeId.startsWith('group:')) {
+            dest = {
+              kind: 'tab-groups',
+              tabIndex: targetResolved.tabIndex,
+              index: targetResolved.tab.groups?.length ?? 0,
+            };
+          } else {
+            dest = {
+              kind: 'tab-pages',
+              tabIndex: targetResolved.tabIndex,
+              index: targetResolved.tab.pages?.length ?? 0,
+            };
+          }
+        } else if (targetResolved.kind === 'group') {
+          dest = {
+            kind: 'group-pages',
+            tabIndex: targetResolved.tabIndex,
+            groupPath: targetResolved.groupPath,
+            index: targetResolved.group.pages?.length ?? 0,
+          };
+        } else {
+          return;
+        }
+      } else {
+        const baseAddr = addressOfEntry(targetResolved);
+        if (!baseAddr) return;
+        dest = {
+          ...baseAddr,
+          index: side === 'below' ? baseAddr.index + 1 : baseAddr.index,
+        };
+      }
 
       handleConfigChange((config) => {
         if (activeId.startsWith(ORPHAN_ID_PREFIX)) {
@@ -1485,6 +1529,7 @@ export function RepoBrowser() {
             ) : liveDocsConfig ? (
               <DndContext
                 sensors={dndSensors}
+                collisionDetection={collisionDetection}
                 onDragStart={handleDragStart}
                 onDragOver={handleDragOver}
                 onDragEnd={handleDragEnd}
@@ -1520,11 +1565,15 @@ export function RepoBrowser() {
                 </SortableContext>
                 <DragOverlay dropAnimation={null}>
                   {dragOverlay ? (
+                    /* Compact cursor pill — dark surface + label + a faint
+                       border. Mintlify-style: small enough to feel like an
+                       indicator attached to the cursor, not a full row
+                       being dragged around. Sized to content, max-width
+                       caps long labels so the pill doesn't sprawl. */
                     <div
-                      className='pointer-events-none rounded-xl border border-border/60 bg-background/95 px-2 py-1 shadow-lg ring-1 ring-primary/40 backdrop-blur-sm'
-                      style={{ width: dragOverlay.width }}
-                      dangerouslySetInnerHTML={{ __html: dragOverlay.html }}
-                    />
+                      className='pointer-events-none inline-flex max-w-[14rem] items-center gap-1.5 rounded-md border border-border/60 bg-popover px-2 py-1 text-xs font-medium text-foreground shadow-lg'>
+                      <span className='truncate'>{dragOverlay.label}</span>
+                    </div>
                   ) : null}
                 </DragOverlay>
               </DndContext>

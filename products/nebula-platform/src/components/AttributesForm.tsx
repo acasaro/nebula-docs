@@ -125,6 +125,44 @@ function FieldRenderer({
           onChange={(next) => onChange({ [field.key]: next })}
         />
       );
+    case 'swatch': {
+      const Icon = field.icon;
+      const current =
+        typeof values[field.key] === 'string'
+          ? (values[field.key] as string)
+          : null;
+      return (
+        <div className="flex flex-col gap-1.5">
+          <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            {Icon ? <Icon className="size-3.5" /> : null}
+            {field.label}
+          </span>
+          <div className="grid grid-cols-5 gap-2">
+            {field.options.map((opt) => {
+              const selected = current === opt.value;
+              return (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => onChange({ [field.key]: opt.value })}
+                  aria-label={opt.label ?? opt.value}
+                  aria-pressed={selected}
+                  title={opt.label ?? opt.value}
+                  className={cn(
+                    'aspect-square w-full rounded-md transition',
+                    'ring-1 ring-inset ring-border',
+                    'hover:ring-2 hover:ring-foreground/30',
+                    selected &&
+                      'ring-2 ring-offset-2 ring-offset-popover ring-foreground',
+                  )}
+                  style={{ backgroundColor: opt.color }}
+                />
+              );
+            })}
+          </div>
+        </div>
+      );
+    }
     case 'icon': {
       void onRequestUpload;
       const Icon = field.icon;

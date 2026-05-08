@@ -41,10 +41,12 @@ import { MdxExpandable } from './MdxExpandableNode';
 import { MdxMermaid } from './MdxMermaidNode';
 import { MdxProfile } from './MdxProfileNode';
 import { MdxRaw } from './MdxRawNode';
+import { MdxSheet } from './MdxSheetNode';
 import { MdxSnippet } from './MdxSnippetNode';
 import { MdxTree, MdxTreeFile, MdxTreeFolder } from './MdxTreeNode';
 import { MdxStep, MdxSteps } from './MdxStepsNode';
 import { MdxTab, MdxTabs } from './MdxTabsNode';
+import { MdxTooltip } from './MdxTooltipNode';
 import { MdxUpdate } from './MdxUpdateNode';
 import { MdxVideo } from './MdxVideoNode';
 import { SlashCommand } from './slashCommand';
@@ -207,6 +209,7 @@ export function MdxEditor({
       MdxCallout,
       MdxCard,
       MdxFrame,
+      MdxSheet,
       MdxUpdate,
       MdxSteps,
       MdxStep,
@@ -227,6 +230,7 @@ export function MdxEditor({
       MdxResponseExample,
       MdxMermaid,
       MdxBadge,
+      MdxTooltip,
       MdxImage,
       MdxVideo,
       MdxProfile,

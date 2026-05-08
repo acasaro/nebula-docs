@@ -200,7 +200,7 @@ export function FeatureCard({
               style={{ marginTop: title ? 8 : undefined, lineHeight: 1.4 }}
               className={cn(
                 'text-sm text-muted-foreground',
-                '[&_p]:my-0 [&_p+p]:mt-2',
+                '[&_p]:my-0 [&_p+p]:mt-2 [&_p]:text-sm [&_p]:leading-[1.4] [&_p]:text-muted-foreground',
               )}
               data-component-part="feature-card-description"
             >

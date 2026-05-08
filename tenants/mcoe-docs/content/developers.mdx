@@ -4,6 +4,45 @@ description: Technical documentation for mobile CI, release management, code sig
 sidebarTitle: Overview
 mode: custom
 ---
-import { DeveloperLanding } from "@tenant/components/DeveloperLanding";
+<Hero variant="split" title="Developer Documentation" description="CI/CD, releases, and mobile engineering" secondaryTitle="Build, test, and ship mobile apps with confidence." secondaryDescription="Standardized CI/CD, a staged release pipeline, and tooling to take every MCOE app from first build to production." background="url(&quot;https://firebasestorage.googleapis.com/v0/b/mcoe-d.firebasestorage.app/o/dev%2F1%2Fimages%2F479194cb7e88658a.jpg?alt=media&token=b0454866-4593-41c6-854f-514e1f7e997e&quot;) center / cover no-repeat" />
 
-<DeveloperLanding />
+
+
+<Columns cols={2}>
+<Column>
+<TopicCard color="blue" icon="https://firebasestorage.googleapis.com/v0/b/mcoe-d.firebasestorage.app/o/dev%2F1%2Fimages%2F572f4afb8e3ed59b.svg?alt=media&token=67dfa1b8-b3d5-4daa-8c72-6fff0acdd589" title="Mobile CI" description="CI/CD pipelines, workflows, and migration guides for MCOE mobile apps.">
+<TopicLink label="About Mobile CI" href="" />
+<TopicLink label="Migrating to Bitrise" href="" />
+<TopicLink label="Mobile workflows" href="" />
+</TopicCard>
+</Column>
+
+<Column>
+<TopicCard color="green" icon="https://firebasestorage.googleapis.com/v0/b/mcoe-d.firebasestorage.app/o/dev%2F1%2Fimages%2F6289578f4e34c1a1.svg?alt=media&token=6ec55d03-27da-48c7-bf96-afb13d4f9609" title="Release Management" description="Rollouts, version tracking, and staged release processes across platforms.">
+<TopicLink label="Getting Started" href="" />
+<TopicLink label="Key concepts" href="" />
+<TopicLink label="Adding a new rollout" href="" />
+</TopicCard>
+</Column>
+</Columns>
+
+<br/>
+
+<Columns cols={2}>
+<Column>
+<TopicCard color="purple" icon="https://firebasestorage.googleapis.com/v0/b/mcoe-d.firebasestorage.app/o/dev%2F1%2Fimages%2Fc1a737d25749995f.svg?alt=media&token=3a0db346-8e1a-4a6d-af80-d1a4a943e2bc" title="Bitrise Access" description="Getting set up on the Bitrise platform, permissions, and environment configuration.">
+<TopicLink label="Platform overview" href="" />
+<TopicLink label="Access & permissions" href="" />
+</TopicCard>
+</Column>
+
+<Column>
+<TopicCard color="orange" icon="https://firebasestorage.googleapis.com/v0/b/mcoe-d.firebasestorage.app/o/dev%2F1%2Fimages%2F033c6be4be63ff05.svg?alt=media&token=1dd0de5b-d403-4572-a24e-a9a1cf12d4f4" title="Release Management" description="Rollouts, version tracking, and staged release processes across platforms.">
+<TopicLink label="Release candidate" href="" />
+<TopicLink label="Submit to App Store" href="" />
+<TopicLink label="MCOE Approvals" href="" />
+<TopicLink label="Release to Google Play" href="" />
+
+</TopicCard>
+</Column>
+</Columns>

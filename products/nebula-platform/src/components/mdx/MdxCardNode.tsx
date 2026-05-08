@@ -28,6 +28,7 @@ const ATTRS = [
   'cta',
   'horizontal',
   'arrow',
+  'align',
 ] as const;
 
 export const MdxCard = Node.create({

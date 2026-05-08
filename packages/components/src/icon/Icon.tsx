@@ -8,6 +8,9 @@ import { cn } from '../utils/cn';
  * inherit the parent's CSS color; non-SVG custom URLs (PNG, JPG, etc.)
  * render as `<img>` and keep their original colors.
  *
+ * Cross-origin SVGs (e.g. Firebase Storage) require CORS headers for
+ * mask-image to work. See storage.cors.json for the bucket config.
+ *
  * The CDN is hosted from `mcoe-icons.web.app`, deployed via
  * `pnpm -w run icons:deploy`. Source corpora: Lucide, Material Icons,
  * Material Symbols. UHG / Optum sets get added later.
@@ -132,4 +135,3 @@ export function Icon({
     />
   );
 }
-

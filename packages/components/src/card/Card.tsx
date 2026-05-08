@@ -40,9 +40,11 @@ export function Card({
   cta,
   arrow,
   disabled,
+  align = 'start',
   className,
   children,
 }: CardProps) {
+  const isCentered = align === 'center';
   const resolvedHref = disabled ? undefined : href;
   const isLink = !!resolvedHref;
   const Component: ElementType = isLink ? 'a' : 'div';
@@ -86,6 +88,7 @@ export function Card({
         className={cn(
           'relative px-6 py-5',
           horizontal && 'flex items-center gap-x-4',
+          isCentered && 'flex flex-col items-center text-center',
         )}
         data-component-part="card-content-container"
       >

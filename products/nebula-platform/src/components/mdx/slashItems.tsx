@@ -50,6 +50,10 @@ export interface SlashItem {
   description: string;
   Icon: typeof TypeIcon;
   keywords?: string[];
+  /** Optional section label. The menu renders a divider with this label
+   *  before the first item carrying it; consecutive items in the same
+   *  section share one header. Items with no section sit at the top. */
+  section?: string;
   command: (props: { editor: Editor; range: { from: number; to: number } }) => void;
 }
 
@@ -992,6 +996,7 @@ export function buildSlashItems(
       : `Reusable snippet — ${entry.importPath}`,
     Icon: entry.isReact ? Puzzle : FileText,
     keywords: ['snippet', 'include', entry.defaultBinding.toLowerCase(), entry.importPath],
+    section: 'Snippets',
     command: ({ editor, range }) => {
       editor
         .chain()

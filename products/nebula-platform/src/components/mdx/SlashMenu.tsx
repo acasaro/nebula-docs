@@ -1,4 +1,5 @@
 import {
+  Fragment,
   forwardRef,
   useEffect,
   useImperativeHandle,
@@ -68,40 +69,56 @@ export const SlashMenu = forwardRef<SlashMenuRef, SlashMenuProps>(
       >
         {items.map((item, i) => {
           const Icon = item.Icon;
+          // Render a section header when this item starts a new section.
+          // The first item with `section` set, plus any subsequent item
+          // whose section differs from the previous item, gets the header.
+          const prevSection = i > 0 ? items[i - 1]!.section : undefined;
+          const showSectionHeader = !!item.section && item.section !== prevSection;
           return (
-            <button
-              key={item.id}
-              ref={(el) => {
-                itemRefs.current[i] = el;
-              }}
-              type="button"
-              role="option"
-              aria-selected={i === selectedIndex}
-              className={cn(
-                'flex w-full items-start gap-3 rounded-sm px-2 py-1.5 text-left',
-                'hover:bg-accent hover:text-accent-foreground',
-                i === selectedIndex && 'bg-accent text-accent-foreground',
-              )}
-              onMouseEnter={() => setSelectedIndex(i)}
-              onClick={() => command(item)}
-            >
-              <span
+            <Fragment key={item.id}>
+              {showSectionHeader ? (
+                <div
+                  className={cn(
+                    'px-2 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground',
+                    i > 0 && 'mt-1 border-t',
+                  )}
+                >
+                  {item.section}
+                </div>
+              ) : null}
+              <button
+                ref={(el) => {
+                  itemRefs.current[i] = el;
+                }}
+                type="button"
+                role="option"
+                aria-selected={i === selectedIndex}
                 className={cn(
-                  'mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-md border bg-background',
-                  'text-muted-foreground',
+                  'flex w-full items-start gap-3 rounded-sm px-2 py-1.5 text-left',
+                  'hover:bg-accent hover:text-accent-foreground',
+                  i === selectedIndex && 'bg-accent text-accent-foreground',
                 )}
+                onMouseEnter={() => setSelectedIndex(i)}
+                onClick={() => command(item)}
               >
-                <Icon className="size-4" />
-              </span>
-              <span className="flex min-w-0 flex-col">
-                <span className="text-sm font-medium leading-tight">
-                  {item.label}
+                <span
+                  className={cn(
+                    'mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-md border bg-background',
+                    'text-muted-foreground',
+                  )}
+                >
+                  <Icon className="size-4" />
                 </span>
-                <span className="truncate text-xs text-muted-foreground">
-                  {item.description}
+                <span className="flex min-w-0 flex-col">
+                  <span className="text-sm font-medium leading-tight">
+                    {item.label}
+                  </span>
+                  <span className="truncate text-xs text-muted-foreground">
+                    {item.description}
+                  </span>
                 </span>
-              </span>
-            </button>
+              </button>
+            </Fragment>
           );
         })}
       </div>

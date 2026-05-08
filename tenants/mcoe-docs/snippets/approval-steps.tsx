@@ -26,12 +26,17 @@ const pipelineStyle: React.CSSProperties = {
   flexWrap: "wrap",
 };
 
+// Accent driven from the active theme's primary brand token. Swaps
+// automatically when the tenant's theme.json is changed (mcoe-default → blue,
+// optum → orange, uhc → deep navy).
+const ACCENT = "var(--mcoe-brand-primary)";
+
 const cardBorderStyle: React.CSSProperties = {
   flex: "1 1 0",
   display: "flex",
   padding: "1px",
   borderRadius: "14px",
-  background: "color-mix(in srgb, var(--brand-purple-mid) 25%, transparent)",
+  background: `color-mix(in srgb, ${ACCENT} 25%, transparent)`,
   minWidth: "140px",
 };
 
@@ -45,9 +50,8 @@ const cardStyle: React.CSSProperties = {
   position: "relative",
   overflow: "hidden",
   width: "100%",
-  background: "color-mix(in srgb, var(--brand-purple-mid) 8%, transparent)",
-  boxShadow:
-    "0 2px 12px color-mix(in srgb, var(--brand-purple-mid) 12%, transparent), 0 1px 3px rgba(0, 0, 0, 0.05)",
+  background: `color-mix(in srgb, ${ACCENT} 8%, transparent)`,
+  boxShadow: `0 2px 12px color-mix(in srgb, ${ACCENT} 12%, transparent), 0 1px 3px rgba(0, 0, 0, 0.05)`,
 };
 
 const shimmerStyle: React.CSSProperties = {
@@ -60,7 +64,7 @@ const shimmerStyle: React.CSSProperties = {
   opacity: 0.1,
   filter: "blur(28px)",
   pointerEvents: "none",
-  background: "var(--brand-purple-mid)",
+  background: ACCENT,
 };
 
 const stepBadgeStyle: React.CSSProperties = {
@@ -72,8 +76,8 @@ const stepBadgeStyle: React.CSSProperties = {
   borderRadius: "5px",
   display: "inline-block",
   marginBottom: "12px",
-  background: "color-mix(in srgb, var(--brand-purple-mid) 18%, transparent)",
-  color: "var(--brand-purple-mid)",
+  background: `color-mix(in srgb, ${ACCENT} 18%, transparent)`,
+  color: ACCENT,
 };
 
 const iconWrapStyle: React.CSSProperties = {
@@ -84,14 +88,14 @@ const iconWrapStyle: React.CSSProperties = {
   alignItems: "center",
   justifyContent: "center",
   marginBottom: "10px",
-  background: "color-mix(in srgb, var(--brand-purple-mid) 18%, transparent)",
+  background: `color-mix(in srgb, ${ACCENT} 18%, transparent)`,
 };
 
 const iconImgBaseStyle: React.CSSProperties = {
   display: "block",
   width: "18px",
   height: "18px",
-  backgroundColor: "var(--brand-purple-mid)",
+  backgroundColor: ACCENT,
   maskSize: "contain",
   maskRepeat: "no-repeat",
   maskPosition: "center",
@@ -105,14 +109,14 @@ const labelStyle: React.CSSProperties = {
   fontWeight: 700,
   letterSpacing: "-0.01em",
   marginBottom: "3px",
-  color: "var(--text-primary, #0f172a)",
+  color: "var(--mcoe-text-primary)",
 };
 
 const subStyle: React.CSSProperties = {
   fontSize: "11px",
   fontFamily: "var(--mcoe-font-family-mono, ui-monospace, SFMono-Regular, Menlo, monospace)",
   letterSpacing: "0.02em",
-  color: "var(--brand-purple-mid)",
+  color: ACCENT,
   opacity: 0.85,
 };
 
@@ -122,7 +126,7 @@ const arrowStyle: React.CSSProperties = {
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
-  color: "color-mix(in srgb, var(--brand-purple-mid) 60%, transparent)",
+  color: `color-mix(in srgb, ${ACCENT} 60%, transparent)`,
 };
 
 export function ApprovalSteps() {

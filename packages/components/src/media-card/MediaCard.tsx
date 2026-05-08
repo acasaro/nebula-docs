@@ -65,8 +65,11 @@ export function MediaCard({
     '--media-pill-bg': PILL_VAR[resolvedColor],
   } as CSSProperties;
 
+  // Card needs a definite height so the image frame's `height: 75%` resolves
+  // against something. `min-h-[300px]` is the floor; `h-full` lets the card
+  // stretch to fill its grid row when laid out in a `<Columns>` block.
   const wrapperClass = cn(
-    'group relative my-3 flex h-full flex-col overflow-hidden rounded-2xl',
+    'group relative my-3 flex h-full min-h-[300px] flex-col overflow-hidden rounded-2xl',
     'border border-stone-950/10 bg-white',
     'dark:border-white/10 dark:bg-stone-900/40',
     isLink && 'cursor-pointer no-underline text-inherit transition-shadow hover:shadow-md',
@@ -76,22 +79,32 @@ export function MediaCard({
   const body = (
     <>
       {image ? (
-        <div className="relative aspect-[16/9] w-full overflow-hidden">
+        // Image occupies the top 75% of the card. Bottom corners stay square
+        // where the image meets the body — only the top corners round, via
+        // the card's `overflow-hidden rounded-2xl` clip.
+        <div
+          className="relative w-full shrink-0 overflow-hidden rounded-b-none"
+          style={{ height: '75%' }}
+          data-component-part="media-card-image-frame"
+        >
           <img
             src={image}
             alt={imageAlt ?? title ?? ''}
-            className="h-full w-full object-cover"
+            // `!m-0` defeats the prose typography margin above the image;
+            // `block` prevents inline-image baseline whitespace below.
+            style={{ margin: 0 }}
+            className="block h-full w-full object-cover !m-0"
             data-component-part="media-card-image"
           />
         </div>
       ) : null}
       <div
-        className="flex flex-1 flex-col p-5"
+        className="flex flex-1 flex-col px-5 pt-4 pb-3"
         data-component-part="media-card-body"
       >
         {category ? (
           <span
-            style={{ backgroundColor: 'var(--media-pill-bg)', marginBottom: 8 }}
+            style={{ backgroundColor: 'var(--media-pill-bg)', marginBottom: 15 }}
             className="self-start rounded-full px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wider text-white"
             data-component-part="media-card-category"
           >
@@ -101,7 +114,7 @@ export function MediaCard({
         {title ? (
           <h3
             style={{ margin: 0 }}
-            className="text-base font-semibold text-stone-800 dark:text-white"
+            className="text-base font-semibold leading-snug text-stone-800 dark:text-white"
             data-component-part="media-card-title"
           >
             {title}
@@ -109,8 +122,12 @@ export function MediaCard({
         ) : null}
         {description ? (
           <p
-            style={title ? { marginTop: 8 } : { margin: 0 }}
-            className="text-sm text-muted-foreground"
+            // 3-line clamp with ellipsis. `overflow-hidden` is required for
+            // -webkit-line-clamp to take effect; `min-h-0` lets the clamp
+            // win against any flex parent that would otherwise stretch the
+            // paragraph to its natural height.
+            style={title ? { marginTop: 4 } : { margin: 0 }}
+            className="line-clamp-3 text-sm leading-snug text-muted-foreground"
             data-component-part="media-card-description"
           >
             {description}

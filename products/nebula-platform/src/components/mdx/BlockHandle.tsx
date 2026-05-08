@@ -42,6 +42,27 @@ import { AttributesPopover } from '@/components/AttributesPopover';
 import { getBlockSchema, type BlockAttrSchema } from '@/lib/blockSchemas';
 import { cn } from '@/lib/utils';
 
+/**
+ * Resolve a ProseMirror document position to the start position of the
+ * containing top-level block. Handles two cases:
+ *  - Cursor inside a normal block (depth ≥ 1): walk up to depth 1 and
+ *    return the position before that ancestor.
+ *  - Cursor inside an `atom: true` node like `mdxImportedSnippet` (which
+ *    has no editable content): `posAtCoords` returns a depth-0 position
+ *    sitting between blocks. Inspect `nodeAfter` / `nodeBefore` to pick
+ *    up the surrounding atom block instead — without this, atom nodes
+ *    have no drag handle and look "dead" in the editor.
+ */
+function resolveBlockPos(editor: Editor, pos: number): number | null {
+  const $pos = editor.view.state.doc.resolve(pos);
+  if ($pos.depth >= 1) return $pos.before(1);
+  const after = $pos.nodeAfter;
+  if (after && after.isBlock) return $pos.pos;
+  const before = $pos.nodeBefore;
+  if (before && before.isBlock) return $pos.pos - before.nodeSize;
+  return null;
+}
+
 interface ActiveBlock {
   pos: number;
   node: ProseMirrorNode;
@@ -171,9 +192,8 @@ export function EditorWithBlockHandle({
       );
       const result = editor.view.posAtCoords({ left: probeX, top: clientY });
       if (!result) return null;
-      const $pos = editor.view.state.doc.resolve(result.pos);
-      if ($pos.depth < 1) return null;
-      const blockPos = $pos.before(1);
+      const blockPos = resolveBlockPos(editor, result.pos);
+      if (blockPos === null) return null;
       const node = editor.view.state.doc.nodeAt(blockPos);
       if (!node) return null;
       const dom = editor.view.nodeDOM(blockPos);
@@ -248,9 +268,8 @@ export function EditorWithBlockHandle({
       setDropTarget(null);
       return;
     }
-    const $pos = editor.view.state.doc.resolve(result.pos);
-    if ($pos.depth < 1) return;
-    const blockPos = $pos.before(1);
+    const blockPos = resolveBlockPos(editor, result.pos);
+    if (blockPos === null) return;
     const node = editor.view.state.doc.nodeAt(blockPos);
     if (!node) return;
     const dom = editor.view.nodeDOM(blockPos);

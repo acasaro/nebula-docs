@@ -78,6 +78,7 @@ import {
   listBranches,
   type FileChange,
 } from "@/lib/content";
+import { loadDrafts, makeDraftScopeKey, saveDrafts } from "@/lib/draftStore";
 import { useGitSettings } from "@/lib/gitSettings";
 import { buildTree, type TreeNode } from "@/lib/repoTree";
 import { cn } from "@/lib/utils";
@@ -407,17 +408,59 @@ export function RepoBrowser() {
   const [creatingPr, setCreatingPr] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
 
-  // Drop file caches when branch changes — same path may differ between branches.
-  const lastBranchRef = useRef<string | null>(null);
+  const active = settings.status === "ready" ? settings.settings : null;
+
+  const scopeKey = useMemo(() => {
+    if (!active || !currentBranch) return null;
+    return makeDraftScopeKey({
+      installationId: active.installationId,
+      owner: active.owner,
+      repo: active.repo,
+      branch: currentBranch,
+    });
+  }, [active, currentBranch]);
+
+  // Reset in-memory file state when the scope changes, then hydrate any
+  // unsaved drafts from localStorage so a refresh (or branch switch and
+  // switch back) doesn't drop the in-progress change set. Persistence is
+  // mirrored from the `files` watcher below.
+  const lastScopeRef = useRef<string | null>(null);
   useEffect(() => {
-    if (lastBranchRef.current !== null && lastBranchRef.current !== currentBranch) {
-      setFiles({});
+    if (!scopeKey) return;
+    if (lastScopeRef.current === scopeKey) return;
+
+    const isFirstScope = lastScopeRef.current === null;
+    lastScopeRef.current = scopeKey;
+
+    if (!isFirstScope) {
       fetchedPathsRef.current = new Set();
-      setDeletions(new Set());
       setSaveMessage(null);
     }
-    lastBranchRef.current = currentBranch;
-  }, [currentBranch]);
+
+    const stored = loadDrafts(scopeKey);
+    setFiles(stored.files);
+    setDeletions(new Set(stored.deletions));
+  }, [scopeKey]);
+
+  // Mirror dirty entries and pending deletions to localStorage so a refresh
+  // restores them. The first run after a scope change is skipped because
+  // `files`/`deletions` still hold the previous scope's data when this
+  // effect fires — we'd otherwise write stale entries into the new scope's
+  // key. The hydration setFiles above triggers a second run with fresh
+  // data, which persists correctly.
+  const lastPersistedScopeRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!scopeKey) return;
+    if (lastPersistedScopeRef.current !== scopeKey) {
+      lastPersistedScopeRef.current = scopeKey;
+      return;
+    }
+    const dirty: Record<string, FileEntry> = {};
+    for (const [path, entry] of Object.entries(files)) {
+      if (entry.original !== entry.draft) dirty[path] = entry;
+    }
+    saveDrafts(scopeKey, { files: dirty, deletions: Array.from(deletions) });
+  }, [files, deletions, scopeKey]);
 
   // One-shot redirect tracker per branch, so editor → sidebar nav doesn't
   // re-trigger after the user explicitly navigates back to the no-path URL.
@@ -444,7 +487,6 @@ export function RepoBrowser() {
   );
   const isCurrentDirty = currentEntry ? currentEntry.original !== currentEntry.draft : false;
 
-  const active = settings.status === "ready" ? settings.settings : null;
   const matchesActive = !!active;
 
   const docsConfigState = useDocsConfig({
@@ -1183,10 +1225,23 @@ export function RepoBrowser() {
       .then(({ content, sha }) => {
         if (cancelled) return;
         const normalized = isMdxFile(selectedPath) ? normalizeMdx(content) : content;
-        setFiles((prev) => ({
-          ...prev,
-          [selectedPath]: { original: normalized, draft: normalized, sha, revertNonce: 0 },
-        }));
+        setFiles((prev) => {
+          // Preserve a hydrated draft if one is already in memory (from
+          // localStorage restore). The fresh GitHub content becomes the new
+          // `original` baseline so the dirty diff is computed against latest
+          // upstream, not the snapshot from when the draft was made.
+          const existing = prev[selectedPath];
+          const hadDraft = existing && existing.draft !== existing.original;
+          return {
+            ...prev,
+            [selectedPath]: {
+              original: normalized,
+              draft: hadDraft ? existing.draft : normalized,
+              sha,
+              revertNonce: existing?.revertNonce ?? 0,
+            },
+          };
+        });
       })
       .catch((err) => {
         if (cancelled) return;

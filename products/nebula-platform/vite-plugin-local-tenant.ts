@@ -33,6 +33,28 @@ const SKIP_DIRS = new Set([
 ]);
 const SKIP_FILES = new Set(['.DS_Store']);
 
+// Static asset types served from `tenants/<tenant>/public/`. Restricted
+// to known media so a stray `.tsx` or `.mdx` in public/ doesn't get
+// served as a file (it would short-circuit the SPA fallback and the
+// editor route would 404).
+const TENANT_PUBLIC_MIME: Record<string, string> = {
+  '.svg': 'image/svg+xml',
+  '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.gif': 'image/gif',
+  '.webp': 'image/webp',
+  '.avif': 'image/avif',
+  '.ico': 'image/x-icon',
+  '.mp4': 'video/mp4',
+  '.webm': 'video/webm',
+  '.woff': 'font/woff',
+  '.woff2': 'font/woff2',
+  '.json': 'application/json',
+  '.txt': 'text/plain',
+  '.pdf': 'application/pdf',
+};
+
 function safeJoin(root: string, rel: string): string {
   const normalized = path.posix.normalize(rel.replace(/^[/\\]+/, ''));
   if (normalized.startsWith('..') || path.isAbsolute(normalized)) {
@@ -90,10 +112,54 @@ export interface LocalTenantOptions {
 export function localTenantPlugin(options: LocalTenantOptions): Plugin {
   const tenantRoot = path.resolve(options.tenantsRoot, options.tenant);
 
+  const tenantPublic = path.resolve(tenantRoot, 'public');
+
   return {
     name: 'nebula:local-tenant',
     apply: 'serve',
     configureServer(server) {
+      // Serve tenant `public/*` from the dev origin so MDX page assets
+      // and `.tsx` snippets that reference absolute paths like
+      // `/images/icons/foo.svg` resolve when rendered live in the editor.
+      // The CLI side already does this through Astro's publicDir; this
+      // mirrors it for the editor preview. Mounted before `/api/fs` so
+      // anything matching a real file short-circuits and never falls
+      // through to the SPA HTML fallback.
+      server.middlewares.use(async (req, res, next) => {
+        if (req.method !== 'GET' && req.method !== 'HEAD') return next();
+        const reqUrl = req.url ?? '/';
+        if (reqUrl.startsWith('/api/') || reqUrl.startsWith('/@') || reqUrl.startsWith('/src/')) {
+          return next();
+        }
+        const pathname = new URL(reqUrl, 'http://x').pathname;
+        if (pathname === '/' || pathname.includes('..')) return next();
+        let abs: string;
+        try {
+          abs = safeJoin(tenantPublic, pathname);
+        } catch {
+          return next();
+        }
+        let stat;
+        try {
+          stat = await fsp.stat(abs);
+        } catch {
+          return next();
+        }
+        if (!stat.isFile()) return next();
+        const ext = path.extname(abs).toLowerCase();
+        const ct = TENANT_PUBLIC_MIME[ext];
+        if (!ct) return next();
+        res.statusCode = 200;
+        res.setHeader('Content-Type', ct);
+        res.setHeader('Cache-Control', 'no-cache');
+        if (req.method === 'HEAD') {
+          res.end();
+          return;
+        }
+        const data = await fsp.readFile(abs);
+        res.end(data);
+      });
+
       server.middlewares.use('/api/fs', async (req, res, next) => {
         const url = new URL(req.url ?? '/', 'http://x');
         try {

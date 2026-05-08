@@ -3,13 +3,12 @@ title: "What Are Rollout Versions?"
 description: "Learn about versions, how they work, and the release stages for each platform."
 sidebarTitle: "About Versions"
 ---
-import { PlatformCard } from "@tenant/components/PlatformCard";
 
 A **version** represents a single release of your mobile app (e.g., v1.2.6). Each version moves through a multi-stage release pipeline from build selection to production release. You can only move to the next stage after completing the current one.
 
 ## Version Stages
 
-<Sheet color="blue" icon="https://firebasestorage.googleapis.com/v0/b/mcoe-d.firebasestorage.app/o/dev%2F1%2Fimages%2F295dd81ec252a4a4.svg?alt=media&token=3a7abdc0-de68-44c0-ae81-bfc8425bf322">
+<Sheet color="blue" label="iOS" icon="https://firebasestorage.googleapis.com/v0/b/mcoe-d.firebasestorage.app/o/dev%2F1%2Fimages%2F295dd81ec252a4a4.svg?alt=media&token=3a7abdc0-de68-44c0-ae81-bfc8425bf322">
 1. **Release Candidate**: Select the release branch and Workflow that generates an IPA file.
 2. **TestFlight**: Upload the release candidate to TestFlight for testing.
 3. **Approvals**: Complete all 6 required approval tasks.
@@ -17,13 +16,12 @@ A **version** represents a single release of your mobile app (e.g., v1.2.6). Eac
 5. **Release on the App Store**: Release to all users or configure a phased release.
 </Sheet>
 
-<Sheet color="green" icon="android" iconLibrary="material" iconType="outlined">
+<Sheet color="green" label="Android" icon="android" iconLibrary="material" iconType="outlined">
 1. **Release Candidate**: Select the release branch and Workflow that generates an AAB file.
 2. **Google Play Upload & Testing**: Upload the release candidate to Google Play for testing.
 3. **Approvals**: Complete all 6 required approval tasks.
 4. **Release on Google Play**: Release to all users or configure a staged rollout.
 </Sheet>
-
 
 ## Version Statuses
 

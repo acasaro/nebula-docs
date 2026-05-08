@@ -65,11 +65,8 @@ export function MediaCard({
     '--media-pill-bg': PILL_VAR[resolvedColor],
   } as CSSProperties;
 
-  // Card needs a definite height so the image frame's `height: 75%` resolves
-  // against something. `min-h-[300px]` is the floor; `h-full` lets the card
-  // stretch to fill its grid row when laid out in a `<Columns>` block.
   const wrapperClass = cn(
-    'group relative my-3 flex h-full min-h-[300px] flex-col overflow-hidden rounded-2xl',
+    'group relative my-3 flex h-full flex-col overflow-hidden rounded-2xl',
     'border border-stone-950/10 bg-white',
     'dark:border-white/10 dark:bg-stone-900/40',
     isLink && 'cursor-pointer no-underline text-inherit transition-shadow hover:shadow-md',
@@ -79,21 +76,26 @@ export function MediaCard({
   const body = (
     <>
       {image ? (
-        // Image occupies the top 75% of the card. Bottom corners stay square
-        // where the image meets the body — only the top corners round, via
-        // the card's `overflow-hidden rounded-2xl` clip.
+        // Fixed 105px-tall image strip at the top of the card. The `<img>`
+        // explicitly zeros border-radius — the host prose CSS sets a 6px
+        // radius on every img otherwise, which would round the bottom edge
+        // where the image meets the body. Only the card's outer
+        // `overflow-hidden rounded-2xl` rounds the top corners.
         <div
           className="relative w-full shrink-0 overflow-hidden rounded-b-none"
-          style={{ height: '75%' }}
+          style={{ height: 105 }}
           data-component-part="media-card-image-frame"
         >
           <img
             src={image}
             alt={imageAlt ?? title ?? ''}
-            // `!m-0` defeats the prose typography margin above the image;
-            // `block` prevents inline-image baseline whitespace below.
-            style={{ margin: 0 }}
-            className="block h-full w-full object-cover !m-0"
+            style={{
+              margin: 0,
+              borderRadius: 0,
+              objectFit: 'cover',
+              objectPosition: 'center 15%',
+            }}
+            className="block h-full w-full !m-0"
             data-component-part="media-card-image"
           />
         </div>

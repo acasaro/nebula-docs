@@ -70,7 +70,10 @@ export function Profile({
           <img
             src={photo}
             alt={name}
-            className="block size-full object-cover"
+            // `object-top` so headshots preserve faces. Default center
+            // crops the top of the head off when the subject sits in
+            // the upper half of a square photo (the headshot norm).
+            className="block size-full object-cover object-top"
             draggable={false}
           />
         ) : (

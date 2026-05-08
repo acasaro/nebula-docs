@@ -435,8 +435,12 @@ function NavSidebarResizeHandle({
       aria-valuemin={EDITOR_NAV_MIN}
       aria-valuemax={EDITOR_NAV_MAX}
       onPointerDown={onPointerDown}
-      className='group absolute inset-y-0 right-0 z-20 flex w-1.5 translate-x-1/2 cursor-col-resize items-center justify-center'>
-      <div className='h-full w-px bg-border/40 transition-colors group-hover:bg-primary/60 group-active:bg-primary' />
+      // Hit zone: 24px wide, asymmetric — 9px left of the aside's right edge,
+      // 15px right of it. The aside has a 1px right border so absolute
+      // `right` is offset 1px from the visible edge; the -16px nets to
+      // +15px past the visible edge.
+      className='group absolute inset-y-0 right-[-16px] z-20 w-6 cursor-col-resize'>
+      <div className='absolute left-[9px] top-1/2 h-[120px] w-[4px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-transparent transition-colors group-hover:bg-foreground/30 group-active:bg-foreground/60' />
     </div>
   );
 }

@@ -28,6 +28,9 @@ export interface TopicCardProps {
    *  hue. Whole card stays as a normal `<div>` — only the children
    *  TopicLinks are clickable. */
   viewAllHref?: string;
+  /** Editor mode — render the View all element as a non-clickable
+   *  `<span>` so previewing the card doesn't navigate. */
+  inactive?: boolean;
   className?: string;
 }
 
@@ -66,6 +69,7 @@ export function TopicCard({
   title,
   description,
   viewAllHref,
+  inactive = false,
   className,
 }: TopicCardProps) {
   const resolvedColor = TOPIC_CARD_COLORS.includes(color) ? color : 'blue';
@@ -132,15 +136,26 @@ export function TopicCard({
         {children}
       </div>
       {viewAllHref ? (
-        <a
-          href={viewAllHref}
-          style={{ marginTop: 12, color: 'var(--topic-accent)' }}
-          className="mt-auto inline-flex items-center gap-1 pt-3 text-sm font-semibold no-underline hover:underline"
-          data-component-part="topic-card-view-all"
-        >
-          View all
-          <ArrowRight className="size-3.5" />
-        </a>
+        inactive ? (
+          <span
+            style={{ color: 'var(--brand-blue-mid)' }}
+            className="mt-auto inline-flex items-center gap-1 pt-3 text-sm font-semibold"
+            data-component-part="topic-card-view-all"
+          >
+            View all
+            <ArrowRight className="size-3.5" />
+          </span>
+        ) : (
+          <a
+            href={viewAllHref}
+            style={{ color: 'var(--brand-blue-mid)' }}
+            className="mt-auto inline-flex items-center gap-1 pt-3 text-sm font-semibold no-underline hover:underline"
+            data-component-part="topic-card-view-all"
+          >
+            View all
+            <ArrowRight className="size-3.5" />
+          </a>
+        )
       ) : null}
     </div>
   );

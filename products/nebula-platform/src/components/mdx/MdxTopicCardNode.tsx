@@ -130,8 +130,8 @@ function MdxTopicCardView({
           icon={iconElement}
           title={attrs.title ?? undefined}
           description={attrs.description ?? undefined}
-          // Don't pass viewAllHref in editor view — would make the
-          // link active. Popover surfaces the URL; serializer round-trips it.
+          viewAllHref={attrs.viewAllHref ?? undefined}
+          inactive
           className="my-0"
         >
           <NodeViewContent />

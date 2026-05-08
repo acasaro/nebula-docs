@@ -1,9 +1,10 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { InlineSpinner } from "@/components/ui/NebulaLoader";
+import { InlineSpinner, NebulaLoader } from "@/components/ui/NebulaLoader";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatBytes, useAssets, useAssetUpload, type Asset } from "@/lib/assets";
 import { fetchIconManifest, useIconManifest } from "@/lib/iconManifest";
+import { useTheme } from "@/lib/theme";
 import { cn } from "@/lib/utils";
 import { Icon, type IconLibrary, type IconType } from "@nebula-docs/components";
 import * as Popover from "@radix-ui/react-popover";
@@ -240,6 +241,16 @@ function SearchBar({ value, onChange }: { value: string; onChange: (v: string) =
 const COLS = 9;
 const CELL = 32;
 
+function IconGridLoader() {
+  const { theme } = useTheme();
+  return (
+    <div className='flex flex-1 flex-col items-center justify-center gap-3 p-4 text-xs text-muted-foreground'>
+      <NebulaLoader size={56} theme={theme} />
+      <span>Loading icons…</span>
+    </div>
+  );
+}
+
 function IconGrid({
   library,
   search,
@@ -269,12 +280,7 @@ function IconGrid({
   });
 
   if (!manifest) {
-    return (
-      <p className='flex items-center gap-2 p-2 text-xs text-muted-foreground'>
-        <InlineSpinner size={12} />
-        Loading icons…
-      </p>
-    );
+    return <IconGridLoader />;
   }
   if (filtered.length === 0) {
     return <p className='p-2 text-xs text-muted-foreground'>No icons match.</p>;

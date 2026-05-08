@@ -522,13 +522,16 @@ astro-island {
   border: 1px solid var(--mcoe-border-default);
 }
 
-/* Reset prose margin/border on images and videos inside Frame — the
- * Frame manages its own spacing (8px padding on all sides) and chrome
- * (rounded corners, optional border). Without this override, the
+/* Reset prose margin/border on images and videos inside Frame and
+ * Profile — both manage their own spacing and shape. Without this, the
  * `.mdx-prose img { margin: 1rem 0 }` rule above adds 16px top + 16px
- * bottom around every <img> inside a Frame, making the vertical
- * padding visually larger than the 8px L/R. */
-:where(.mdx-prose) [data-component-part='frame'] :is(img, video) {
+ * bottom around every <img> inside a Frame (making vertical padding
+ * visually larger than 8px L/R), and inside a circular Profile photo
+ * wrap (overflow-hidden) leaves the top portion of the circle empty —
+ * the image is shoved down by margin-top, exposing the page background
+ * through the avatar's "head". */
+:where(.mdx-prose) [data-component-part='frame'] :is(img, video),
+:where(.mdx-prose) [data-component-part='profile-photo'] img {
   margin: 0;
   border: 0;
   border-radius: inherit;

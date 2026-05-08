@@ -1,5 +1,6 @@
 import { NavLink } from 'react-router';
 import {
+  BarChart3,
   ChevronsLeft,
   ChevronsRight,
   GitBranch,
@@ -29,6 +30,7 @@ export function Sidebar() {
       activePrefix: '/editor/',
     },
     { to: '/assets', label: 'Assets', icon: ImageIcon, end: false },
+    { to: '/analytics', label: 'Analytics', icon: BarChart3, end: false },
     { to: '/settings/git', label: 'Git settings', icon: GitBranch, end: false },
     { to: '/settings/github-app', label: 'GitHub app', icon: Github, end: false },
   ];

@@ -64,7 +64,7 @@ export const SlashMenu = forwardRef<SlashMenuRef, SlashMenuProps>(
 
     return (
       <div
-        className="max-h-72 min-w-[260px] overflow-y-auto rounded-md border bg-popover p-1 shadow-lg"
+        className="max-h-[230px] min-w-[260px] overflow-y-auto rounded-md border bg-popover p-1 shadow-lg"
         role="listbox"
       >
         {items.map((item, i) => {

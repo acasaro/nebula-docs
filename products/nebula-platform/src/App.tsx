@@ -5,6 +5,7 @@ import { AppShell } from '@/components/AppShell';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { useGitSettings } from '@/lib/gitSettings';
 import { useTheme } from '@/lib/theme';
+import { Analytics } from '@/routes/Analytics';
 import { Assets } from '@/routes/Assets';
 import { DevIconPicker } from '@/routes/DevIconPicker';
 import { Home } from '@/routes/Home';
@@ -63,6 +64,7 @@ export function App() {
             <Route path="editor/:branch" element={<RepoBrowser />} />
             <Route path="editor/:branch/~/*" element={<RepoBrowser />} />
             <Route path="assets" element={<Assets />} />
+            <Route path="analytics" element={<Analytics />} />
             <Route path="settings/github-app" element={<SettingsGithubApp />} />
             <Route path="settings/git" element={<SettingsGitRepo />} />
             <Route path="install/callback" element={<InstallCallback />} />

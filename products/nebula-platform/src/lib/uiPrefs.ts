@@ -66,7 +66,9 @@ function makeStore<T>(
 }
 
 const EDITOR_NAV_DEFAULT = 288;
-export const EDITOR_NAV_MIN = 200;
+// Min equals default — the handle only widens the sidebar, never narrows it
+// below the original column width.
+export const EDITOR_NAV_MIN = 288;
 export const EDITOR_NAV_MAX = 560;
 
 const editorNavWidthStore = makeStore<number>(

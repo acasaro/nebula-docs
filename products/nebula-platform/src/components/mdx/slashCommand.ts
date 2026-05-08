@@ -64,7 +64,15 @@ export const SlashCommand = Extension.create<SlashCommandOptions>({
           const place = (props: SuggestionProps) => {
             const rect = props.clientRect?.();
             if (!popup || !rect) return;
-            const top = rect.bottom + window.scrollY + 6;
+            // Flip above when there's not enough room below the cursor.
+            // Falls back to 230 (the menu's max-height) if the popup hasn't
+            // measured yet — matches what we'll actually render.
+            const menuH = popup.offsetHeight || 230;
+            const spaceBelow = window.innerHeight - rect.bottom;
+            const placeAbove = spaceBelow < menuH + 6 && rect.top > spaceBelow;
+            const top = placeAbove
+              ? rect.top + window.scrollY - menuH - 6
+              : rect.bottom + window.scrollY + 6;
             const left = rect.left + window.scrollX;
             popup.style.top = `${top}px`;
             popup.style.left = `${left}px`;

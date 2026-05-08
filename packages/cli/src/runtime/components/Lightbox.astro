@@ -99,12 +99,18 @@
     // is compiled to a React element BEFORE the MDX components map applies,
     // so the map override never sees it. Walking the rendered DOM catches
     // every image regardless of authoring shape.
+    // Skip zoom on images inside chrome (the header logo) and on Profile
+    // avatars — both are UI affordances that the user clicks for navigation
+    // or as part of a card layout, not photographic content meant to be
+    // inspected. The Profile selector matches the wrap that the shared
+    // component renders; the logo selector matches what Navbar.astro emits.
+    var SKIP_ZOOM_CLOSEST = '[data-component-part="profile-photo"], .nebula-logo';
     function tagImages() {
       var imgs = document.querySelectorAll('img');
       for (var i = 0; i < imgs.length; i++) {
         var img = imgs[i];
         if (img.hasAttribute('data-zoomable') || img.hasAttribute('data-no-zoom')) continue;
-        if (img.hasAttribute('noZoom') || img.hasAttribute('nozoom')) {
+        if (img.hasAttribute('noZoom') || img.hasAttribute('nozoom') || img.closest(SKIP_ZOOM_CLOSEST) || img.matches(SKIP_ZOOM_CLOSEST)) {
           img.setAttribute('data-no-zoom', '');
           continue;
         }

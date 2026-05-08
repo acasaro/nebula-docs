@@ -66,7 +66,7 @@ function MdxStageListView({
         selected && 'rounded-2xl ring-2 ring-primary/40',
       )}
     >
-      <StageList className="my-0">
+      <StageList className="my-0 [&_[data-node-view-content]]:contents [&_[data-node-view-content-react]]:contents [&_.react-renderer]:contents">
         <NodeViewContent />
       </StageList>
 

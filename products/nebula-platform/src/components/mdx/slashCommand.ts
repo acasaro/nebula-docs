@@ -86,7 +86,11 @@ export const SlashCommand = Extension.create<SlashCommandOptions>({
               });
               popup = document.createElement('div');
               popup.style.position = 'absolute';
-              popup.style.zIndex = '60';
+              // Lower than dialogs (z-50) so the slash menu doesn't float on
+              // top of the asset/media picker when an item like "Image" or
+              // "Video" opens it. Still above editor block-handles + popovers
+              // (z-30 / z-40) so it remains the primary affordance while open.
+              popup.style.zIndex = '45';
               document.body.appendChild(popup);
               popup.appendChild(component.element);
               place(typedProps);

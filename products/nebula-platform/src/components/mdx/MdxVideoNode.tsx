@@ -85,7 +85,7 @@ function MdxVideoView({
       {!attrs.src ? (
         <div
           className={cn(
-            'flex w-full flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-border/60 bg-muted/20 px-6 py-10 text-sm text-muted-foreground',
+            'flex w-full max-w-[40rem] flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-border/60 bg-muted/20 px-6 py-10 text-sm text-muted-foreground',
             selected && 'outline outline-2 outline-primary/60',
           )}
         >
@@ -109,7 +109,10 @@ function MdxVideoView({
       ) : (
         <figure
           className={cn(
-            'not-prose relative inline-flex max-w-full flex-col gap-2 leading-none',
+            // max-w-[40rem] mirrors the CLI's <Video> render so the editor
+            // preview matches the published page footprint. `inline-flex`
+            // would size to content width without the cap.
+            'not-prose relative inline-flex w-full max-w-[40rem] flex-col gap-2 leading-none',
             selected && 'rounded-lg outline outline-2 outline-primary/60',
           )}
           style={{ margin: 0 }}

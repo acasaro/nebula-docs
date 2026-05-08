@@ -123,22 +123,28 @@ const tocItems = (headings ?? []).filter((h) => h.depth === 2 || h.depth === 3);
     flex-direction: column;
     gap: 0.5rem;
   }
+  /* TOC links: primary brand color at 500 weight by default. Hover lifts to
+     the heading color (clear "i'm an interactive element") while the active
+     item — driven by scroll-spy — stays brand-primary so "you are here"
+     reads at a glance. */
   .nebula-toc-item a {
     display: inline-block;
-    color: var(--mcoe-text-link);
+    color: var(--mcoe-brand-primary);
+    font-weight: 500;
     text-decoration: none;
     transition: color 0.1s;
   }
   .nebula-toc-item a:hover {
-    text-decoration: underline;
-    text-underline-offset: 0.25em;
-    text-decoration-thickness: 1.5px;
+    color: var(--mcoe-text-heading);
+    text-decoration: none;
   }
-  /* Active item — brand-color text, no underline. Underline is reserved for
-     hover so the active item reads as "you are here" without competing with
-     the affordance signal. */
+  /* Active item — brand-color text, no underline. */
   .nebula-toc-item a[aria-current='true'] {
     color: var(--mcoe-brand-primary);
+    font-weight: 600;
+  }
+  .nebula-toc-item a[aria-current='true']:hover {
+    color: var(--mcoe-text-heading);
   }
   /* H3 entries indent under the H2 they belong to, keeping the visual
      hierarchy without making the column wider. */

@@ -2,8 +2,14 @@ import { useRef } from 'react';
 import styled from '@emotion/styled';
 
 const Figure = styled.figure({
-  margin: '16px 0',
+  // Centered with a constrained default width. 40rem (640px) keeps the
+  // video from dominating the ~880px content column while still being
+  // large enough to read product UI captures. Tenants can override
+  // per-instance via inline styles or a wrapping <Frame>.
+  margin: '16px auto',
   padding: 0,
+  maxWidth: '40rem',
+  width: '100%',
 });
 
 const VideoWrapper = styled.div({

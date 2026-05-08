@@ -30,12 +30,23 @@ export function AssetDetailDrawer({
   const [alt, setAlt] = useState('');
   const [saving, setSaving] = useState(false);
   const [savedFlash, setSavedFlash] = useState(false);
+  // Per-button copy-confirmation flash. Both buttons share the same drawer
+  // so they need independent flash state — copying one shouldn't flicker
+  // the other's icon. Both auto-clear after 1.4s.
+  const [copiedFlash, setCopiedFlash] = useState<'url' | 'mdx' | null>(null);
 
   useEffect(() => {
     setDisplayName(asset?.displayName ?? '');
     setAlt(asset?.alt ?? '');
     setSavedFlash(false);
+    setCopiedFlash(null);
   }, [asset]);
+
+  useEffect(() => {
+    if (!copiedFlash) return;
+    const t = setTimeout(() => setCopiedFlash(null), 1400);
+    return () => clearTimeout(t);
+  }, [copiedFlash]);
 
   useEffect(() => {
     if (!asset) return;
@@ -154,13 +165,41 @@ export function AssetDetailDrawer({
             </div>
 
             <div className='grid grid-cols-2 gap-2'>
-              <Button variant='outline' onClick={() => onCopyUrl(asset)}>
-                <Copy className='size-4' />
-                Copy URL
+              <Button
+                variant='outline'
+                onClick={() => {
+                  onCopyUrl(asset);
+                  setCopiedFlash('url');
+                }}
+                className={cn(
+                  'transition-colors',
+                  copiedFlash === 'url' &&
+                    'border-emerald-500/50 bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/15 hover:text-emerald-600 dark:border-emerald-500/40 dark:text-emerald-400 dark:hover:text-emerald-400',
+                )}>
+                {copiedFlash === 'url' ? (
+                  <Check className='size-4' />
+                ) : (
+                  <Copy className='size-4' />
+                )}
+                {copiedFlash === 'url' ? 'Copied' : 'Copy URL'}
               </Button>
-              <Button variant='outline' onClick={() => onCopyMdx(asset)}>
-                <Copy className='size-4' />
-                Copy MDX
+              <Button
+                variant='outline'
+                onClick={() => {
+                  onCopyMdx(asset);
+                  setCopiedFlash('mdx');
+                }}
+                className={cn(
+                  'transition-colors',
+                  copiedFlash === 'mdx' &&
+                    'border-emerald-500/50 bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/15 hover:text-emerald-600 dark:border-emerald-500/40 dark:text-emerald-400 dark:hover:text-emerald-400',
+                )}>
+                {copiedFlash === 'mdx' ? (
+                  <Check className='size-4' />
+                ) : (
+                  <Copy className='size-4' />
+                )}
+                {copiedFlash === 'mdx' ? 'Copied' : 'Copy MDX'}
               </Button>
             </div>
 

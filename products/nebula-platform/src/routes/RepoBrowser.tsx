@@ -645,15 +645,11 @@ export function RepoBrowser() {
     }
     const activeStr = typeof activeId === 'string' ? activeId : '';
     const activeIsTab = activeStr.startsWith('tab:');
+    const activeIsGroup = activeStr.startsWith('group:');
     const overIsTab = overId.startsWith('tab:');
+    const overIsGroup = overId.startsWith('group:');
     if (overId.startsWith(ORPHAN_ID_PREFIX)) {
       // Orphan rows aren't drop targets.
-      setHover({ overId: null, side: null });
-      return;
-    }
-    // Tab targets: only valid when dragging another tab. Cross-kind drops
-    // (group/page over tab, tab over group/page) show no indicator.
-    if (overIsTab !== activeIsTab) {
       setHover({ overId: null, side: null });
       return;
     }
@@ -661,8 +657,51 @@ export function RepoBrowser() {
     if (!overRect) return;
     const activeRect = e.active?.rect.current.translated;
     const pointerY = activeRect ? activeRect.top + activeRect.height / 2 : 0;
+
+    // Container targets (tab, group): use a three-zone hit-test so the user
+    // can either reorder the container itself (top/bottom 25%) OR drop into
+    // it as a child (middle 50%). Tabs aren't reorderable from non-tab
+    // drags, so a non-tab over a tab is always 'into'. Same for non-group
+    // over group when the source is a page.
+    if (overIsTab || overIsGroup) {
+      const sourceIsPage = !activeIsTab && !activeIsGroup;
+      // Same-kind drag: keep the existing sibling-reorder behavior across
+      // the full row. Pages dropped onto tabs/groups always nest.
+      if (overIsTab && activeIsTab) {
+        const midY = overRect.top + overRect.height / 2;
+        setHover({ overId, side: pointerY < midY ? 'above' : 'below' });
+        return;
+      }
+      if (overIsGroup && activeIsGroup) {
+        const midY = overRect.top + overRect.height / 2;
+        setHover({ overId, side: pointerY < midY ? 'above' : 'below' });
+        return;
+      }
+      // Cross-kind: only valid when source is a page (or a group dropped
+      // into a tab). Page-over-tab and page-over-group → 'into'.
+      if (sourceIsPage || (activeIsGroup && overIsTab)) {
+        const topZone = overRect.top + overRect.height * 0.25;
+        const bottomZone = overRect.top + overRect.height * 0.75;
+        if (pointerY < topZone) {
+          setHover({ overId, side: 'above' });
+        } else if (pointerY > bottomZone) {
+          setHover({ overId, side: 'below' });
+        } else {
+          setHover({ overId, side: 'into' });
+        }
+        return;
+      }
+      // Other cross-kind combos (tab over group/page, etc.) — disallow.
+      setHover({ overId: null, side: null });
+      return;
+    }
+    // Page targets (leaf rows): same-kind reorder only.
+    if (activeIsTab !== overIsTab) {
+      setHover({ overId: null, side: null });
+      return;
+    }
     const midY = overRect.top + overRect.height / 2;
-    const side: DropSide = pointerY < midY ? "above" : "below";
+    const side: DropSide = pointerY < midY ? 'above' : 'below';
     setHover({ overId, side });
   }, []);
 

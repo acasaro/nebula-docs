@@ -15,7 +15,7 @@ import { cn } from '@/lib/utils';
  * exactly where the drop will land.
  */
 
-export type DropSide = 'above' | 'below';
+export type DropSide = 'above' | 'below' | 'into';
 
 export interface HoverState {
   overId: string | null;
@@ -62,7 +62,8 @@ export function DragRow({
   const sortable = useSortable({ id, disabled: !draggable && !droppable });
   const { setNodeRef, attributes, listeners, transform, transition, isDragging } = sortable;
   const hover = useHover();
-  const showLine = droppable && hover.overId === id;
+  const isHovered = droppable && hover.overId === id;
+  const showInto = isHovered && hover.side === 'into';
 
   return (
     <div
@@ -77,9 +78,14 @@ export function DragRow({
       {...(draggable ? attributes : {})}
       {...(draggable ? listeners : {})}
     >
-      {showLine && hover.side === 'above' ? <DropLine position='top' /> : null}
+      {isHovered && hover.side === 'above' ? <DropLine position='top' /> : null}
       {children}
-      {showLine && hover.side === 'below' ? <DropLine position='bottom' /> : null}
+      {isHovered && hover.side === 'below' ? <DropLine position='bottom' /> : null}
+      {/* Whole-row "drop INTO this container" highlight. Sits as an absolute
+          overlay so it doesn't disturb layout or push siblings around — the
+          row itself stays put while the indicator shows that releasing the
+          pointer here will nest the dragged page inside this tab/group. */}
+      {showInto ? <DropZone /> : null}
     </div>
   );
 }
@@ -92,6 +98,15 @@ function DropLine({ position }: { position: 'top' | 'bottom' }) {
         'pointer-events-none absolute inset-x-1 h-0.5 rounded-full bg-emerald-500',
         position === 'top' ? '-top-px' : '-bottom-px',
       )}
+    />
+  );
+}
+
+function DropZone() {
+  return (
+    <div
+      aria-hidden='true'
+      className='pointer-events-none absolute inset-0 rounded-xl bg-emerald-500/10 ring-2 ring-emerald-500/60'
     />
   );
 }

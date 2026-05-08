@@ -46,7 +46,13 @@ const { title } = Astro.props as Props;
   /* Connector line between circles. Sits under the circle column with a
    * small gap on both ends so it doesn't kiss the circle borders. The line
    * extends a hair past the step's padding-bottom so it visually meets the
-   * next step's circle without a seam. */
+   * next step's circle without a seam.
+   *
+   * Color is derived from the heading token at low alpha so light mode
+   * gets a wispy gray (Mintlify-style faint trail) and dark mode stays
+   * proportionally subtle. `--mcoe-border-muted` was visibly too dark in
+   * light mode (#c1c9d2) — the line read as a hard divider rather than
+   * connective tissue between circles. */
   .nebula-step::after {
     content: '';
     position: absolute;
@@ -54,7 +60,7 @@ const { title } = Astro.props as Props;
     top: 2.125rem;
     bottom: -0.25rem;
     width: 1px;
-    background: var(--mcoe-border-muted);
+    background: color-mix(in srgb, var(--mcoe-text-heading) 12%, transparent);
   }
   /* Last step: fade the line into transparent instead of hard-cutting at
    * the circle's bottom. Mintlify pattern — the trail tapers off, signalling
@@ -64,8 +70,8 @@ const { title } = Astro.props as Props;
     height: 2.25rem;
     background: linear-gradient(
       to bottom,
-      var(--mcoe-border-muted) 0%,
-      var(--mcoe-border-muted) 35%,
+      color-mix(in srgb, var(--mcoe-text-heading) 12%, transparent) 0%,
+      color-mix(in srgb, var(--mcoe-text-heading) 12%, transparent) 35%,
       transparent 100%
     );
   }

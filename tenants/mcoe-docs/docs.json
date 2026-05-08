@@ -93,6 +93,13 @@
         ]
       },
       {
+        "tab": "Product",
+        "icon": "shapes",
+        "pages": [
+          "product"
+        ]
+      },
+      {
         "tab": "Resources",
         "icon": "book",
         "pages": [
@@ -102,13 +109,6 @@
           "resources/library",
           "resources/apple-developer-access",
           "resources/google-developer-access"
-        ]
-      },
-      {
-        "tab": "Product",
-        "icon": "shapes",
-        "pages": [
-          "product"
         ]
       },
       {

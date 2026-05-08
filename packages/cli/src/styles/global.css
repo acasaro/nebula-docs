@@ -14,6 +14,16 @@
 @source "../**/*.{astro,ts,tsx}";
 @source "../../../components/src/**/*.{ts,tsx}";
 
+/* Safelist Mintlify-pattern utilities that only appear inside tenant MDX
+   files (which Tailwind doesn't scan — the tenant root is dynamic per
+   build, and MDX inline class strings are processed by the MDX compiler
+   not the Tailwind extractor). The Editor emits dual `<img>` tags with
+   `block dark:hidden` + `hidden dark:block` for light/dark image variants;
+   without these utilities in the bundle the dark image stays hidden in
+   both themes and the editor's branding work doesn't reach the rendered
+   site. Add new patterns here as new MDX-only classes appear. */
+@source inline("block dark:hidden hidden dark:block");
+
 /* Composed at startup by prepareAstroEnv (src/cli/prepareAstro.mjs):
      globalTokens + base theme + tenant theme.json overrides → CSS vars.
    Generated to packages/cli/.nebula/tokens.css; gitignored. */

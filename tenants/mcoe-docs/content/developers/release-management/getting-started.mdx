@@ -9,7 +9,10 @@ import { PlatformNav } from "@tenant/components/PlatformNav";
 
 The Rollouts module in Immerse helps you manage mobile app releases from build selection through App Store submission and production release. It provides a structured pipeline with built-in compliance checks, approval workflows, and integration with Bitrise CI/CD and Apple App Store Connect.
 
-<BitrisePrereq feature="Rollouts" />
+<Warning>
+Your project must be fully migrated to Bitrise CI before using Rollouts. If you haven't migrated yet, see Migrating from GitHub to Bitrise.
+</Warning>
+
 
 ## What Is a Rollout?
 
@@ -87,7 +90,15 @@ You need permissions to create rollouts and manage versions in Immerse.
 
 ## Accessing the Rollouts Module
 
-<PlatformNav product="Rollouts" />
+<Steps>
+<Step title="Open Immerse Platform">
+Navigate to Immerse Platform and sign in with your credentials.
+</Step>
+
+<Step title="Go to Rollouts">
+From the left navigation sidebar, select **Rollouts**.
+</Step>
+</Steps>
 
 From here you'll see all Rollouts created by your team, or the option to create your first one. The Rollouts module is located at `/beta/rollouts/` in the portal.
 

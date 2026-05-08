@@ -2,9 +2,9 @@
   "$schema": "https://nebula-docs.uhg.com/theme.schema.json",
   "extends": "mcoe-default",
   "tokens": {
-    "brandPrimary": "#FF681F",
-    "brandPrimaryDark": "#004BA0",
-    "brandPrimaryLight": "#69F0FF"
+    "brandPrimary": "#196ECF",
+    "brandPrimaryDark": "#002677",
+    "brandPrimaryLight": "#46E6FF"
   },
   "codeBlock": {
     "dark": "dark-plus",

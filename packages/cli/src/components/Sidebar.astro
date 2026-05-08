@@ -298,6 +298,12 @@ const ariaLabel = activeTab?.tab ?? 'Documentation';
     list-style: none;
     margin: 0;
     padding: 0;
+    /* 2px gap between adjacent rows so a hover pill never butts against
+       an active pill — the pill backgrounds always read as separate even
+       when stacked back-to-back. */
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
   }
   .nebula-sidebar-item {
     margin: 0;
@@ -440,10 +446,24 @@ const ariaLabel = activeTab?.tab ?? 'Documentation';
   .nebula-sidebar-nested[open] > .nebula-sidebar-nested-summary .nebula-sidebar-nested-chevron {
     transform: rotate(90deg);
   }
+  /* Indent nested rows via padding (not margin on the list) so the hover/
+     active pill background stays full-width at every depth — pills line up
+     edge-to-edge with the top-level rows above them. The text shift between
+     levels is intentionally small (≈8px), which keeps the hierarchy legible
+     without pushing deep rows to a different visual column. */
   .nebula-sidebar-nested .nebula-sidebar-list {
-    margin-left: 0.625rem;
+    margin-left: 0;
   }
   .nebula-sidebar-nested .nebula-sidebar-item a {
-    padding-left: 2.5rem;
+    padding-left: 2.375rem;
+  }
+  .nebula-sidebar-nested .nebula-sidebar-nested .nebula-sidebar-item a {
+    padding-left: 2.875rem;
+  }
+  .nebula-sidebar-nested .nebula-sidebar-nested-summary {
+    padding-left: 2.375rem;
+  }
+  .nebula-sidebar-nested .nebula-sidebar-nested .nebula-sidebar-nested-summary {
+    padding-left: 2.875rem;
   }
 </style>

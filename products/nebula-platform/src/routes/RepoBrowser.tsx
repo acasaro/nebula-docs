@@ -9,7 +9,7 @@ import { EditorSurfaceSkeleton } from "@/components/EditorSurfaceSkeleton";
 import { FileTreeSkeleton } from "@/components/FileTreeSkeleton";
 import { NavTreeSkeleton } from "@/components/NavTreeSkeleton";
 import { OrphanedPages, ORPHAN_ID_PREFIX } from "@/components/OrphanedPages";
-import { SourceEditor } from "@/components/SourceEditor";
+import { SourceEditor, languageForPath } from "@/components/SourceEditor";
 import {
   DndContext,
   DragOverlay,
@@ -163,7 +163,7 @@ function TreeItem({ node, depth, selectedPath, onSelect, hideExtensions = false 
         <span className='truncate font-medium'>{node.name}</span>
       </button>
       {expanded ? (
-        <div>
+        <div className='mt-0.5 flex flex-col gap-0.5'>
           {node.children!.map((child) => (
             <TreeItem
               key={child.fullPath}
@@ -308,16 +308,26 @@ function FileViewer({
       <SourceEditor
         key={`${path}:${revertNonce}`}
         value={content}
+        language='mdx'
         onChange={onContentChange}
         className='flex-1'
       />
     );
   }
 
+  // Non-MDX text files (json, yaml, ts, css, etc.) — same SourceEditor with
+  // language inferred from the path, so config files and tenant-local
+  // components edit with full syntax highlighting + a numbered gutter.
+  // `onChange` is wired the same way as MDX so dirty-tracking + the
+  // PublishMenu pipeline carry these edits through to commit unchanged.
   return (
-    <pre className='flex-1 overflow-auto whitespace-pre-wrap break-words p-6 font-mono text-xs leading-relaxed text-foreground/90'>
-      {content}
-    </pre>
+    <SourceEditor
+      key={`${path}:${revertNonce}`}
+      value={content}
+      language={languageForPath(path)}
+      onChange={onContentChange}
+      className='flex-1'
+    />
   );
 }
 
@@ -350,7 +360,7 @@ function FileTreePanel({
     return <p className='px-3 py-2 text-sm text-muted-foreground'>{emptyMessage}</p>;
   }
   return (
-    <div className='px-3 py-2'>
+    <div className='flex flex-col gap-0.5 px-3 py-2'>
       {tree.map((node) => (
         <TreeItem
           key={node.fullPath}

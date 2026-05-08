@@ -3,7 +3,6 @@ title: "Configuring Rollout Settings"
 description: "Managing rollout settings, app store configuration, and Google Play setup."
 sidebarTitle: "Settings"
 ---
-
 Rollout settings control your rollout's identity, repository connections, and platform-specific app store configurations. There are two settings pages: **Rollout Settings** (name and repository) and **Global Settings** (application info and app store configuration).
 
 ## Rollout Settings Page
@@ -17,40 +16,45 @@ Navigate to your rollout and click **"Settings"** from the checklist page, or go
 ### Rename Your Rollout
 
 <Steps>
-  <Step title="Update the rollout name">
-    In the **"Edit Rollout Name"** section, update the rollout name field. The preview shows what the final name will be (lowercase, hyphens replace special characters).
-    <VideoLoop src="/videos/05-editing-rollout-name.mp4" loop caption="Editing the rollout name" maxLoops={2} />
-  </Step>
-  <Step title="Verify no conflicts">
-    The system checks that the new name doesn't conflict with another rollout under the same ASK ID.
-  </Step>
-  <Step title="Save or discard">
-    Click **Save** in the top-right corner to confirm, or **Discard** to cancel.
-  </Step>
+<Step title="Update the rollout name">
+In the **"Edit Rollout Name"** section, update the rollout name field. The preview shows what the final name will be (lowercase, hyphens replace special characters).
+
+<Video src="https://firebasestorage.googleapis.com/v0/b/mcoe-d.firebasestorage.app/o/dev%2F1%2Fvideos%2F6f4edaf3787995d1.mp4?alt=media&token=7e6fd7c7-8e36-4ec3-b2d5-63944518ecf0" caption="Editing the rollout name" loop maxLoops={2} />
+</Step>
+
+<Step title="Verify no conflicts">
+The system checks that the new name doesn't conflict with another rollout under the same ASK ID.
+</Step>
+
+<Step title="Save or discard">
+Click **Save** in the top-right corner to confirm, or **Discard** to cancel.
+</Step>
 </Steps>
 
 ### Repository Configuration
 
 This section shows the repository connected to your rollout. You can add or update the repository connection from here.
-    <VideoLoop src="/videos/03-connecting-repository.mp4" loop caption="Configuring the repository connection" maxLoops={2} />
 
+<Video src="https://firebasestorage.googleapis.com/v0/b/mcoe-d.firebasestorage.app/o/dev%2F1%2Fvideos%2Fcffc1486c7c10509.mp4?alt=media&token=b942aba1-0e63-451a-935f-b936ebba5e33" caption="Configuring the repository connection" loop maxLoops={2} />
 
 ### Delete a Rollout
 
 At the bottom of the settings page, the **Danger Zone** section includes a delete option.
 
 <Steps>
-  <Step title="Click Delete Rollout">
-    Click the **"Delete Rollout"** button (red) in the Danger Zone.
-  </Step>
-  <Step title="Confirm deletion">
-    A confirmation dialog appears. Type the rollout name exactly to confirm.
-        <VideoLoop src="/videos/06-deleting-rollouts.mp4" loop caption="Confirming the deletion of a rollout" maxLoops={2} />
+<Step title="Click Delete Rollout">
+Click the **"Delete Rollout"** button (red) in the Danger Zone.
+</Step>
 
-  </Step>
-  <Step title="Delete">
-    Click **Confirm** to permanently delete the rollout and all associated data (versions, approvals, etc.).
-  </Step>
+<Step title="Confirm deletion">
+A confirmation dialog appears. Type the rollout name exactly to confirm.
+
+<Video src="https://firebasestorage.googleapis.com/v0/b/mcoe-d.firebasestorage.app/o/dev%2F1%2Fvideos%2F064dd16700b657a0.mp4?alt=media&token=9efe540d-d397-4d77-b83e-325a8d0b87c3" caption="Confirming the deletion of a rollout" loop maxLoops={2} />
+</Step>
+
+<Step title="Delete">
+Click **Confirm** to permanently delete the rollout and all associated data (versions, approvals, etc.).
+</Step>
 </Steps>
 
 <Warning>Deleting a rollout cannot be undone. All versions, approvals, and configuration data will be permanently removed.</Warning>
@@ -63,7 +67,7 @@ The Global Settings page has three tabs for configuring platform-specific detail
 /beta/rollouts/{askId}/{rolloutName}/global-settings
 ```
 
-        <VideoLoop src="/videos/06-rollout-settings-tabs.mp4" loop caption="The Global Settings page with three configuration tabs" maxLoops={2} />
+<Video src="https://firebasestorage.googleapis.com/v0/b/mcoe-d.firebasestorage.app/o/dev%2F1%2Fvideos%2F064dd16700b657a0.mp4?alt=media&token=9efe540d-d397-4d77-b83e-325a8d0b87c3" caption="The Global Settings page with three configuration tabs" loop maxLoops={2} />
 
 ### Tab 1: Global
 
@@ -72,7 +76,7 @@ This tab shows your application's information and organization details. Most fie
 **Application Information (Read-Only)**
 
 | Field | Description |
-|-------|-------------|
+| --- | --- |
 | ASK ID | Your application's identifier |
 | App Name | Short application name |
 | Application Name | Full application name |
@@ -84,7 +88,7 @@ This tab shows your application's information and organization details. Most fie
 **Ownership & Organization (Read-Only)**
 
 | Field | Description |
-|-------|-------------|
+| --- | --- |
 | Service Owner | Name of the service owner |
 | Technical Owner | Name of the technical owner |
 | Product Owner | Name of the product owner |
@@ -101,7 +105,7 @@ This tab shows your application's information and organization details. Most fie
 **Editable Global Fields**
 
 | Field | Required for Checklist | Description |
-|-------|----------------------|-------------|
+| --- | --- | --- |
 | Support URL | Yes | Link to your app's support page |
 | Marketing URL | Yes | Link to your app's marketing page |
 | Privacy Policy URL | Yes | Link to your app's privacy policy |
@@ -114,7 +118,7 @@ Fill in these fields and click **Save** to complete the Global Settings checklis
 Configure your Apple App Store Connect settings here. These are used when submitting iOS versions to the App Store.
 
 | Field | Required | Description |
-|-------|----------|-------------|
+| --- | --- | --- |
 | Application Name | Yes | The name displayed on the App Store |
 | Bundle ID | Yes | Your iOS app's bundle identifier (e.g., `com.uhg.myapp`) |
 | SKU | No | Stock Keeping Unit for App Store Connect |
@@ -124,23 +128,19 @@ Configure your Apple App Store Connect settings here. These are used when submit
 
 <Tip>The Application Name and Bundle ID are critical — they must match your Xcode project configuration and App Store Connect settings exactly.</Tip>
 
-<Frame caption="The App Store Connect configuration tab">
-  ![app-store-connect-settings](/images/docs/developer/rollout-settings-tab2.png)
-</Frame>
+<img src="https://firebasestorage.googleapis.com/v0/b/mcoe-d.firebasestorage.app/o/dev%2F1%2Fimages%2F256ff01d000d0df8.png?alt=media&token=c8706d9c-9b9d-4bcd-9229-65151172d872" alt="rollout-settings-tab2.png" width="1509" height="1053" />
 
 ### Tab 3: Google Play Console
 
 Configure your Google Play Console settings here. These are used when managing Android releases.
 
 | Field | Required | Description |
-|-------|----------|-------------|
+| --- | --- | --- |
 | Application Name | Yes | The name displayed on Google Play |
 | Package Name | Yes | Your Android app's package name (e.g., `com.uhg.myapp`) |
 | Service Account Email | No | Google service account for API access |
 
-<Frame caption="The Google Play Console configuration tab">
-  ![google-play-settings](/images/docs/developer/rollout-settings-tab3.png)
-</Frame>
+<img src="https://firebasestorage.googleapis.com/v0/b/mcoe-d.firebasestorage.app/o/dev%2F1%2Fimages%2F041de1570bc5cbbe.png?alt=media&token=3622b19f-800d-4ed7-9c33-a1194ccb0c77" alt="rollout-settings-tab3.png" width="1506" height="1025" />
 
 ## Saving and Discarding Changes
 

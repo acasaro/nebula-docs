@@ -3,8 +3,7 @@ title: "Mobile CI"
 description: "MCOE empowers mobile teams via Bitrise to ship apps faster by automating repetitive mobile workflows, delivering ready-to-use integrations tailored for iOS and Android, accelerating testing cycles across real-device environments, and ensuring consistently high-quality releases."
 sidebarTitle: "About Mobile CI"
 ---
-
-import { PlatformCard } from '@tenant/components/PlatformCard';
+import { PlatformCard } from "@tenant/components/PlatformCard";
 
 MCOE's Mobile CI platform empowers mobile teams to ship apps faster by automating repetitive workflows, delivering ready-to-use integrations for iOS and Android, accelerating testing cycles, and ensuring consistently high-quality releases. The platform is built on top of three connected systems: **Immerse**, **GitHub**, and **Bitrise**.
 
@@ -12,8 +11,8 @@ MCOE's Mobile CI platform empowers mobile teams to ship apps faster by automatin
 
 The Enterprise Mobile CI/CD architecture connects three systems that work together to take your code from commit to production:
 
-<Frame caption='Enterprise Pipelines CI Overview — Immerse, GitHub, and Bitrise working together'>
-  ![enterprise-ci-overview](/images/image-place-holder.png)
+<Frame caption="Enterprise Pipelines CI Overview — Immerse, GitHub, and Bitrise working together">
+![enterprise-ci-overview](https://firebasestorage.googleapis.com/v0/b/mcoe-d.firebasestorage.app/o/dev%2F1%2Fimages%2F512ca799411ced47.png?alt=media&token=f69ac29d-edf8-4fd7-95c2-660b2e6f28fc)
 </Frame>
 
 ### Immerse
@@ -41,6 +40,7 @@ Bitrise handles mobile-specific build, test, and release operations:
 
 - **Projects** — Each application has a Bitrise project containing both Bitrise CI and Release Management
 - **Workflows** — Pre-configured workflows for each build type:
+
   - iOS Build (Dev / Test / Prod)
   - Android Build (Dev / Test / Prod)
   - Release Candidate
@@ -49,7 +49,7 @@ Bitrise handles mobile-specific build, test, and release operations:
 - **Release Management** — Enterprise Approvals, App Store Connect integration, and Google Play Store integration
 
 <Note>
-  Bitrise downloads build artifacts from the CI pipeline and manages them through the release
+Bitrise downloads build artifacts from the CI pipeline and manages them through the release
   process. See [Release Management](/developers/release-management/getting-started) for details on
   the release workflow.
 </Note>
@@ -57,69 +57,62 @@ Bitrise handles mobile-specific build, test, and release operations:
 ## How It All Connects
 
 <Steps>
-  <Step title='Immerse creates the pipeline'>
-    When you create a mobile pipeline in Immerse, it provisions the necessary Bitrise project and
-    commits shared workflow files to your GitHub repository.
-  </Step>
-  <Step title='GitHub Actions runs the CI workflow'>
-    On push or pull request, the shared [React Native CI
+<Step title="Immerse creates the pipeline">
+When you create a mobile pipeline in Immerse, it provisions the necessary Bitrise project and
+commits shared workflow files to your GitHub repository.
+</Step>
+
+<Step title="GitHub Actions runs the CI workflow">
+On push or pull request, the shared [React Native CI
     workflow](/developers/mobile-ci/mobile-workflows/react-native-ci) runs — installing
     dependencies, running tests, performing code quality scans, and triggering Bitrise builds.
-  </Step>
-  <Step title='Bitrise builds your app'>
-    Bitrise executes the mobile-specific build workflow (iOS/Android), producing signed artifacts
-    (`.ipa` or `.aab` files).
-  </Step>
-  <Step title='Artifacts flow back'>
-    Build artifacts are downloaded from Bitrise and can be uploaded to JFrog or used directly in the
-    Release Management pipeline.
-  </Step>
-  <Step title='Release Management takes over'>
-    Once artifacts are ready, the [Rollouts module](/developers/release-management/getting-started)
+</Step>
+
+<Step title="Bitrise builds your app">
+Bitrise executes the mobile-specific build workflow (iOS/Android), producing signed artifacts
+(`.ipa` or `.aab` files).
+</Step>
+
+<Step title="Artifacts flow back">
+Build artifacts are downloaded from Bitrise and can be uploaded to JFrog or used directly in the
+Release Management pipeline.
+</Step>
+
+<Step title="Release Management takes over">
+Once artifacts are ready, the [Rollouts module](/developers/release-management/getting-started)
     manages the full release lifecycle — testing, approvals, store review, and production release.
-  </Step>
+</Step>
 </Steps>
 
 ## Supported Platforms
 
-<PlatformCard platform="ios">
+<PlatformCard platform="ios" />
 
-- **Build Tool:** Xcode via Bitrise
-- **Artifact:** Signed `.ipa` file
-- **Distribution:** TestFlight + App Store Connect
-- **Workflows:** iOS Build (Dev/Test/Prod), iOS Native Build, Release Candidate
-
-</PlatformCard>
-
-<PlatformCard platform="android">
-
-- **Build Tool:** Gradle via Bitrise
-- **Artifact:** Signed `.aab` file
-- **Distribution:** Google Play Console
-- **Workflows:** Android Build (Dev/Test/Prod), Android Native Build, Release Candidate
-
-</PlatformCard>
+<PlatformCard platform="android" />
 
 ## Getting Started
 
 <Steps>
-  <Step title='Ensure your project is in Bitrise'>
-    Your application needs a Bitrise project. If you don't have one yet, the [Enterprise
+<Step title="Ensure your project is in Bitrise">
+Your application needs a Bitrise project. If you don't have one yet, the [Enterprise
     Pipelines](/developers/mobile-ci/mobile-workflows) flow in Immerse will create one for you.
-  </Step>
-  <Step title='Set up your CI workflow'>
-    Add the [React Native CI reusable
+</Step>
+
+<Step title="Set up your CI workflow">
+Add the [React Native CI reusable
     workflow](/developers/mobile-ci/mobile-workflows/react-native-ci) to your repository's GitHub
     Actions configuration.
-  </Step>
-  <Step title='Configure Bitrise authentication'>
-    Set up either a Bitrise API token or OIDC-based authentication for secure build triggering.
-  </Step>
-  <Step title='Create a Rollout (optional)'>
-    If you want to manage releases through Immerse, [create a
+</Step>
+
+<Step title="Configure Bitrise authentication">
+Set up either a Bitrise API token or OIDC-based authentication for secure build triggering.
+</Step>
+
+<Step title="Create a Rollout (optional)">
+If you want to manage releases through Immerse, [create a
     Rollout](/developers/release-management/manage-rollout/create-rollout) and connect it to your
     Bitrise project.
-  </Step>
+</Step>
 </Steps>
 
 ## What's Next

@@ -12,7 +12,84 @@ type ShikiInstance = HighlighterCore & {
 
 const LIGHT_THEME: BundledTheme = 'github-light';
 const DARK_THEME: BundledTheme = 'github-dark';
-const LANGS: BundledLanguage[] = ['mdx'];
+
+/** Languages eagerly loaded with the highlighter on first init. The set
+ *  intentionally covers everything a tenant repo commonly carries (MDX,
+ *  config formats, the source for tenant-local components, CI workflows)
+ *  so the editor goes from "nothing highlighted" to "fully highlighted"
+ *  without on-demand `loadLanguage` round-trips.
+ *
+ *  IMPORTANT: every entry here MUST be a Shiki bundled language. Adding
+ *  a non-bundled ID (e.g. `'svg'`) throws inside `createHighlighter` and
+ *  kills the whole highlighter — every file then renders unstyled.
+ *  Extensions like `.svg` map to `'xml'` in `EXT_TO_LANG` instead. */
+const PRELOADED_LANGS: BundledLanguage[] = [
+  'mdx',
+  'markdown',
+  'json',
+  'jsonc',
+  'json5',
+  'yaml',
+  'toml',
+  'typescript',
+  'tsx',
+  'javascript',
+  'jsx',
+  'astro',
+  'css',
+  'scss',
+  'html',
+  'xml',
+  'shellscript',
+];
+
+/** File-extension → Shiki language ID. Keys are lowercased ext (no dot).
+ *  Falls back to `'plaintext'` when an extension isn't mapped, which Shiki
+ *  also accepts and renders unstyled (no highlighter color tokens). */
+const EXT_TO_LANG: Record<string, BundledLanguage | 'plaintext'> = {
+  mdx: 'mdx',
+  md: 'markdown',
+  markdown: 'markdown',
+  json: 'json',
+  jsonc: 'jsonc',
+  json5: 'json5',
+  yaml: 'yaml',
+  yml: 'yaml',
+  toml: 'toml',
+  ts: 'typescript',
+  mts: 'typescript',
+  cts: 'typescript',
+  tsx: 'tsx',
+  js: 'javascript',
+  mjs: 'javascript',
+  cjs: 'javascript',
+  jsx: 'jsx',
+  astro: 'astro',
+  css: 'css',
+  scss: 'scss',
+  sass: 'scss',
+  html: 'html',
+  htm: 'html',
+  xml: 'xml',
+  svg: 'xml',
+  sh: 'shellscript',
+  bash: 'shellscript',
+  zsh: 'shellscript',
+  txt: 'plaintext',
+};
+
+/** Resolve a file path (or basename) to its Shiki language ID. Handles
+ *  composite filenames the extension lookup would miss (e.g. `.gitignore`,
+ *  `Dockerfile`) — the docs platform doesn't render those today, but the
+ *  fallback to `plaintext` keeps things safe regardless. */
+export function languageForPath(path: string | null | undefined): BundledLanguage | 'plaintext' {
+  if (!path) return 'plaintext';
+  const base = path.split('/').pop() ?? '';
+  const idx = base.lastIndexOf('.');
+  if (idx <= 0) return 'plaintext';
+  const ext = base.slice(idx + 1).toLowerCase();
+  return EXT_TO_LANG[ext] ?? 'plaintext';
+}
 
 let highlighterPromise: Promise<ShikiInstance> | null = null;
 
@@ -22,7 +99,7 @@ function getHighlighter(): Promise<ShikiInstance> {
       const { createHighlighter } = await import('shiki');
       const hl = await createHighlighter({
         themes: [LIGHT_THEME, DARK_THEME],
-        langs: LANGS,
+        langs: PRELOADED_LANGS,
       });
       return hl as ShikiInstance;
     })();
@@ -33,11 +110,14 @@ function getHighlighter(): Promise<ShikiInstance> {
 interface SourceEditorProps {
   value: string;
   onChange?: (next: string) => void;
+  /** Shiki language ID. Defaults to `'mdx'`. Pass `'plaintext'` for files
+   *  whose extension isn't in `EXT_TO_LANG`. */
+  language?: BundledLanguage | 'plaintext';
   className?: string;
 }
 
 /**
- * Editable source view with MDX syntax highlighting and a GitHub-style
+ * Editable source view with Shiki syntax highlighting and a GitHub-style
  * line-number gutter.
  *
  * The textarea is the source of truth — its caret + selection drive editing.
@@ -49,7 +129,12 @@ interface SourceEditorProps {
  * All three layers must share identical font metrics — same family, size,
  * line-height, and tab-size — or the gutter drifts as the file scrolls.
  */
-export function SourceEditor({ value, onChange, className }: SourceEditorProps) {
+export function SourceEditor({
+  value,
+  onChange,
+  language = 'mdx',
+  className,
+}: SourceEditorProps) {
   const [html, setHtml] = useState<string>('');
   const [activeLine, setActiveLine] = useState(1);
   const isDark = useDarkMode();
@@ -70,17 +155,27 @@ export function SourceEditor({ value, onChange, className }: SourceEditorProps) 
       .then((hl) => {
         if (cancelled) return;
         const theme = isDark ? DARK_THEME : LIGHT_THEME;
-        const rendered = hl.codeToHtml(value, { lang: 'mdx', theme });
+        // Languages outside the preloaded set fall back to plaintext rather
+        // than throwing on `codeToHtml`. Keeps the editor usable for
+        // unrecognized extensions.
+        const loaded = new Set(hl.getLoadedLanguages());
+        const lang = language !== 'plaintext' && loaded.has(language) ? language : 'plaintext';
+        const rendered = hl.codeToHtml(value, { lang, theme });
         setHtml(rendered);
       })
-      .catch(() => {
-        // Fall back to plain text — no highlight.
+      .catch((err) => {
+        // Fall back to plain text — no highlight. Surface the error so a
+        // misconfigured `PRELOADED_LANGS` (e.g. an ID not bundled in Shiki)
+        // doesn't disappear into a silent code path that just renders raw
+        // text everywhere.
+        // eslint-disable-next-line no-console
+        console.error('[SourceEditor] Shiki highlight failed:', err);
         setHtml('');
       });
     return () => {
       cancelled = true;
     };
-  }, [value, isDark]);
+  }, [value, isDark, language]);
 
   // Sync the pre + gutter scroll positions with the textarea's so the
   // highlighting and line numbers stay aligned with the caret.
@@ -105,7 +200,8 @@ export function SourceEditor({ value, onChange, className }: SourceEditorProps) 
   };
 
   const editable = !!onChange;
-  const gutterWidth = `${Math.max(2, String(lineCount).length)}ch`;
+  const gutterDigits = Math.max(2, String(lineCount).length);
+  const gutterWidth = `${gutterDigits}ch`;
 
   return (
     <div
@@ -115,13 +211,16 @@ export function SourceEditor({ value, onChange, className }: SourceEditorProps) 
       )}
       data-component-part="source-editor"
     >
+      {/* Gutter — wider padding (left edge breathing room + clear gap to the
+          source column on the right) and a slightly larger numeric scale so
+          line numbers read at a glance without overpowering the code. */}
       <div
         ref={gutterRef}
         aria-hidden="true"
         className={cn(
-          'mdx-source-gutter pointer-events-none shrink-0 select-none overflow-hidden border-r border-border/40 py-4 pl-3 pr-2 font-mono text-xs leading-relaxed text-muted-foreground/60',
+          'mdx-source-gutter pointer-events-none shrink-0 select-none overflow-hidden border-r border-border/40 bg-muted/20 py-5 pl-5 pr-4 font-mono text-[13px] leading-[1.65] text-muted-foreground/55',
         )}
-        style={{ width: `calc(${gutterWidth} + 1.25rem)` }}
+        style={{ width: `calc(${gutterWidth} + 2.25rem)` }}
       >
         {Array.from({ length: lineCount }).map((_, i) => {
           const n = i + 1;
@@ -130,7 +229,7 @@ export function SourceEditor({ value, onChange, className }: SourceEditorProps) 
               key={n}
               className={cn(
                 'text-right tabular-nums',
-                n === activeLine && 'text-foreground',
+                n === activeLine && 'font-medium text-foreground',
               )}
               style={{ width: gutterWidth }}
             >
@@ -145,7 +244,7 @@ export function SourceEditor({ value, onChange, className }: SourceEditorProps) 
             ref={preRef}
             aria-hidden="true"
             className={cn(
-              'mdx-source-pre absolute inset-0 m-0 overflow-auto whitespace-pre py-4 pr-4 pl-2 font-mono text-xs leading-relaxed',
+              'mdx-source-pre absolute inset-0 m-0 overflow-auto whitespace-pre-wrap break-words py-5 pr-6 pl-5 font-mono text-[13px] leading-[1.65]',
               'pointer-events-none',
             )}
             dangerouslySetInnerHTML={{ __html: html }}
@@ -155,7 +254,7 @@ export function SourceEditor({ value, onChange, className }: SourceEditorProps) 
             ref={preRef}
             aria-hidden="true"
             className={cn(
-              'mdx-source-pre absolute inset-0 m-0 overflow-auto whitespace-pre py-4 pr-4 pl-2 font-mono text-xs leading-relaxed text-foreground/90',
+              'mdx-source-pre absolute inset-0 m-0 overflow-auto whitespace-pre-wrap break-words py-5 pr-6 pl-5 font-mono text-[13px] leading-[1.65] text-foreground/90',
               'pointer-events-none',
             )}
           >
@@ -174,9 +273,9 @@ export function SourceEditor({ value, onChange, className }: SourceEditorProps) 
           spellCheck={false}
           autoCorrect="off"
           autoCapitalize="off"
-          wrap="off"
+          wrap="soft"
           className={cn(
-            'absolute inset-0 m-0 block h-full w-full resize-none overflow-auto whitespace-pre border-0 bg-transparent py-4 pr-4 pl-2 font-mono text-xs leading-relaxed outline-none',
+            'absolute inset-0 m-0 block h-full w-full resize-none overflow-auto whitespace-pre border-0 bg-transparent py-5 pr-6 pl-5 font-mono text-[13px] leading-[1.65] outline-none',
             'text-transparent caret-foreground selection:bg-primary/30 selection:text-foreground',
           )}
         />

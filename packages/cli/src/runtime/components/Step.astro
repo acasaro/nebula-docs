@@ -14,8 +14,11 @@ const { title } = Astro.props as Props;
   .nebula-step {
     counter-increment: nebula-step;
     position: relative;
-    padding-left: 2.75rem;
-    padding-bottom: 1.5rem;
+    /* Circle column = 1.75rem (circle) + 1.5rem (breathing room before content).
+       Wider gap matches Mintlify — the line+circle reads as its own column,
+       not as a bullet glued to the prose. */
+    padding-left: 3.25rem;
+    padding-bottom: 2rem;
   }
   /* Numbered circle. Uses color-mix from `--mcoe-text-heading` so the fill
    * sits a tasteful step darker than the page bg in light mode and a step
@@ -69,8 +72,8 @@ const { title } = Astro.props as Props;
   .nebula-step-title {
     font-weight: 600;
     color: var(--mcoe-text-heading);
-    margin: 0 0 0.5rem;
-    font-size: 1rem;
+    margin: 0 0 0.75rem;
+    font-size: 1.0625rem;
     line-height: 1.4;
     letter-spacing: -0.01em;
   }

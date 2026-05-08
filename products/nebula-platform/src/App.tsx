@@ -27,7 +27,9 @@ function LegacyRepoRedirect() {
 /**
  * Toast portal — bottom-right, non-invasive. Sonner's `theme` prop has to
  * match our app theme explicitly: it doesn't read our `documentElement.dark`
- * class on its own, so we wire it via `useTheme()`.
+ * class on its own, so we wire it via `useTheme()`. No `closeButton` —
+ * toasts are ephemeral by design and auto-dismiss on Sonner's default timer;
+ * the X added visual noise without earning its keep.
  */
 function AppToaster() {
   const { theme } = useTheme();
@@ -36,7 +38,6 @@ function AppToaster() {
       position='bottom-right'
       theme={theme}
       richColors
-      closeButton
     />
   );
 }

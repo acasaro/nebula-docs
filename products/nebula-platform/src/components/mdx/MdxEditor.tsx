@@ -421,6 +421,21 @@ export function MdxEditor({
       <EditorWithBlockHandle editor={onSourceChange ? editor : null}>
         <EditorContent editor={editor} />
       </EditorWithBlockHandle>
+      {onSourceChange ? (
+        // Click-to-focus tail. Without this, clicking in the empty space
+        // below the last block does nothing — the user can see the page
+        // ends but the editor only takes focus when they click directly
+        // on contenteditable content. 40vh is enough that the trailing
+        // gap is always reachable on a half-empty page.
+        <div
+          aria-hidden
+          className="min-h-[20vh] cursor-text"
+          onMouseDown={(e) => {
+            e.preventDefault();
+            editor?.commands.focus('end');
+          }}
+        />
+      ) : null}
       <TextToolbar editor={onSourceChange ? editor : null} />
       <LinkBubble editor={onSourceChange ? editor : null} />
 

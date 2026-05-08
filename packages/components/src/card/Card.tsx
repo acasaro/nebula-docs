@@ -4,6 +4,7 @@ import { Icon } from '../icon';
 import { cn } from '../utils/cn';
 
 export type CardAlign = 'start' | 'center';
+export type CardPadding = 'sm' | 'normal' | 'lg' | 'xl';
 
 export interface CardProps {
   title?: ReactNode;
@@ -19,9 +20,21 @@ export interface CardProps {
    *  mission-statement / pull-quote layout (badge centered above
    *  centered text). */
   align?: CardAlign;
+  /** Inner padding scale. `normal` (default) is `px-6 py-5`; `lg` and
+   *  `xl` give roomier breathing room for hero/mission-statement
+   *  compositions; `sm` is a tighter density for sidebar callouts or
+   *  index tiles. */
+  padding?: CardPadding;
   className?: string;
   children?: ReactNode;
 }
+
+const PADDING_CLASSES: Record<CardPadding, string> = {
+  sm: 'px-4 py-3',
+  normal: 'px-6 py-5',
+  lg: 'px-8 py-7',
+  xl: 'px-10 py-10',
+};
 
 function isExternalUrl(url: string): boolean {
   return /^[a-z]+:\/\//i.test(url) || url.startsWith('//');
@@ -41,6 +54,7 @@ export function Card({
   arrow,
   disabled,
   align = 'start',
+  padding = 'normal',
   className,
   children,
 }: CardProps) {
@@ -86,7 +100,8 @@ export function Card({
       ) : null}
       <div
         className={cn(
-          'relative px-6 py-5',
+          'relative',
+          PADDING_CLASSES[padding] ?? PADDING_CLASSES.normal,
           horizontal && 'flex items-center gap-x-4',
           isCentered && 'flex flex-col items-center text-center',
         )}

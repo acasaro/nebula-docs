@@ -188,7 +188,7 @@ function MdxFeatureCardView({
       icon={attrs.icon}
       iconLibrary={attrs.iconLibrary ?? undefined}
       iconType={attrs.iconType ?? undefined}
-      size={20}
+      size={28}
     />
   ) : undefined;
 

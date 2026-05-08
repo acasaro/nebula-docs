@@ -108,7 +108,7 @@ export function FeatureCard({
   const TitleTag = `h${resolvedLevel}` as 'h1' | 'h2' | 'h3' | 'h4';
 
   const resolvedIcon =
-    typeof icon === 'string' ? <McoeIcon icon={icon} size={22} /> : icon;
+    typeof icon === 'string' ? <McoeIcon icon={icon} size={28} /> : icon;
 
   const styleVars = {
     '--feature-accent': ACCENT_VAR[color],
@@ -148,7 +148,7 @@ export function FeatureCard({
       >
         {resolvedIcon ? (
           <div
-            className="flex size-[45px] shrink-0 items-center justify-center rounded-lg"
+            className="flex size-14 shrink-0 items-center justify-center rounded-lg"
             style={{
               backgroundColor: 'var(--feature-tile-bg)',
               color: 'var(--feature-icon-fg)',

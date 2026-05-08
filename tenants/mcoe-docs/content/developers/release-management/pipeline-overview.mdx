@@ -3,23 +3,23 @@ title: "Version Pipeline Overview"
 description: "The 5-stage release pipeline explained, including stage progression, statuses, and lifecycle."
 sidebarTitle: "Version Steps Overview"
 ---
-
 import ApprovalSteps from "/snippets/approval-steps.tsx";
 
 Every version in the Rollouts module moves through a 5-stage pipeline. Each stage must be completed before the next one can begin. This guide explains the full pipeline lifecycle, how stages progress, and what each status means.
-
-<ApprovalSteps />
 
 ## The Five Stages
 
 <StageList>
 <Stage label="Release Candidate" status="done" meta="Select build artifact" />
+
 <Stage label="Testing" status="done" meta="Upload to TestFlight" />
+
 <Stage label="Approvals" status="active" meta="6 required sign-offs" />
+
 <Stage label="Store Review" status="pending" meta="Apple / Google review" />
+
 <Stage label="Release" status="pending" meta="Go live" />
 </StageList>
-
 
 | Stage | What Happens | Key Action |
 | --- | --- | --- |
@@ -100,7 +100,6 @@ Each stage card also shows its own status:
 | **Not Started** | Gray | Stage hasn't been reached yet |
 
 ## Platform Differences
-
 
 ## Pipeline Lifecycle Example
 

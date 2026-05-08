@@ -81,6 +81,11 @@ import {
 import { loadDrafts, makeDraftScopeKey, saveDrafts } from "@/lib/draftStore";
 import { useGitSettings } from "@/lib/gitSettings";
 import { buildTree, type TreeNode } from "@/lib/repoTree";
+import {
+  EDITOR_NAV_MAX,
+  EDITOR_NAV_MIN,
+  useEditorNavWidth,
+} from "@/lib/uiPrefs";
 import { cn } from "@/lib/utils";
 import { ChevronDown, ChevronRight, Code2, Eye, Files, Folder, Map, Settings } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -378,6 +383,64 @@ function FileTreePanel({
   );
 }
 
+// Drag handle that lets the user resize the editor's nav sidebar by dragging
+// its right edge. The 1px-wide visual line sits inside a 6px-wide hit area so
+// the cursor catches the resize even when the user clicks slightly off — IDE
+// muscle memory for this kind of handle. While dragging we own the body
+// cursor and disable text selection so the column-resize cursor sticks even
+// when the pointer slides over child elements.
+function NavSidebarResizeHandle({
+  width,
+  onChange,
+}: {
+  width: number;
+  onChange: (next: number) => void;
+}) {
+  const onPointerDown = useCallback(
+    (event: React.PointerEvent<HTMLDivElement>) => {
+      if (event.button !== 0) return;
+      event.preventDefault();
+      const startX = event.clientX;
+      const startWidth = width;
+      const target = event.currentTarget;
+      target.setPointerCapture(event.pointerId);
+      const prevBodyCursor = document.body.style.cursor;
+      const prevBodySelect = document.body.style.userSelect;
+      document.body.style.cursor = "col-resize";
+      document.body.style.userSelect = "none";
+
+      const onMove = (e: PointerEvent) => {
+        onChange(startWidth + (e.clientX - startX));
+      };
+      const onUp = (e: PointerEvent) => {
+        target.releasePointerCapture(e.pointerId);
+        target.removeEventListener("pointermove", onMove);
+        target.removeEventListener("pointerup", onUp);
+        target.removeEventListener("pointercancel", onUp);
+        document.body.style.cursor = prevBodyCursor;
+        document.body.style.userSelect = prevBodySelect;
+      };
+      target.addEventListener("pointermove", onMove);
+      target.addEventListener("pointerup", onUp);
+      target.addEventListener("pointercancel", onUp);
+    },
+    [width, onChange],
+  );
+
+  return (
+    <div
+      role='separator'
+      aria-orientation='vertical'
+      aria-valuenow={width}
+      aria-valuemin={EDITOR_NAV_MIN}
+      aria-valuemax={EDITOR_NAV_MAX}
+      onPointerDown={onPointerDown}
+      className='group absolute inset-y-0 right-0 z-20 flex w-1.5 translate-x-1/2 cursor-col-resize items-center justify-center'>
+      <div className='h-full w-px bg-border/40 transition-colors group-hover:bg-primary/60 group-active:bg-primary' />
+    </div>
+  );
+}
+
 export function RepoBrowser() {
   const params = useParams();
   const navigate = useNavigate();
@@ -400,6 +463,7 @@ export function RepoBrowser() {
   const [settingsOpen, setSettingsOpen] = useState<OpenNavSettings | null>(null);
   const [configurationsOpen, setConfigurationsOpen] = useState(false);
   const [deletions, setDeletions] = useState<Set<string>>(new Set());
+  const [navSidebarWidth, setNavSidebarWidth] = useEditorNavWidth();
 
   const currentBranch = branchParam;
   const [branches, setBranches] = useState<string[]>([]);
@@ -1554,7 +1618,9 @@ export function RepoBrowser() {
 
   return (
     <div className='-m-8 flex h-[calc(100vh-3rem)] min-h-0'>
-      <aside className='-mt-12 flex h-screen w-72 shrink-0 flex-col overflow-hidden border-r border-border/20 bg-muted/30'>
+      <aside
+        style={{ width: navSidebarWidth }}
+        className='relative -mt-12 flex h-screen shrink-0 flex-col overflow-hidden border-r border-border/20 bg-muted/30'>
         {active.docsSubdirectory ? (
           <div className='border-b border-border/40 px-4 py-2 text-xs text-muted-foreground'>
             <code>{active.docsSubdirectory}</code>
@@ -1677,6 +1743,7 @@ export function RepoBrowser() {
           <Settings className='size-4' />
           Configurations
         </button>
+        <NavSidebarResizeHandle width={navSidebarWidth} onChange={setNavSidebarWidth} />
       </aside>
       {settingsOpen ? (
         <NavSettingsPanel

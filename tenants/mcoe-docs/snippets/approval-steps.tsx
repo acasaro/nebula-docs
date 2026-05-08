@@ -104,20 +104,26 @@ const iconImgBaseStyle: React.CSSProperties = {
   WebkitMaskPosition: "center",
 };
 
+// Text colors inherit from the page so they flip with the host's
+// light/dark mode regardless of which token system is in scope.
+// `--mcoe-text-primary` only dark-flips inside `[data-theme="dark"]`
+// (the legacy docs-site convention), but the editor uses a `.dark`
+// class — so a fixed-token color renders dark-on-dark and is
+// unreadable in editor dark mode.
 const labelStyle: React.CSSProperties = {
   fontSize: "13px",
   fontWeight: 700,
   letterSpacing: "-0.01em",
   marginBottom: "3px",
-  color: "var(--mcoe-text-primary)",
+  color: "inherit",
 };
 
 const subStyle: React.CSSProperties = {
   fontSize: "11px",
   fontFamily: "var(--mcoe-font-family-mono, ui-monospace, SFMono-Regular, Menlo, monospace)",
   letterSpacing: "0.02em",
-  color: ACCENT,
-  opacity: 0.85,
+  color: "inherit",
+  opacity: 0.7,
 };
 
 const arrowStyle: React.CSSProperties = {

@@ -53,16 +53,17 @@ export function Sheet({
   className,
 }: SheetProps) {
   const resolvedIcon =
-    typeof icon === 'string' ? <McoeIcon icon={icon} size={30} /> : icon;
+    typeof icon === 'string' ? <McoeIcon icon={icon} size={25} /> : icon;
   const hasHeader = !!resolvedIcon || !!label;
 
   return (
     <div
       style={{ '--sheet-accent': ACCENT[color] } as CSSProperties}
       className={cn(
-        'my-4 overflow-hidden rounded-lg border-l-4 px-5 py-4',
-        'border-l-[var(--sheet-accent)]',
-        'bg-[color-mix(in_srgb,var(--sheet-accent)_8%,transparent)]',
+        'my-3 overflow-hidden rounded-lg px-5 py-4',
+        'border border-[color-mix(in_srgb,var(--sheet-accent)_20%,transparent)]',
+        'border-l-4 border-l-[var(--sheet-accent)]',
+        'bg-[color-mix(in_srgb,var(--sheet-accent)_3%,transparent)]',
         className,
       )}
       data-component-part="sheet"
@@ -75,7 +76,7 @@ export function Sheet({
         >
           {resolvedIcon ? (
             <span
-              className="flex size-[30px] shrink-0 items-center justify-center"
+              className="flex size-[25px] shrink-0 items-center justify-center"
               data-component-part="sheet-icon"
             >
               {resolvedIcon}

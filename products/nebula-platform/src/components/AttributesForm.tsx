@@ -137,7 +137,7 @@ function FieldRenderer({
             {Icon ? <Icon className="size-3.5" /> : null}
             {field.label}
           </span>
-          <div className="grid grid-cols-5 gap-2">
+          <div className="flex flex-wrap gap-2">
             {field.options.map((opt) => {
               const selected = current === opt.value;
               return (
@@ -149,7 +149,7 @@ function FieldRenderer({
                   aria-pressed={selected}
                   title={opt.label ?? opt.value}
                   className={cn(
-                    'aspect-square w-full rounded-md transition',
+                    'size-[25px] rounded-md transition',
                     'ring-1 ring-inset ring-border',
                     'hover:ring-2 hover:ring-foreground/30',
                     selected &&

@@ -69,7 +69,7 @@ function MdxSheetView({ node, selected }: NodeViewProps) {
       icon={attrs.icon}
       iconLibrary={attrs.iconLibrary ?? undefined}
       iconType={attrs.iconType ?? undefined}
-      size={30}
+      size={25}
     />
   ) : undefined;
 

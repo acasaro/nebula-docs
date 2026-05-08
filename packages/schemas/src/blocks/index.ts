@@ -3,6 +3,7 @@ export * from './heading';
 export * from './text';
 export * from './callout';
 export * from './icon';
+export * from './feature-card';
 export * from './frame';
 export * from './hero';
 export * from './profile';

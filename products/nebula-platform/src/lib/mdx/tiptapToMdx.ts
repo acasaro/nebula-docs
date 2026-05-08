@@ -100,6 +100,8 @@ function serializeBlock(node: TiptapNode): string {
       return serializeCallout(node);
     case 'mdxCard':
       return serializeJsxBlock(node, 'Card');
+    case 'mdxFeatureCard':
+      return serializeJsxBlock(node, 'FeatureCard');
     case 'mdxFrame':
       return serializeJsxBlock(node, 'Frame');
     case 'mdxSheet':

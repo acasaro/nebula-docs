@@ -6,6 +6,7 @@ import { cardSchema } from './card';
 import { cardGroupSchema } from './cardGroup';
 import { columnsSchema } from './columns';
 import { expandableSchema } from './expandable';
+import { featureCardSchema } from './feature-card';
 import { frameSchema } from './frame';
 import { imageSchema } from './image';
 import { paramFieldSchema } from './paramField';
@@ -29,6 +30,7 @@ const REGISTRY: Record<string, BlockAttrSchema> = {
   [cardGroupSchema.blockType]: cardGroupSchema,
   [columnsSchema.blockType]: columnsSchema,
   [expandableSchema.blockType]: expandableSchema,
+  [featureCardSchema.blockType]: featureCardSchema,
   [frameSchema.blockType]: frameSchema,
   [imageSchema.blockType]: imageSchema,
   [paramFieldSchema.blockType]: paramFieldSchema,

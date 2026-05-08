@@ -40,6 +40,7 @@ import { MdxCodeGroup } from './MdxCodeGroupNode';
 import { MdxExpandable } from './MdxExpandableNode';
 import { MdxMermaid } from './MdxMermaidNode';
 import { MdxProfile } from './MdxProfileNode';
+import { MdxFeatureCard } from './MdxFeatureCardNode';
 import { MdxRaw } from './MdxRawNode';
 import { MdxSheet } from './MdxSheetNode';
 import { MdxSnippet } from './MdxSnippetNode';
@@ -208,6 +209,7 @@ export function MdxEditor({
       MdxCodeGroup,
       MdxCallout,
       MdxCard,
+      MdxFeatureCard,
       MdxFrame,
       MdxSheet,
       MdxUpdate,

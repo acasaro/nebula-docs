@@ -11,12 +11,13 @@ import {
   Anchor as AnchorIcon,
   ChevronDown,
   ChevronRight,
-  ChevronsDownUp,
   ChevronsUpDown,
+  CirclePlus,
   FilePlus,
+  FoldVertical,
   FolderPlus,
   Folder,
-  LayoutPanelTop,
+  PanelsTopLeft,
   Plus,
   Settings,
 } from 'lucide-react';
@@ -110,8 +111,12 @@ const EMPTY_PATH_SET: ReadonlySet<string> = new Set<string>();
 // indented by a small fixed step under their parent's row so nesting reads
 // visually without wasting horizontal space — the parent's icon column is
 // not duplicated, just a subtle indent shift.
-const ROOT_PL = 8;
-const GROUP_TEXT_OFFSET = 14;
+//
+// `ROOT_PL` doubles as the left gutter for top-level rows (the rounded pill
+// background sits this far in from the sidebar's left edge). The container's
+// right padding mirrors it so left and right gutters match.
+const ROOT_PL = 12;
+const GROUP_TEXT_OFFSET = 18;
 
 export function NavTree({
   config,
@@ -141,16 +146,15 @@ export function NavTree({
   );
 
   return (
-    <div className="flex flex-col gap-1 py-2 pr-2">
-      <div className="flex items-center justify-between pl-2 pr-1 pt-1 pb-1 text-xs text-muted-foreground/70">
+    <div className="flex flex-col gap-1 py-2 pr-3">
+      {/* Top toolbar — gutters mirror the nav row pills below it (`ROOT_PL`
+       *  on the left, container `pr-3` on the right) so the controls sit
+       *  inside the same vertical channel as the rows. */}
+      <div className="flex items-center justify-between pl-3 pr-1 pt-1 pb-1 text-xs text-muted-foreground/70">
         <span>Navigation</span>
         <div className="flex items-center gap-0.5">
           <CollapseAllButton onCollapseAll={() => setCollapseSignal((n) => n + 1)} />
-          <NavigationAddButton
-            onPickTab={() => setAddingTab(true)}
-            onPickAnchor={() => setAddingKind('anchor')}
-            onPickDropdown={() => setAddingKind('dropdown')}
-          />
+          <NavigationAddButton onPickTab={() => setAddingTab(true)} />
         </div>
       </div>
       <div className="flex flex-col gap-0.5">
@@ -207,7 +211,17 @@ export function NavTree({
             }}
             onCancel={() => setAddingTab(false)}
           />
-        ) : null}
+        ) : (
+          // Persistent "+ Add new" placeholder at the bottom of the root
+          // list. Only tabs can be added here (the same constraint as the
+          // header `+` button), so this is a single-action trigger — clicking
+          // it goes straight to the inline-name input.
+          <AddNewPlaceholder
+            indent={ROOT_PL}
+            ariaLabel="Add new tab"
+            onClick={() => setAddingTab(true)}
+          />
+        )}
         {addingKind === 'anchor' ? (
           <InlineAddRow
             kind="anchor"
@@ -278,9 +292,9 @@ function NamedNavRow({
         }
       >
         {iconName ? (
-          <Icon icon={iconName} size={14} className="shrink-0 text-muted-foreground" />
+          <Icon icon={iconName} size={16} className="shrink-0 text-muted-foreground" />
         ) : (
-          <FallbackIcon className="size-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
+          <FallbackIcon className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
         )}
         <Title>{label}</Title>
       </Row>
@@ -307,28 +321,23 @@ function CollapseAllButton({ onCollapseAll }: CollapseAllButtonProps) {
       }}
       className="flex size-5 items-center justify-center rounded text-muted-foreground/70 transition-colors hover:bg-accent hover:text-foreground"
     >
-      <ChevronsDownUp className="size-3.5" />
+      <FoldVertical className="size-3.5" />
     </button>
   );
 }
 
 interface NavigationAddButtonProps {
   onPickTab: () => void;
-  onPickAnchor?: () => void;
-  onPickDropdown?: () => void;
 }
 
 /**
- * Top-level Navigation `+` — opens a popover with the three kinds of
- * top-level entry Mintlify supports at the root of navigation: tabs,
- * anchors, and dropdowns. Mirrors the group-level `AddEntryButton` shape so
- * the muscle memory transfers.
+ * Top-level Navigation `+` — popover with the only thing addable at the root
+ * of `navigation`: tabs. Anchors and dropdowns aren't surfaced here per the
+ * supported-nav-patterns scope (Tabs→Groups→Pages and Tabs→Menus→Groups/
+ * Pages); existing anchor/dropdown entries from `docs.json` still render via
+ * `NamedNavRow`, but the editor never authors new ones.
  */
-function NavigationAddButton({
-  onPickTab,
-  onPickAnchor,
-  onPickDropdown,
-}: NavigationAddButtonProps) {
+function NavigationAddButton({ onPickTab }: NavigationAddButtonProps) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -370,35 +379,9 @@ function NavigationAddButton({
               onPickTab();
             }}
           >
-            <LayoutPanelTop className="size-3.5" />
+            <PanelsTopLeft className="size-3.5" />
             Tab
           </button>
-          {onPickAnchor && (
-            <button
-              type="button"
-              className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent"
-              onClick={() => {
-                setOpen(false);
-                onPickAnchor();
-              }}
-            >
-              <AnchorIcon className="size-3.5" />
-              Anchor
-            </button>
-          )}
-          {onPickDropdown && (
-            <button
-              type="button"
-              className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent"
-              onClick={() => {
-                setOpen(false);
-                onPickDropdown();
-              }}
-            >
-              <ChevronsUpDown className="size-3.5" />
-              Dropdown
-            </button>
-          )}
         </Popover.Content>
       </Popover.Portal>
     </Popover.Root>
@@ -557,6 +540,11 @@ function TabSection({
               onCommit={commitAdd}
               onCancel={() => setAddingKind(null)}
             />
+          ) : directPages.length === 0 && groups.length === 0 ? (
+            // Empty expanded tab → show the "+ Add new" affordance so the
+            // section doesn't sit blank. Picker matches the action-button
+            // popover (page or group) since both are valid under a tab.
+            <EntryAddPlaceholder indent={tabTextX} onPick={beginAdd} />
           ) : null}
         </div>
       ) : null}
@@ -674,6 +662,10 @@ function GroupSection({
               onCommit={commitAdd}
               onCancel={() => setAddingKind(null)}
             />
+          ) : pages.length === 0 ? (
+            // Empty expanded group → show the "+ Add new" affordance.
+            // Same picker as the action-button popover: page or group.
+            <EntryAddPlaceholder indent={childIndent} onPick={beginAdd} />
           ) : null}
         </div>
       ) : null}
@@ -812,7 +804,7 @@ function Row({
         }
       }}
       className={cn(
-        'group/nav-row relative flex h-8 items-center justify-between rounded-xl pl-2 pr-1 text-sm font-semibold transition-colors select-none outline-none',
+        'group/nav-row relative flex h-[34px] items-center justify-between rounded-xl pl-2 pr-1 text-sm font-semibold transition-colors select-none outline-none',
         onClick && 'cursor-pointer',
         highlighted
           ? 'bg-accent text-accent-foreground'
@@ -820,7 +812,7 @@ function Row({
       )}
       style={{ marginLeft: `${paddingLeft}px` }}
     >
-      <div className="flex min-w-0 items-center gap-1">{children}</div>
+      <div className="flex min-w-0 items-center gap-2">{children}</div>
       {showActions && actions ? (
         <div
           className={cn(
@@ -844,7 +836,7 @@ function Chevron({ expanded }: { expanded: boolean }) {
   return (
     <ChevronDown
       className={cn(
-        'size-3.5 shrink-0 text-muted-foreground transition-transform',
+        'size-4 shrink-0 text-muted-foreground transition-transform',
         !expanded && '-rotate-90',
       )}
       aria-hidden="true"
@@ -870,7 +862,7 @@ function CollapseToggleIcon({
   expanded: boolean;
 }) {
   return (
-    <span className="relative inline-flex size-3.5 shrink-0 items-center justify-center">
+    <span className="relative inline-flex size-4 shrink-0 items-center justify-center">
       <span className="absolute inset-0 inline-flex items-center justify-center transition-opacity group-hover/nav-row:opacity-0">
         <NavIcon icon={icon} fallback={fallback} />
       </span>
@@ -894,18 +886,18 @@ function NavIcon({
       <Icon
         icon={name}
         iconLibrary="lucide"
-        size={14}
+        size={16}
         className="shrink-0 text-muted-foreground"
       />
     );
   }
   if (fallback === 'folder') {
-    return <Folder className="size-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />;
+    return <Folder className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />;
   }
   if (fallback === 'tab') {
     // Matches the icon used in the Navigation `+` popover so a new tab the
     // user creates inline shows the same shape they just clicked to make it.
-    return <LayoutPanelTop className="size-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />;
+    return <PanelsTopLeft className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />;
   }
   return null;
 }
@@ -1090,16 +1082,16 @@ function InlineAddRow({ kind, indent, onCommit, onCancel }: InlineAddRowProps) {
           ? AnchorIcon
           : kind === 'dropdown'
             ? ChevronsUpDown
-            : LayoutPanelTop;
+            : PanelsTopLeft;
 
   return (
     <div
-      className="group/nav-row relative flex h-8 items-center rounded-xl bg-accent/40 pl-2 pr-1 text-sm font-semibold"
+      className="group/nav-row relative flex h-[34px] items-center rounded-xl bg-accent/40 pl-2 pr-1 text-sm font-semibold"
       style={{ marginLeft: `${indent}px` }}
       onClick={(e) => e.stopPropagation()}
     >
-      <div className="flex min-w-0 items-center gap-1">
-        <KindIcon className="size-3.5 shrink-0 text-muted-foreground" />
+      <div className="flex min-w-0 items-center gap-2">
+        <KindIcon className="size-4 shrink-0 text-muted-foreground" />
         <input
           ref={inputRef}
           type="text"
@@ -1123,6 +1115,122 @@ function InlineAddRow({ kind, indent, onCommit, onCancel }: InlineAddRowProps) {
         />
       </div>
     </div>
+  );
+}
+
+interface AddNewPlaceholderProps {
+  indent: number;
+  ariaLabel: string;
+  /** Single-action click. For multi-kind contexts (empty tabs/groups), wrap
+   *  this in a Popover trigger via `EntryAddPlaceholder` instead. */
+  onClick?: (e: ReactMouseEvent) => void;
+}
+
+/**
+ * Persistent "+ Add new" affordance — visually a nav row, but tinted lower
+ * than real entries so it reads as scaffolding rather than content. Hover
+ * matches the standard nav row (`bg-accent` + `text-accent-foreground`) so
+ * it lights up on intent the same way real rows do.
+ *
+ * Forwards refs and spreads click props so it can be the child of
+ * `<Popover.Trigger asChild>` (Radix needs to attach a ref to measure the
+ * trigger; without forwarding, popovers anchor at 0,0).
+ */
+const AddNewPlaceholder = forwardRef<HTMLDivElement, AddNewPlaceholderProps>(
+  function AddNewPlaceholder({ indent, ariaLabel, onClick, ...rest }, ref) {
+    return (
+      <div
+        ref={ref}
+        role="button"
+        tabIndex={0}
+        aria-label={ariaLabel}
+        onClick={onClick}
+        onKeyDown={(e) => {
+          if (!onClick) return;
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            onClick(e as unknown as ReactMouseEvent);
+          }
+        }}
+        className={cn(
+          'group/nav-row relative flex h-[34px] cursor-pointer items-center rounded-xl pl-2 pr-1 text-sm font-semibold transition-colors select-none outline-none',
+          // Subtler default tint than real rows (foreground/40 vs /70) so the
+          // placeholder recedes; full hover state matches the main nav system.
+          'text-foreground/40 hover:bg-accent hover:text-accent-foreground focus-visible:bg-accent focus-visible:text-accent-foreground',
+        )}
+        style={{ marginLeft: `${indent}px` }}
+        {...rest}
+      >
+        <div className="flex min-w-0 items-center gap-2">
+          <CirclePlus className="size-4 shrink-0" aria-hidden="true" />
+          <span>Add new</span>
+        </div>
+      </div>
+    );
+  },
+);
+
+interface EntryAddPlaceholderProps {
+  indent: number;
+  onPick: (kind: AddEntryKind) => void;
+}
+
+/**
+ * Placeholder variant for empty tabs and groups. Wraps `AddNewPlaceholder`
+ * in a popover so clicking opens the same page/group picker the row's
+ * action-button `+` uses — no surprise UX between the two entry points.
+ */
+function EntryAddPlaceholder({ indent, onPick }: EntryAddPlaceholderProps) {
+  const [open, setOpen] = useState(false);
+  const handlePick = (kind: AddEntryKind) => {
+    setOpen(false);
+    onPick(kind);
+  };
+
+  return (
+    <Popover.Root open={open} onOpenChange={setOpen}>
+      <Popover.Trigger asChild>
+        <AddNewPlaceholder
+          indent={indent}
+          ariaLabel="Add new page or group"
+          onClick={(e) => {
+            e.stopPropagation();
+            setOpen(true);
+          }}
+        />
+      </Popover.Trigger>
+      <Popover.Portal>
+        <Popover.Content
+          sideOffset={4}
+          align="start"
+          className={cn(
+            'z-50 min-w-[180px] rounded-md border bg-popover p-1 shadow-md',
+            'data-[state=open]:animate-in data-[state=closed]:animate-out',
+            'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
+            'data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95',
+          )}
+          onCloseAutoFocus={(e) => e.preventDefault()}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button
+            type="button"
+            className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent"
+            onClick={() => handlePick('page')}
+          >
+            <FilePlus className="size-3.5" />
+            Add a page
+          </button>
+          <button
+            type="button"
+            className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent"
+            onClick={() => handlePick('group')}
+          >
+            <FolderPlus className="size-3.5" />
+            Add a group
+          </button>
+        </Popover.Content>
+      </Popover.Portal>
+    </Popover.Root>
   );
 }
 

@@ -306,6 +306,30 @@ export const SLASH_ITEMS: SlashItem[] = [
     },
   },
   {
+    id: 'feature-card',
+    label: 'Feature card',
+    description: 'Landing-page card with optional icon, pill, and CTA',
+    Icon: LayoutPanelTop,
+    keywords: ['feature', 'card', 'tile', 'landing', 'highlight'],
+    command: ({ editor, range }) => {
+      editor
+        .chain()
+        .focus()
+        .deleteRange(range)
+        .insertContent({
+          type: 'mdxFeatureCard',
+          attrs: {
+            color: 'blue',
+            accent: 'top-bar',
+            layout: 'vertical',
+            title: 'Feature title',
+          },
+          content: [{ type: 'paragraph' }],
+        })
+        .run();
+    },
+  },
+  {
     id: 'frame',
     label: 'Figure',
     description: 'Framed image with optional caption',

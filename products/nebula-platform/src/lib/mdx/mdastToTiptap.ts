@@ -177,6 +177,8 @@ function convertBlock(node: RootContent, ctx: ConvertCtx): TiptapNode | null {
       }
       if (name && CALLOUT_NAMES.has(name)) return convertCallout(jsx, ctx);
       if (name === 'Card') return convertSimpleBlock(jsx, ctx, 'mdxCard');
+      if (name === 'FeatureCard')
+        return convertSimpleBlock(jsx, ctx, 'mdxFeatureCard');
       if (name === 'Frame') return convertSimpleBlock(jsx, ctx, 'mdxFrame');
       if (name === 'Sheet') return convertSimpleBlock(jsx, ctx, 'mdxSheet');
       if (name === 'Update') return convertSimpleBlock(jsx, ctx, 'mdxUpdate');
@@ -232,7 +234,7 @@ function convertBlock(node: RootContent, ctx: ConvertCtx): TiptapNode | null {
 function convertSimpleBlock(
   node: MdxJsxFlowElement,
   ctx: ConvertCtx,
-  type: 'mdxCard' | 'mdxFrame' | 'mdxSheet' | 'mdxUpdate',
+  type: 'mdxCard' | 'mdxFeatureCard' | 'mdxFrame' | 'mdxSheet' | 'mdxUpdate',
 ): TiptapNode {
   const attrs = extractAttrs(node);
   const content: TiptapNode[] = [];

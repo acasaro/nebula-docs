@@ -9,6 +9,7 @@ export * from './code-group';
 export * from './columns';
 export * from './example';
 export * from './expandable';
+export * from './feature-card';
 export * from './frame';
 export * from './hero';
 export * from './icon';

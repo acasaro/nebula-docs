@@ -3,16 +3,13 @@ title: "Getting Started with Rollouts"
 description: "Overview of the Rollouts module, key concepts, prerequisites, and how to access it."
 sidebarTitle: "Getting Started"
 ---
-import { BitrisePrereq } from "@tenant/components/BitrisePrereq";
-import { StageStatus } from "@tenant/components/StageStatus";
-import { PlatformNav } from "@tenant/components/PlatformNav";
+
 
 The Rollouts module in Immerse helps you manage mobile app releases from build selection through App Store submission and production release. It provides a structured pipeline with built-in compliance checks, approval workflows, and integration with Bitrise CI/CD and Apple App Store Connect.
 
 <Warning>
 Your project must be fully migrated to Bitrise CI before using Rollouts. If you haven't migrated yet, see Migrating from GitHub to Bitrise.
 </Warning>
-
 
 ## What Is a Rollout?
 
@@ -35,13 +32,18 @@ A **version** represents a single release (e.g., v1.2.6). Each version moves thr
 
 Every version passes through these stages in order:
 
-<StageStatus stages={[
-{ name: "Release Candidate", status: "completed", label: "Select build" },
-{ name: "Testing", status: "completed", label: "TestFlight / Google Play" },
-{ name: "Approvals", status: "active", label: "Team sign-off" },
-{ name: "Store Review", status: "upcoming", label: "Apple / Google" },
-{ name: "Release", status: "upcoming", label: "Go live" },
-]} />
+<StageList>
+<Stage label="Release Candidate" status="done" meta="Select build artifact" />
+
+<Stage label="Testing" status="done" meta="Upload to TestFlight" />
+
+<Stage label="Approvals" status="active" meta="6 required sign-offs" />
+
+<Stage label="Store Review" status="pending" meta="Apple / Google review" />
+
+<Stage label="Release" status="pending" meta="Go live" />
+</StageList>
+
 
 See [Pipeline Overview](/developers/release-management/pipeline-overview) for details on each stage.
 

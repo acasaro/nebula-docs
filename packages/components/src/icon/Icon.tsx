@@ -4,8 +4,9 @@ import { cn } from '../utils/cn';
 /**
  * Icon resolves names + library + type to a CDN URL and renders the SVG
  * via `mask-image` so authors can recolor with `currentColor` (or an
- * explicit `color` prop). Custom URLs (absolute http(s) or path-rooted)
- * bypass the mask and render as `<img>` so artwork keeps its own colors.
+ * explicit `color` prop). Custom SVG URLs also use `mask-image` so they
+ * inherit the parent's CSS color; non-SVG custom URLs (PNG, JPG, etc.)
+ * render as `<img>` and keep their original colors.
  *
  * The CDN is hosted from `mcoe-icons.web.app`, deployed via
  * `pnpm -w run icons:deploy`. Source corpora: Lucide, Material Icons,
@@ -93,18 +94,21 @@ export function Icon({
   if (!icon) return null;
 
   if (isCustomUrl(icon)) {
-    return (
-      <img
-        src={icon}
-        alt=""
-        className={cn('inline-block', className)}
-        style={{ width: size, height: size }}
-        aria-hidden="true"
-      />
-    );
+    const pathname = icon.split('?')[0] ?? '';
+    if (!pathname.toLowerCase().endsWith('.svg')) {
+      return (
+        <img
+          src={icon}
+          alt=""
+          className={cn('inline-block', className)}
+          style={{ width: size, height: size }}
+          aria-hidden="true"
+        />
+      );
+    }
   }
 
-  const url = buildIconUrl(icon, iconLibrary, iconType);
+  const url = isCustomUrl(icon) ? icon : buildIconUrl(icon, iconLibrary, iconType);
   const style: CSSProperties = {
     display: 'inline-block',
     width: size,
@@ -128,3 +132,4 @@ export function Icon({
     />
   );
 }
+

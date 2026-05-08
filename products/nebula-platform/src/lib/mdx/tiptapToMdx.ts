@@ -110,6 +110,16 @@ function serializeBlock(node: TiptapNode): string {
       return serializeJsxBlock(node, 'Sheet');
     case 'mdxStageList':
       return serializeStageList(node);
+    case 'mdxStats':
+      return serializeStats(node);
+    case 'mdxStat':
+      return serializeStat(node);
+    case 'mdxMediaCard':
+      return serializeMediaCard(node);
+    case 'mdxTopicCard':
+      return serializeTopicCard(node);
+    case 'mdxTopicLink':
+      return serializeTopicLink(node);
     case 'mdxStage':
       return serializeStage(node);
     case 'mdxUpdate':
@@ -511,6 +521,41 @@ function serializeStageList(node: TiptapNode): string {
 function serializeStage(node: TiptapNode): string {
   const attrs = serializeAttrs(node.attrs);
   return `<Stage${attrs} />`;
+}
+
+function serializeStats(node: TiptapNode): string {
+  const attrs = serializeAttrs(node.attrs);
+  const stats = (node.content ?? [])
+    .map((child) => (child.type === 'mdxStat' ? serializeStat(child) : ''))
+    .filter(Boolean)
+    .join('\n');
+  return `<Stats${attrs}>\n${stats}\n</Stats>`;
+}
+
+function serializeStat(node: TiptapNode): string {
+  const attrs = serializeAttrs(node.attrs);
+  return `<Stat${attrs} />`;
+}
+
+function serializeTopicCard(node: TiptapNode): string {
+  const attrs = serializeAttrs(node.attrs);
+  const links = (node.content ?? [])
+    .map((child) =>
+      child.type === 'mdxTopicLink' ? serializeTopicLink(child) : '',
+    )
+    .filter(Boolean)
+    .join('\n');
+  return `<TopicCard${attrs}>\n${links}\n</TopicCard>`;
+}
+
+function serializeTopicLink(node: TiptapNode): string {
+  const attrs = serializeAttrs(node.attrs);
+  return `<TopicLink${attrs} />`;
+}
+
+function serializeMediaCard(node: TiptapNode): string {
+  const attrs = serializeAttrs(node.attrs);
+  return `<MediaCard${attrs} />`;
 }
 
 function serializeImportedSnippet(node: TiptapNode): string {

@@ -9,7 +9,7 @@ export interface StageListProps {
 export function StageList({ children, className }: StageListProps) {
   return (
     <div
-      className={cn('my-3 flex flex-col gap-2', className)}
+      className={cn('my-5 flex flex-col gap-[13px]', className)}
       data-component-part="stage-list"
     >
       {children}

@@ -3,6 +3,8 @@ import { ArrowRight, ArrowUpRight } from 'lucide-react';
 import { Icon } from '../icon';
 import { cn } from '../utils/cn';
 
+export type CardAlign = 'start' | 'center';
+
 export interface CardProps {
   title?: ReactNode;
   icon?: ReactNode;
@@ -12,6 +14,11 @@ export interface CardProps {
   cta?: string;
   arrow?: boolean;
   disabled?: boolean;
+  /** Content alignment inside the card. `start` (default) is the
+   *  Mintlify-style left-align; `center` centers all children for the
+   *  mission-statement / pull-quote layout (badge centered above
+   *  centered text). */
+  align?: CardAlign;
   className?: string;
   children?: ReactNode;
 }

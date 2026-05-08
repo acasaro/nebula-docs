@@ -74,6 +74,11 @@ vendor/                  # Reference material; deleted as we stop referencing ea
   nebula.md              # Platform architecture + settled decisions
   nebula-cli.md          # CLI architecture + locked decisions + tenant model
   conventions.md         # Repo-wide patterns
+  editor-toolbars.md     # Inline TextToolbar + LinkBubble + slot-aware
+                         #   dropdown pattern (FeatureCard title is the
+                         #   reference implementation). Read first when
+                         #   touching the bubble menu, link bubble, or
+                         #   adding an editable title slot to a component.
   status.md              # Live workstream snapshot + Upcoming workstreams
   archive/               # Historical context (old docs-site arch, April 2026 refactor log)
 ```

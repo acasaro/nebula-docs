@@ -105,8 +105,20 @@ export function TextToolbar({ editor }: TextToolbarProps) {
       // outside the container, but the trigger lives inside it.
       if (containerRef.current?.querySelector('[data-state="open"]')) return;
 
-      const { empty } = editor.state.selection;
+      const { from, to, empty } = editor.state.selection;
+      // `empty` is `from === to`, which catches a TextSelection caret but
+      // NOT a NodeSelection (whose `empty` is false even though no text
+      // is highlighted). ProseMirror sometimes lands on a NodeSelection
+      // at init or after a node replace, so also require that the
+      // selected range actually contains text — without this guard the
+      // toolbar centers on whatever node is selected and floats in the
+      // middle of the page on first navigation.
       if (empty) {
+        setCoords(null);
+        return;
+      }
+      const selectedText = editor.state.doc.textBetween(from, to, '\n').trim();
+      if (!selectedText) {
         setCoords(null);
         return;
       }
@@ -117,7 +129,7 @@ export function TextToolbar({ editor }: TextToolbarProps) {
       }
 
       const rect = getSelectionRect(editor);
-      if (!rect) {
+      if (!rect || rect.bottom <= rect.top) {
         setCoords(null);
         return;
       }

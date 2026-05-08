@@ -182,7 +182,10 @@ function convertBlock(node: RootContent, ctx: ConvertCtx): TiptapNode | null {
         return convertFeatureCardGroup(jsx, ctx);
       if (name === 'Frame') return convertSimpleBlock(jsx, ctx, 'mdxFrame');
       if (name === 'Sheet') return convertSimpleBlock(jsx, ctx, 'mdxSheet');
+      if (name === 'MediaCard') return convertMediaCard(jsx);
       if (name === 'StageList') return convertStageList(jsx);
+      if (name === 'Stats') return convertStats(jsx);
+      if (name === 'TopicCard') return convertTopicCard(jsx);
       if (name === 'Stage') return convertStageAtom(jsx);
       if (name === 'Update') return convertSimpleBlock(jsx, ctx, 'mdxUpdate');
       if (name === 'Steps') return convertSteps(jsx, ctx);
@@ -422,6 +425,108 @@ function convertStageAtom(node: MdxJsxFlowElement): TiptapNode {
       label: typeof attrs.label === 'string' ? attrs.label : null,
       status: typeof attrs.status === 'string' ? attrs.status : null,
       meta: typeof attrs.meta === 'string' ? attrs.meta : null,
+    },
+  };
+}
+
+/** Stats's content schema is `mdxStat+`. Drop non-Stat children (lossy)
+ *  and fall back to a single empty Stat if the parent serialized empty. */
+function convertStats(node: MdxJsxFlowElement): TiptapNode {
+  const attrs = extractAttrs(node);
+  const content: TiptapNode[] = [];
+  for (const child of node.children ?? []) {
+    if (
+      child.type === 'mdxJsxFlowElement' &&
+      (child as MdxJsxFlowElement).name === 'Stat'
+    ) {
+      content.push(convertStatAtom(child as MdxJsxFlowElement));
+    }
+  }
+  if (content.length === 0) {
+    content.push({
+      type: 'mdxStat',
+      attrs: { value: null, label: null, color: null },
+    });
+  }
+  return {
+    type: 'mdxStats',
+    attrs: {
+      columns: typeof attrs.columns === 'number' ? attrs.columns : null,
+    },
+    content,
+  };
+}
+
+function convertStatAtom(node: MdxJsxFlowElement): TiptapNode {
+  const attrs = extractAttrs(node);
+  return {
+    type: 'mdxStat',
+    attrs: {
+      value: typeof attrs.value === 'string' ? attrs.value : null,
+      label: typeof attrs.label === 'string' ? attrs.label : null,
+      color: typeof attrs.color === 'string' ? attrs.color : null,
+    },
+  };
+}
+
+/** TopicCard's content schema is `mdxTopicLink+`. Same shape as Stats —
+ *  drop non-TopicLink children silently and fall back to a single empty
+ *  link if the parent serialized empty. */
+function convertTopicCard(node: MdxJsxFlowElement): TiptapNode {
+  const attrs = extractAttrs(node);
+  const content: TiptapNode[] = [];
+  for (const child of node.children ?? []) {
+    if (
+      child.type === 'mdxJsxFlowElement' &&
+      (child as MdxJsxFlowElement).name === 'TopicLink'
+    ) {
+      content.push(convertTopicLinkAtom(child as MdxJsxFlowElement));
+    }
+  }
+  if (content.length === 0) {
+    content.push({ type: 'mdxTopicLink', attrs: { label: null, href: null } });
+  }
+  return {
+    type: 'mdxTopicCard',
+    attrs: {
+      color: typeof attrs.color === 'string' ? attrs.color : null,
+      icon: typeof attrs.icon === 'string' ? attrs.icon : null,
+      iconLibrary: typeof attrs.iconLibrary === 'string' ? attrs.iconLibrary : null,
+      iconType: typeof attrs.iconType === 'string' ? attrs.iconType : null,
+      title: typeof attrs.title === 'string' ? attrs.title : null,
+      description: typeof attrs.description === 'string' ? attrs.description : null,
+      viewAllHref: typeof attrs.viewAllHref === 'string' ? attrs.viewAllHref : null,
+    },
+    content,
+  };
+}
+
+/** MediaCard is an atom — no children. Pull every relevant attr off the
+ *  JSX element. */
+function convertMediaCard(node: MdxJsxFlowElement): TiptapNode {
+  const attrs = extractAttrs(node);
+  return {
+    type: 'mdxMediaCard',
+    attrs: {
+      image: typeof attrs.image === 'string' ? attrs.image : null,
+      imageAlt: typeof attrs.imageAlt === 'string' ? attrs.imageAlt : null,
+      title: typeof attrs.title === 'string' ? attrs.title : null,
+      description: typeof attrs.description === 'string' ? attrs.description : null,
+      href: typeof attrs.href === 'string' ? attrs.href : null,
+      category: typeof attrs.category === 'string' ? attrs.category : null,
+      categoryColor:
+        typeof attrs.categoryColor === 'string' ? attrs.categoryColor : null,
+    },
+  };
+}
+
+function convertTopicLinkAtom(node: MdxJsxFlowElement): TiptapNode {
+  const attrs = extractAttrs(node);
+  return {
+    type: 'mdxTopicLink',
+    attrs: {
+      label: typeof attrs.label === 'string' ? attrs.label : null,
+      href: typeof attrs.href === 'string' ? attrs.href : null,
     },
   };
 }

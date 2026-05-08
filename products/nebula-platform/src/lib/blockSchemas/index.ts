@@ -10,18 +10,22 @@ import { featureCardSchema } from './feature-card';
 import { featureCardGroupSchema } from './feature-card-group';
 import { frameSchema } from './frame';
 import { imageSchema } from './image';
+import { mediaCardSchema } from './media-card';
 import { paramFieldSchema } from './paramField';
 import { profileSchema } from './profile';
 import { requestExampleSchema } from './requestExample';
 import { responseExampleSchema } from './responseExample';
 import { responseFieldSchema } from './responseField';
 import { sheetSchema } from './sheet';
-import { stageListSchema } from './stage-list';
 import { stageSchema } from './stage';
+import { statSchema } from './stat';
+import { statsSchema } from './stats';
 import { stepSchema } from './step';
 import { stepsSchema } from './steps';
 import { tabSchema } from './tab';
 import { tooltipSchema } from './tooltip';
+import { topicCardSchema } from './topic-card';
+import { topicLinkSchema } from './topic-link';
 import { updateSchema } from './update';
 import { videoSchema } from './video';
 
@@ -37,18 +41,22 @@ const REGISTRY: Record<string, BlockAttrSchema> = {
   [featureCardGroupSchema.blockType]: featureCardGroupSchema,
   [frameSchema.blockType]: frameSchema,
   [imageSchema.blockType]: imageSchema,
+  [mediaCardSchema.blockType]: mediaCardSchema,
   [paramFieldSchema.blockType]: paramFieldSchema,
   [profileSchema.blockType]: profileSchema,
   [requestExampleSchema.blockType]: requestExampleSchema,
   [responseExampleSchema.blockType]: responseExampleSchema,
   [responseFieldSchema.blockType]: responseFieldSchema,
   [sheetSchema.blockType]: sheetSchema,
-  [stageListSchema.blockType]: stageListSchema,
   [stageSchema.blockType]: stageSchema,
+  [statSchema.blockType]: statSchema,
+  [statsSchema.blockType]: statsSchema,
   [stepSchema.blockType]: stepSchema,
   [stepsSchema.blockType]: stepsSchema,
   [tabSchema.blockType]: tabSchema,
   [tooltipSchema.blockType]: tooltipSchema,
+  [topicCardSchema.blockType]: topicCardSchema,
+  [topicLinkSchema.blockType]: topicLinkSchema,
   [updateSchema.blockType]: updateSchema,
   [videoSchema.blockType]: videoSchema,
 };

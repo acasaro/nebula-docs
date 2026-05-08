@@ -47,6 +47,11 @@ import { MdxSheet } from './MdxSheetNode';
 import { MdxSnippet } from './MdxSnippetNode';
 import { MdxStage } from './MdxStageNode';
 import { MdxStageList } from './MdxStageListNode';
+import { MdxStat } from './MdxStatNode';
+import { MdxStats } from './MdxStatsNode';
+import { MdxMediaCard } from './MdxMediaCardNode';
+import { MdxTopicCard } from './MdxTopicCardNode';
+import { MdxTopicLink } from './MdxTopicLinkNode';
 import { MdxTree, MdxTreeFile, MdxTreeFolder } from './MdxTreeNode';
 import { MdxStep, MdxSteps } from './MdxStepsNode';
 import { MdxTab, MdxTabs } from './MdxTabsNode';
@@ -221,6 +226,11 @@ export function MdxEditor({
       MdxSheet,
       MdxStageList,
       MdxStage,
+      MdxStats,
+      MdxStat,
+      MdxMediaCard,
+      MdxTopicCard,
+      MdxTopicLink,
       MdxUpdate,
       MdxSteps,
       MdxStep,

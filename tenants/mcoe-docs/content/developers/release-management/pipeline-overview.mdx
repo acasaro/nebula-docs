@@ -3,20 +3,19 @@ title: "Version Pipeline Overview"
 description: "The 5-stage release pipeline explained, including stage progression, statuses, and lifecycle."
 sidebarTitle: "Version Steps Overview"
 ---
-import { StageStatus } from "@tenant/components/StageStatus";
-import { PlatformCard } from "@tenant/components/PlatformCard";
 
 Every version in the Rollouts module moves through a 5-stage pipeline. Each stage must be completed before the next one can begin. This guide explains the full pipeline lifecycle, how stages progress, and what each status means.
 
 ## The Five Stages
 
-<StageStatus stages={[
-{ name: "Release Candidate", status: "completed", label: "Select build artifact" },
-{ name: "Testing", status: "completed", label: "Upload to TestFlight" },
-{ name: "Approvals", status: "active", label: "6 required sign-offs" },
-{ name: "Store Review", status: "upcoming", label: "Apple / Google review" },
-{ name: "Release", status: "upcoming", label: "Go live" },
-]} />
+<StageList>
+<Stage label="Release Candidate" status="done" meta="Select build artifact" />
+<Stage label="Testing" status="done" meta="Upload to TestFlight" />
+<Stage label="Approvals" status="active" meta="6 required sign-offs" />
+<Stage label="Store Review" status="pending" meta="Apple / Google review" />
+<Stage label="Release" status="pending" meta="Go live" />
+</StageList>
+
 
 | Stage | What Happens | Key Action |
 | --- | --- | --- |
@@ -98,9 +97,6 @@ Each stage card also shows its own status:
 
 ## Platform Differences
 
-<PlatformCard platform="ios" />
-
-<PlatformCard platform="android" />
 
 ## Pipeline Lifecycle Example
 

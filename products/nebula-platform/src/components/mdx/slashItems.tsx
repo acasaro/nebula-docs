@@ -397,6 +397,91 @@ export const SLASH_ITEMS: SlashItem[] = [
     },
   },
   {
+    id: 'media-card',
+    label: 'Media card',
+    description: 'Hero-image card with optional category pill and CTA',
+    Icon: Image,
+    keywords: ['media', 'card', 'image', 'hero', 'resource', 'guide', 'tile'],
+    command: ({ editor, range }) => {
+      editor
+        .chain()
+        .focus()
+        .deleteRange(range)
+        .insertContent({
+          type: 'mdxMediaCard',
+          attrs: {
+            title: 'Card title',
+            description: 'Short description',
+            categoryColor: 'blue',
+          },
+        })
+        .run();
+    },
+  },
+  {
+    id: 'topic-card',
+    label: 'Topic card',
+    description: 'Topic-hub card with a list of links and an optional View all',
+    Icon: FolderTree,
+    keywords: ['topic', 'hub', 'links', 'index', 'navigation'],
+    command: ({ editor, range }) => {
+      editor
+        .chain()
+        .focus()
+        .deleteRange(range)
+        .insertContent({
+          type: 'mdxTopicCard',
+          attrs: { color: 'blue', title: 'Topic title' },
+          content: [
+            {
+              type: 'mdxTopicLink',
+              attrs: { label: 'First link', href: '' },
+            },
+            {
+              type: 'mdxTopicLink',
+              attrs: { label: 'Second link', href: '' },
+            },
+          ],
+        })
+        .run();
+    },
+  },
+  {
+    id: 'stats',
+    label: 'Stats',
+    description: 'Numeric stats grid (auto-fit by default)',
+    Icon: LayoutGrid,
+    keywords: ['stats', 'metrics', 'numbers', 'kpi', 'figures'],
+    command: ({ editor, range }) => {
+      editor
+        .chain()
+        .focus()
+        .deleteRange(range)
+        .insertContent({
+          type: 'mdxStats',
+          content: [
+            {
+              type: 'mdxStat',
+              attrs: { value: '2', label: 'Platforms', color: 'blue' },
+            },
+            {
+              type: 'mdxStat',
+              attrs: { value: '5', label: 'Release Stages', color: 'blue' },
+            },
+            {
+              type: 'mdxStat',
+              attrs: { value: '40+', label: 'Technical Docs', color: 'blue' },
+            },
+            {
+              type: 'mdxStat',
+              attrs: { value: '100%', label: 'Coverage', color: 'blue' },
+            },
+          ],
+        })
+        .run();
+    },
+  },
+  {
     id: 'frame',
     label: 'Figure',
     description: 'Framed image with optional caption',

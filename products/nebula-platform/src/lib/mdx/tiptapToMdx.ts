@@ -101,11 +101,17 @@ function serializeBlock(node: TiptapNode): string {
     case 'mdxCard':
       return serializeJsxBlock(node, 'Card');
     case 'mdxFeatureCard':
-      return serializeJsxBlock(node, 'FeatureCard');
+      return serializeFeatureCard(node);
+    case 'mdxFeatureCardGroup':
+      return serializeJsxBlock(node, 'FeatureCardGroup');
     case 'mdxFrame':
       return serializeJsxBlock(node, 'Frame');
     case 'mdxSheet':
       return serializeJsxBlock(node, 'Sheet');
+    case 'mdxStageList':
+      return serializeStageList(node);
+    case 'mdxStage':
+      return serializeStage(node);
     case 'mdxUpdate':
       return serializeJsxBlock(node, 'Update');
     case 'mdxSteps':
@@ -452,6 +458,35 @@ function serializeJsxBlock(node: TiptapNode, tag: string): string {
   return `<${tag}${attrs}>\n${body}\n</${tag}>`;
 }
 
+/**
+ * FeatureCard's title slot lives as the first content child
+ * (`mdxFeatureCardTitle`) in the editor. On disk it round-trips as flat
+ * attrs on the parent: `title="..."` plus `titleLevel={N}` when the level
+ * isn't the default 3. Marks in the title (bold/italic/link) are stripped
+ * on save — see the `mdxFeatureCardTitle` NodeView comment for context.
+ */
+function serializeFeatureCard(node: TiptapNode): string {
+  const content = node.content ?? [];
+  const titleNode = content[0]?.type === 'mdxFeatureCardTitle' ? content[0] : null;
+  const bodyNodes = titleNode ? content.slice(1) : content;
+  const body = bodyNodes.map(serializeBlock).filter(Boolean).join('\n\n');
+
+  const titleInline = titleNode?.content ?? [];
+  const titleLevel = Number(titleNode?.attrs?.level) || 3;
+  const titleText = titleInline
+    .map((c) => (typeof c.text === 'string' ? c.text : ''))
+    .join('')
+    .trim();
+
+  const attrs = serializeAttrs({
+    ...(node.attrs ?? {}),
+    title: titleText || null,
+    titleLevel:
+      titleLevel !== 3 ? { __expression: String(titleLevel) } : null,
+  });
+  return `<FeatureCard${attrs}>\n${body}\n</FeatureCard>`;
+}
+
 function serializeSteps(node: TiptapNode): string {
   const attrs = serializeAttrs(node.attrs);
   const stepBlocks = (node.content ?? [])
@@ -461,6 +496,21 @@ function serializeSteps(node: TiptapNode): string {
     .filter(Boolean)
     .join('\n\n');
   return `<Steps${attrs}>\n${stepBlocks}\n</Steps>`;
+}
+
+function serializeStageList(node: TiptapNode): string {
+  const stages = (node.content ?? [])
+    .map((child) =>
+      child.type === 'mdxStage' ? serializeStage(child) : '',
+    )
+    .filter(Boolean)
+    .join('\n\n');
+  return `<StageList>\n${stages}\n</StageList>`;
+}
+
+function serializeStage(node: TiptapNode): string {
+  const attrs = serializeAttrs(node.attrs);
+  return `<Stage${attrs} />`;
 }
 
 function serializeImportedSnippet(node: TiptapNode): string {

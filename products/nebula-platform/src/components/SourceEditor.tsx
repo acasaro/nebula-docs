@@ -135,7 +135,7 @@ export function SourceEditor({
   language = 'mdx',
   className,
 }: SourceEditorProps) {
-  const [html, setHtml] = useState<string>('');
+  const [hl, setHl] = useState<ShikiInstance | null>(null);
   const [activeLine, setActiveLine] = useState(1);
   const isDark = useDarkMode();
   const taRef = useRef<HTMLTextAreaElement>(null);
@@ -144,7 +144,6 @@ export function SourceEditor({
 
   const lineCount = useMemo(() => {
     if (!value) return 1;
-    // Mirror what GitHub shows: a trailing `\n` produces an empty line N+1.
     const newlines = (value.match(/\n/g) ?? []).length;
     return Math.max(1, newlines + (value.endsWith('\n') ? 1 : 1));
   }, [value]);
@@ -152,30 +151,28 @@ export function SourceEditor({
   useEffect(() => {
     let cancelled = false;
     getHighlighter()
-      .then((hl) => {
-        if (cancelled) return;
-        const theme = isDark ? DARK_THEME : LIGHT_THEME;
-        // Languages outside the preloaded set fall back to plaintext rather
-        // than throwing on `codeToHtml`. Keeps the editor usable for
-        // unrecognized extensions.
-        const loaded = new Set(hl.getLoadedLanguages());
-        const lang = language !== 'plaintext' && loaded.has(language) ? language : 'plaintext';
-        const rendered = hl.codeToHtml(value, { lang, theme });
-        setHtml(rendered);
-      })
+      .then((instance) => { if (!cancelled) setHl(instance); })
       .catch((err) => {
-        // Fall back to plain text — no highlight. Surface the error so a
-        // misconfigured `PRELOADED_LANGS` (e.g. an ID not bundled in Shiki)
-        // doesn't disappear into a silent code path that just renders raw
-        // text everywhere.
         // eslint-disable-next-line no-console
-        console.error('[SourceEditor] Shiki highlight failed:', err);
-        setHtml('');
+        console.error('[SourceEditor] Shiki init failed:', err);
       });
-    return () => {
-      cancelled = true;
-    };
-  }, [value, isDark, language]);
+    return () => { cancelled = true; };
+  }, []);
+
+  // Synchronous highlight: once the highlighter is loaded, codeToHtml is
+  // a pure CPU call — no promise, no stale-state gap. The textarea and
+  // highlighted pre always show the same value in the same render.
+  const html = useMemo(() => {
+    if (!hl) return '';
+    try {
+      const theme = isDark ? DARK_THEME : LIGHT_THEME;
+      const loaded = new Set(hl.getLoadedLanguages());
+      const lang = language !== 'plaintext' && loaded.has(language) ? language : 'plaintext';
+      return hl.codeToHtml(value, { lang, theme });
+    } catch {
+      return '';
+    }
+  }, [hl, value, isDark, language]);
 
   // Sync the pre + gutter scroll positions with the textarea's so the
   // highlighting and line numbers stay aligned with the caret.

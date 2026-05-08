@@ -5,12 +5,14 @@ import {
   Image as ImageIcon,
   Layers,
   Link as LinkIcon,
+  Moon,
   PanelLeft,
+  Sun,
   Tag,
   Type,
 } from 'lucide-react';
 import type { IconValue } from '@/components/IconField';
-import { SelectRow, TextRow, ToggleRow } from './FormRow';
+import { ColorRow, SelectRow, TextRow, ToggleRow } from './FormRow';
 import { IconRow } from './IconRow';
 import { KeywordsRow } from './KeywordsRow';
 
@@ -34,6 +36,8 @@ export interface PageFrontmatterValues {
   url: string;
   keywords: string[];
   ogImage: string;
+  backgroundColor: string;
+  backgroundColorDark: string;
 }
 
 interface PageSettingsFormProps {
@@ -143,6 +147,24 @@ export function PageSettingsForm({
         options={MODE_OPTIONS}
         placeholder="Default"
       />
+      {values.mode === 'custom' ? (
+        <>
+          <ColorRow
+            label="BG Light"
+            icon={Sun}
+            value={values.backgroundColor}
+            onChange={(v) => onChange({ backgroundColor: v })}
+            placeholder="Theme default"
+          />
+          <ColorRow
+            label="BG Dark"
+            icon={Moon}
+            value={values.backgroundColorDark}
+            onChange={(v) => onChange({ backgroundColorDark: v })}
+            placeholder="Theme default"
+          />
+        </>
+      ) : null}
     </div>
   );
 }

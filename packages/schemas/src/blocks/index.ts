@@ -9,5 +9,7 @@ export * from './hero';
 export * from './profile';
 export * from './sheet';
 export * from './video';
+export * from './stage';
+export * from './stage-list';
 export * from './step';
 export * from './steps';

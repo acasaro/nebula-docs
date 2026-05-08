@@ -40,10 +40,13 @@ import { MdxCodeGroup } from './MdxCodeGroupNode';
 import { MdxExpandable } from './MdxExpandableNode';
 import { MdxMermaid } from './MdxMermaidNode';
 import { MdxProfile } from './MdxProfileNode';
-import { MdxFeatureCard } from './MdxFeatureCardNode';
+import { MdxFeatureCard, MdxFeatureCardTitle } from './MdxFeatureCardNode';
+import { MdxFeatureCardGroup } from './MdxFeatureCardGroupNode';
 import { MdxRaw } from './MdxRawNode';
 import { MdxSheet } from './MdxSheetNode';
 import { MdxSnippet } from './MdxSnippetNode';
+import { MdxStage } from './MdxStageNode';
+import { MdxStageList } from './MdxStageListNode';
 import { MdxTree, MdxTreeFile, MdxTreeFolder } from './MdxTreeNode';
 import { MdxStep, MdxSteps } from './MdxStepsNode';
 import { MdxTab, MdxTabs } from './MdxTabsNode';
@@ -52,6 +55,8 @@ import { MdxUpdate } from './MdxUpdateNode';
 import { MdxVideo } from './MdxVideoNode';
 import { SlashCommand } from './slashCommand';
 import { SlashHint } from './slashHint';
+import { LinkBubble } from './LinkBubble';
+import { TextToolbar } from './TextToolbar';
 
 interface MdxEditorProps {
   source: string;
@@ -210,8 +215,12 @@ export function MdxEditor({
       MdxCallout,
       MdxCard,
       MdxFeatureCard,
+      MdxFeatureCardTitle,
+      MdxFeatureCardGroup,
       MdxFrame,
       MdxSheet,
+      MdxStageList,
+      MdxStage,
       MdxUpdate,
       MdxSteps,
       MdxStep,
@@ -392,6 +401,8 @@ export function MdxEditor({
       <EditorWithBlockHandle editor={onSourceChange ? editor : null}>
         <EditorContent editor={editor} />
       </EditorWithBlockHandle>
+      <TextToolbar editor={onSourceChange ? editor : null} />
+      <LinkBubble editor={onSourceChange ? editor : null} />
 
       <MediaPickerDialog
         open={pickerState.open}

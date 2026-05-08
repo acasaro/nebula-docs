@@ -44,15 +44,94 @@ const ATTRS = [
   'iconLibrary',
   'iconType',
   'pill',
-  'title',
   'linkText',
   'linkUrl',
 ] as const;
 
+/**
+ * Inline-editable title slot. Modeling the title as a real ProseMirror node
+ * (instead of an `<input>` synced to a `title` attr) lets the bubble menu
+ * pick up text selections and apply marks like any other editable content.
+ *
+ * The `level` attribute (1-4) controls which HTML heading tag the slot
+ * renders as. The bubble menu changes levels via `updateAttributes`, scoped
+ * to this node so it can't bleed onto the description blocks below.
+ *
+ * On disk the title round-trips as flat attrs on the parent JSX:
+ * `<FeatureCard title="..." titleLevel={N}>` (titleLevel omitted when it's
+ * the default 3). The CLI's FeatureCard React component reads those attrs
+ * directly, so the published site mirrors the editor's level choice.
+ *
+ * Marks inside the title (bold/italic/link) are POC-lossy on save — they
+ * survive the editor session but are stripped when the title flattens back
+ * to the `title="..."` attr. We can't put them in a `<FeatureCardTitle>`
+ * JSX child because the Astro+React+MDX boundary pre-renders nested React
+ * children to HTML strings before they reach a React parent component, so
+ * a parent FeatureCard couldn't introspect them to find the title slot.
+ */
+export const FEATURE_CARD_TITLE_LEVELS = [1, 2, 3, 4] as const;
+export type FeatureCardTitleLevel = (typeof FEATURE_CARD_TITLE_LEVELS)[number];
+
+export const MdxFeatureCardTitle = Node.create({
+  name: 'mdxFeatureCardTitle',
+  content: 'inline*',
+  defining: true,
+  isolating: true,
+  selectable: false,
+
+  addAttributes() {
+    return {
+      level: {
+        default: 3 as FeatureCardTitleLevel,
+        parseHTML: (el) => {
+          const tag = el.tagName.toLowerCase();
+          const m = /^h([1-4])$/.exec(tag);
+          return m ? Number(m[1]) : 3;
+        },
+        renderHTML: () => ({}),
+      },
+    };
+  },
+
+  parseHTML() {
+    return [
+      { tag: 'h1[data-mdx-feature-card-title]' },
+      { tag: 'h2[data-mdx-feature-card-title]' },
+      { tag: 'h3[data-mdx-feature-card-title]' },
+      { tag: 'h4[data-mdx-feature-card-title]' },
+    ];
+  },
+
+  renderHTML({ node, HTMLAttributes }) {
+    const level = (FEATURE_CARD_TITLE_LEVELS as readonly number[]).includes(
+      node.attrs.level,
+    )
+      ? (node.attrs.level as FeatureCardTitleLevel)
+      : 3;
+    const sizeClass: Record<FeatureCardTitleLevel, string> = {
+      1: 'text-2xl',
+      2: 'text-xl',
+      3: 'text-base',
+      4: 'text-sm',
+    };
+    return [
+      `h${level}`,
+      mergeAttributes(HTMLAttributes, {
+        'data-mdx-feature-card-title': '',
+        style: 'margin: 0',
+        class: `font-semibold text-stone-800 dark:text-white empty:before:content-[attr(data-placeholder)] empty:before:text-stone-400 dark:empty:before:text-stone-600 ${sizeClass[level]}`,
+        'data-placeholder': 'Feature title',
+      }),
+      0,
+    ];
+  },
+});
+
 export const MdxFeatureCard = Node.create({
   name: 'mdxFeatureCard',
   group: 'block',
-  content: 'block+',
+  // Title slot first, then any block content for the description body.
+  content: 'mdxFeatureCardTitle block*',
   defining: true,
 
   addAttributes() {
@@ -92,7 +171,6 @@ function MdxFeatureCardView({
     iconLibrary?: IconLibrary | null;
     iconType?: IconType | null;
     pill?: string | null;
-    title?: string | null;
     linkText?: string | null;
     linkUrl?: string | null;
   };
@@ -118,28 +196,6 @@ function MdxFeatureCardView({
     e.stopPropagation();
   };
 
-  // Inline-editable title — rendered as an unstyled `<input>` slotted into
-  // FeatureCard's title slot. The visual styling matches `<h3>` so
-  // unfocused the input reads as the rendered title; focus shows the
-  // input affordance. Eventual inline rich-text toolbar will target this.
-  const titleNode = (
-    <input
-      type="text"
-      value={attrs.title ?? ''}
-      placeholder="Feature title"
-      onChange={(e) =>
-        updateAttributes({ title: e.target.value || null })
-      }
-      onClick={stopPm}
-      onMouseDown={stopPm}
-      className={cn(
-        'w-full bg-transparent p-0 outline-none',
-        'text-base font-semibold text-stone-800 dark:text-white',
-        'placeholder:text-stone-400 dark:placeholder:text-stone-600',
-      )}
-    />
-  );
-
   const [attrOpen, setAttrOpen] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
 
@@ -152,13 +208,18 @@ function MdxFeatureCardView({
       )}
     >
       <div ref={cardRef}>
+        {/* `title` is undefined so FeatureCard skips its own h3; the
+            mdxFeatureCardTitle sub-node renders an <h3> as the first
+            child of NodeViewContent below, and CSS on the body wrapper
+            in FeatureCard treats subsequent siblings as description
+            content. */}
         <FeatureCard
           color={color}
           accent={accent}
           layout={layout}
           icon={iconElement}
           pill={attrs.pill ?? undefined}
-          title={titleNode}
+          title={undefined}
           linkText={attrs.linkText ?? undefined}
           // Don't pass linkUrl in editor view — would make the entire
           // card a link element and intercept text selection. The

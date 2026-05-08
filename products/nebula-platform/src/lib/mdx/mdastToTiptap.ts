@@ -177,10 +177,13 @@ function convertBlock(node: RootContent, ctx: ConvertCtx): TiptapNode | null {
       }
       if (name && CALLOUT_NAMES.has(name)) return convertCallout(jsx, ctx);
       if (name === 'Card') return convertSimpleBlock(jsx, ctx, 'mdxCard');
-      if (name === 'FeatureCard')
-        return convertSimpleBlock(jsx, ctx, 'mdxFeatureCard');
+      if (name === 'FeatureCard') return convertFeatureCard(jsx, ctx);
+      if (name === 'FeatureCardGroup')
+        return convertFeatureCardGroup(jsx, ctx);
       if (name === 'Frame') return convertSimpleBlock(jsx, ctx, 'mdxFrame');
       if (name === 'Sheet') return convertSimpleBlock(jsx, ctx, 'mdxSheet');
+      if (name === 'StageList') return convertStageList(jsx);
+      if (name === 'Stage') return convertStageAtom(jsx);
       if (name === 'Update') return convertSimpleBlock(jsx, ctx, 'mdxUpdate');
       if (name === 'Steps') return convertSteps(jsx, ctx);
       if (name === 'Tabs') return convertTabs(jsx, ctx);
@@ -244,6 +247,183 @@ function convertSimpleBlock(
   }
   if (content.length === 0) content.push({ type: 'paragraph' });
   return { type, attrs, content };
+}
+
+/**
+ * FeatureCard's title slot is a content sub-node (`mdxFeatureCardTitle`) in
+ * the editor so the bubble menu can apply marks and change the heading
+ * level. On disk it round-trips as flat attrs on the parent JSX:
+ *   `<FeatureCard title="..." titleLevel={N}>`
+ *
+ * Title text is the `title` attr; heading level is the `titleLevel` attr
+ * (omitted when 3, the default). Marks inside the title are POC-lossy.
+ *
+ * For back-compat we also accept the previous `<FeatureCardTitle level={N}>`
+ * JSX child shape (it landed in earlier saves) and lift it into the same
+ * sub-node — but we never re-emit that shape; the next save flattens it
+ * back to attrs. The Astro+React+MDX boundary pre-renders nested React
+ * children to strings before they reach a React parent component, so the
+ * JSX-child shape couldn't actually render in the CLI; flat attrs sidestep
+ * that boundary.
+ */
+function convertFeatureCard(
+  node: MdxJsxFlowElement,
+  ctx: ConvertCtx,
+): TiptapNode {
+  const allAttrs = extractAttrs(node);
+  const fallbackTitle =
+    typeof allAttrs.title === 'string' ? allAttrs.title : '';
+  const fallbackLevel = (() => {
+    const n = Number(allAttrs.titleLevel);
+    return Number.isFinite(n) && n >= 1 && n <= 4 ? n : 3;
+  })();
+  const { title: _t, titleLevel: _l, ...attrs } = allAttrs;
+
+  let titleInline: TiptapNode[] | null = null;
+  let titleLevel = fallbackLevel;
+  const body: TiptapNode[] = [];
+
+  // Back-compat: extract a `<FeatureCardTitle>` JSX child if present.
+  // MDX may emit it as either an `mdxJsxFlowElement` (when on its own line
+  // surrounded by blank lines) or as an `mdxJsxTextElement` wrapped in a
+  // paragraph (the default for inline JSX inside a flow JSX parent).
+  const extractFromTitleEl = (
+    titleEl: MdxJsxFlowElement | MdxJsxTextElement,
+  ) => {
+    const titleAttrs: Record<string, unknown> = {};
+    for (const a of titleEl.attributes ?? []) {
+      if (a.type !== 'mdxJsxAttribute') continue;
+      const v = a.value;
+      if (v == null) titleAttrs[a.name] = true;
+      else if (typeof v === 'string') titleAttrs[a.name] = v;
+      else if (typeof v === 'object' && 'value' in v && typeof v.value === 'string') {
+        const expr = v.value.trim();
+        try {
+          titleAttrs[a.name] = JSON.parse(expr);
+        } catch {
+          titleAttrs[a.name] = expr;
+        }
+      }
+    }
+    const lvl = Number(titleAttrs.level);
+    if (Number.isFinite(lvl) && lvl >= 1 && lvl <= 4) titleLevel = lvl;
+    titleInline = [];
+    for (const tc of titleEl.children ?? []) {
+      if (tc.type === 'paragraph') {
+        const conv = convertInline(
+          (tc as { children: PhrasingContent[] }).children,
+        );
+        if (conv) titleInline!.push(...conv);
+      } else {
+        const conv = convertInline([tc as PhrasingContent]);
+        if (conv) titleInline!.push(...conv);
+      }
+    }
+  };
+
+  for (const child of node.children ?? []) {
+    if (
+      child.type === 'mdxJsxFlowElement' &&
+      (child as MdxJsxFlowElement).name === 'FeatureCardTitle'
+    ) {
+      extractFromTitleEl(child as MdxJsxFlowElement);
+      continue;
+    }
+    if (
+      child.type === 'paragraph' &&
+      Array.isArray((child as { children?: unknown[] }).children)
+    ) {
+      const inlineChildren = (child as { children: { type: string; name?: string }[] }).children;
+      const onlyTitleIdx = inlineChildren.findIndex(
+        (c) => c.type === 'mdxJsxTextElement' && c.name === 'FeatureCardTitle',
+      );
+      if (
+        onlyTitleIdx !== -1 &&
+        inlineChildren.every(
+          (c, i) =>
+            i === onlyTitleIdx ||
+            (c.type === 'text' && !(c as unknown as { value: string }).value.trim()),
+        )
+      ) {
+        extractFromTitleEl(inlineChildren[onlyTitleIdx] as unknown as MdxJsxTextElement);
+        continue;
+      }
+    }
+    const conv = convertBlock(child as RootContent, ctx);
+    if (conv) body.push(conv);
+  }
+
+  if (!titleInline) {
+    titleInline = fallbackTitle
+      ? [{ type: 'text', text: fallbackTitle }]
+      : [];
+  }
+
+  const titleNode: TiptapNode = {
+    type: 'mdxFeatureCardTitle',
+    attrs: { level: titleLevel },
+    content: titleInline,
+  };
+  return { type: 'mdxFeatureCard', attrs, content: [titleNode, ...body] };
+}
+
+/** FeatureCardGroup's content schema is `mdxFeatureCard+`, so the
+ *  paragraph fallback used by `convertSimpleBlock` would produce an
+ *  invalid Tiptap doc. Drop non-FeatureCard children silently (lossy)
+ *  and fall back to a single empty FeatureCard if the parent serialized
+ *  empty. */
+function convertFeatureCardGroup(
+  node: MdxJsxFlowElement,
+  ctx: ConvertCtx,
+): TiptapNode {
+  const attrs = extractAttrs(node);
+  const content: TiptapNode[] = [];
+  for (const child of node.children ?? []) {
+    const conv = convertBlock(child as RootContent, ctx);
+    if (conv && conv.type === 'mdxFeatureCard') content.push(conv);
+  }
+  if (content.length === 0) {
+    content.push({
+      type: 'mdxFeatureCard',
+      attrs: { color: 'blue', accent: 'top-bar' },
+      content: [
+        { type: 'mdxFeatureCardTitle', content: [] },
+        { type: 'paragraph' },
+      ],
+    });
+  }
+  return { type: 'mdxFeatureCardGroup', attrs, content };
+}
+
+function convertStageList(node: MdxJsxFlowElement): TiptapNode {
+  const content: TiptapNode[] = [];
+  for (const child of node.children ?? []) {
+    if (
+      child.type === 'mdxJsxFlowElement' &&
+      (child as MdxJsxFlowElement).name === 'Stage'
+    ) {
+      content.push(convertStageAtom(child as MdxJsxFlowElement));
+    }
+  }
+  if (content.length === 0) {
+    content.push({
+      type: 'mdxStage',
+      attrs: { label: 'Stage', status: 'pending' },
+    });
+  }
+  return { type: 'mdxStageList', content };
+}
+
+function convertStageAtom(node: MdxJsxFlowElement): TiptapNode {
+  const attrs = extractAttrs(node);
+  return {
+    type: 'mdxStage',
+    attrs: {
+      label: typeof attrs.label === 'string' ? attrs.label : null,
+      status: typeof attrs.status === 'string' ? attrs.status : null,
+      meta: typeof attrs.meta === 'string' ? attrs.meta : null,
+    },
+  };
 }
 
 function convertSteps(node: MdxJsxFlowElement, ctx: ConvertCtx): TiptapNode {

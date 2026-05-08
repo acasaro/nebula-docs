@@ -13,10 +13,10 @@ import { columnsSchema } from '@/lib/blockSchemas/columns';
 import { cardGroupSchema } from '@/lib/blockSchemas/cardGroup';
 import { cn } from '@/lib/utils';
 
-function clampCols(value: unknown): 1 | 2 | 3 | 4 {
+function clampCols(value: unknown): number {
   const n = typeof value === 'string' ? Number(value) : value;
-  if (n === 1 || n === 2 || n === 3 || n === 4) return n;
-  return 2;
+  if (typeof n !== 'number' || !Number.isFinite(n)) return 2;
+  return Math.min(Math.max(Math.trunc(n), 1), 12);
 }
 
 export const MdxColumns = Node.create({

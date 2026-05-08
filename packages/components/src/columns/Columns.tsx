@@ -1,7 +1,7 @@
 import type { CSSProperties, ReactNode } from 'react';
 import { cn } from '../utils/cn';
 
-export type ColCount = 1 | 2 | 3 | 4;
+export type ColCount = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12;
 
 export interface ColumnsProps {
   children?: ReactNode;
@@ -10,13 +10,17 @@ export interface ColumnsProps {
 }
 
 const DEFAULT_COLS: ColCount = 2;
+const MAX_COLS = 12;
 
 /**
- * Mintlify-style Columns. Lays children out as a CSS grid with `cols` columns
- * (1-4, default 2). Collapses to a single column on narrow viewports.
+ * Lays children out as a CSS grid with `cols` columns (1-12, default 2).
+ * Collapses to a single column on narrow viewports.
  */
 export function Columns({ children, cols = DEFAULT_COLS, className }: ColumnsProps) {
-  const numCols = Number(cols) || DEFAULT_COLS;
+  const parsed = Number(cols);
+  const numCols = Number.isFinite(parsed)
+    ? Math.min(Math.max(parsed, 1), MAX_COLS)
+    : DEFAULT_COLS;
   return (
     <div
       className={cn(

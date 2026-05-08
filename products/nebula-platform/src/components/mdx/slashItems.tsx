@@ -30,6 +30,7 @@ import {
   Sliders,
   Tag as TagIcon,
   User as UserIcon,
+  ListChecks,
   ListOrdered,
   List as ListUnordered,
   Minus,
@@ -322,9 +323,75 @@ export const SLASH_ITEMS: SlashItem[] = [
             color: 'blue',
             accent: 'top-bar',
             layout: 'vertical',
-            title: 'Feature title',
           },
-          content: [{ type: 'paragraph' }],
+          content: [
+            {
+              type: 'mdxFeatureCardTitle',
+              content: [{ type: 'text', text: 'Feature title' }],
+            },
+            { type: 'paragraph' },
+          ],
+        })
+        .run();
+    },
+  },
+  {
+    id: 'feature-card-group',
+    label: 'Feature card group',
+    description: 'Auto-fit grid of feature cards (responsive flow)',
+    Icon: LayoutGrid,
+    keywords: ['feature', 'cards', 'grid', 'group', 'landing', 'tiles'],
+    command: ({ editor, range }) => {
+      const card = (color: string) => ({
+        type: 'mdxFeatureCard',
+        attrs: { color, accent: 'top-bar' },
+        content: [
+          {
+            type: 'mdxFeatureCardTitle',
+            content: [{ type: 'text', text: 'Feature title' }],
+          },
+          { type: 'paragraph' },
+        ],
+      });
+      editor
+        .chain()
+        .focus()
+        .deleteRange(range)
+        .insertContent({
+          type: 'mdxFeatureCardGroup',
+          attrs: {},
+          content: [card('blue'), card('green'), card('purple')],
+        })
+        .run();
+    },
+  },
+  {
+    id: 'stage-list',
+    label: 'Stage list',
+    description: 'Pipeline status indicator with semantic stages',
+    Icon: ListChecks,
+    keywords: ['stage', 'pipeline', 'status', 'progress', 'workflow'],
+    command: ({ editor, range }) => {
+      editor
+        .chain()
+        .focus()
+        .deleteRange(range)
+        .insertContent({
+          type: 'mdxStageList',
+          content: [
+            {
+              type: 'mdxStage',
+              attrs: { label: 'Planning', status: 'done' },
+            },
+            {
+              type: 'mdxStage',
+              attrs: { label: 'In progress', status: 'active' },
+            },
+            {
+              type: 'mdxStage',
+              attrs: { label: 'Review', status: 'pending' },
+            },
+          ],
         })
         .run();
     },

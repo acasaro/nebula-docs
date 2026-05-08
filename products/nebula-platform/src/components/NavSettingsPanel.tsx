@@ -349,6 +349,8 @@ function SettingsBody({
     url: stringValue(fm.url) ?? pageObj?.externalUrl ?? '',
     keywords: arrayValue(fm.keywords) ?? pageObj?.keywords ?? [],
     ogImage: stringValue(fm.ogImage) ?? pageObj?.ogImage ?? '',
+    backgroundColor: stringValue(fm.backgroundColor) ?? '',
+    backgroundColorDark: stringValue(fm.backgroundColorDark) ?? '',
   };
 
   const onPatch = (patch: Partial<PageFrontmatterValues>) => {

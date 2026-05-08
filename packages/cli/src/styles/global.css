@@ -29,6 +29,11 @@
    Generated to packages/cli/.nebula/tokens.css; gitignored. */
 @import "../../.nebula/tokens.css";
 
+/* Shared content palette consumed by editor components (Sheet,
+   FeatureCard, etc.). Same import the Platform editor uses, so a card
+   looks identical here and there. */
+@import "@nebula-docs/theme/dist/brand-palette.css";
+
 /* Components in @nebula-docs/components use Tailwind's `dark:` variant
  * to switch styles. Both consumers (the Platform editor and this CLI
  * build) use a class-based dark mode toggle on the document root, NOT

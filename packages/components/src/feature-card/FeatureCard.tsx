@@ -17,6 +17,20 @@ export type FeatureCardColor = (typeof FEATURE_CARD_COLORS)[number];
 
 export type FeatureCardAccent = 'top-bar' | 'none';
 export type FeatureCardLayout = 'vertical' | 'horizontal';
+export type FeatureCardTitleLevel = 1 | 2 | 3 | 4;
+
+const TITLE_SIZE_CLASS: Record<FeatureCardTitleLevel, string> = {
+  1: 'text-2xl',
+  2: 'text-xl',
+  3: 'text-base',
+  4: 'text-sm',
+};
+
+function clampLevel(value: unknown): FeatureCardTitleLevel {
+  const n = typeof value === 'string' ? Number(value) : value;
+  if (n === 1 || n === 2 || n === 3 || n === 4) return n;
+  return 3;
+}
 
 export interface FeatureCardProps {
   children?: ReactNode;
@@ -31,9 +45,13 @@ export interface FeatureCardProps {
   icon?: ReactNode;
   /** Optional status pill text, e.g. "LIVE", "WEEKLY". */
   pill?: string;
-  /** Title — string for tenant MDX, ReactNode so the editor can pass an
-   *  inline-editable input that takes over the title slot. */
+  /** Title text. Plain string in tenant MDX; ReactNode so the editor can
+   *  pass an inline-editable input that takes over the slot. */
   title?: ReactNode;
+  /** Heading level for the title (1-4). Defaults to 3. Marks inside the
+   *  title aren't durable across save (see editor's `mdxFeatureCardTitle`
+   *  comment); the level is. */
+  titleLevel?: FeatureCardTitleLevel | string | number;
   /** CTA label. When set, renders a "{linkText} →" line in the accent
    *  color and turns the whole card into a link if `linkUrl` is set. */
   linkText?: string;
@@ -77,6 +95,7 @@ export function FeatureCard({
   icon,
   pill,
   title,
+  titleLevel,
   linkText,
   linkUrl,
   className,
@@ -85,8 +104,11 @@ export function FeatureCard({
   const showAccent = accent === 'top-bar';
   const isLink = !!linkUrl;
 
+  const resolvedLevel: FeatureCardTitleLevel = clampLevel(titleLevel);
+  const TitleTag = `h${resolvedLevel}` as 'h1' | 'h2' | 'h3' | 'h4';
+
   const resolvedIcon =
-    typeof icon === 'string' ? <McoeIcon icon={icon} size={20} /> : icon;
+    typeof icon === 'string' ? <McoeIcon icon={icon} size={22} /> : icon;
 
   const styleVars = {
     '--feature-accent': ACCENT_VAR[color],
@@ -126,7 +148,7 @@ export function FeatureCard({
       >
         {resolvedIcon ? (
           <div
-            className="flex size-10 shrink-0 items-center justify-center rounded-lg"
+            className="flex size-[45px] shrink-0 items-center justify-center rounded-lg"
             style={{
               backgroundColor: 'var(--feature-tile-bg)',
               color: 'var(--feature-icon-fg)',
@@ -137,34 +159,48 @@ export function FeatureCard({
           </div>
         ) : null}
         <div
-          className={cn(
-            'flex min-w-0 flex-1 flex-col',
-            !isHorizontal && resolvedIcon ? 'mt-3' : null,
-          )}
+          // Icon → content: 16px (per spec). Inline because Tailwind
+          // utilities can lose the cascade against `.mdx-prose`.
+          style={!isHorizontal && resolvedIcon ? { marginTop: 16 } : undefined}
+          className="flex min-w-0 flex-1 flex-col"
         >
           {pill ? (
+            // Pill → next item: 12px (per spec). Inline for the same
+            // cascade reason as the title's margin.
             <span
-              className="mb-2 inline-block rounded-full px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wider text-white"
-              style={{ backgroundColor: 'var(--feature-accent)' }}
+              style={{
+                backgroundColor: 'var(--feature-accent)',
+                marginBottom: 12,
+              }}
+              className="self-start rounded-full px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wider text-white"
               data-component-part="feature-card-pill"
             >
               {pill}
             </span>
           ) : null}
           {title ? (
-            <h3
-              className="m-0 text-base font-semibold text-stone-800 dark:text-white"
+            // Inline `margin: 0` because the editor wraps content in a
+            // `.mdx-prose` container that injects `mt-*` on every heading.
+            // Inline style has the highest specificity short of !important,
+            // so this guarantees a zero-margin heading inside or outside
+            // the editor regardless of which level we picked.
+            <TitleTag
+              style={{ margin: 0 }}
+              className={cn(
+                'font-semibold text-stone-800 dark:text-white',
+                TITLE_SIZE_CLASS[resolvedLevel],
+              )}
               data-component-part="feature-card-title"
             >
               {title}
-            </h3>
+            </TitleTag>
           ) : null}
           {children ? (
             <div
+              style={{ marginTop: title ? 8 : undefined, lineHeight: 1.4 }}
               className={cn(
-                'text-sm leading-6 text-stone-600 dark:text-stone-400',
+                'text-sm text-muted-foreground',
                 '[&_p]:my-0 [&_p+p]:mt-2',
-                title ? 'mt-1' : null,
               )}
               data-component-part="feature-card-description"
             >
@@ -172,9 +208,13 @@ export function FeatureCard({
             </div>
           ) : null}
           {linkText ? (
+            // Description → link: 16px minimum (per spec). `mt-auto`
+            // anchors to the bottom in equal-height card grids;
+            // `paddingTop: 16` guarantees the visual gap when the card
+            // is content-sized.
             <span
-              className="mt-auto inline-flex items-center gap-1 pt-3 text-sm font-medium"
-              style={{ color: 'var(--feature-accent)' }}
+              style={{ paddingTop: 16 }}
+              className="mt-auto inline-flex items-center gap-1 text-sm font-semibold text-primary"
               data-component-part="feature-card-cta"
             >
               {linkText}

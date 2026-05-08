@@ -9,10 +9,24 @@ interface Props {
   title: string;
   description?: string;
   currentSlug: string;
+  /** Per-page light-mode bg override. Falls through to the theme default if omitted. */
+  backgroundColor?: string;
+  /** Per-page dark-mode bg override. Falls through to the theme default if omitted. */
+  backgroundColorDark?: string;
 }
 
-const { title, description, currentSlug } = Astro.props as Props;
+const { title, description, currentSlug, backgroundColor, backgroundColorDark } =
+  Astro.props as Props;
 const docs = loadDocsConfig();
+
+// Inline-style each override as a CSS custom property on <body>. The static
+// CSS in this layout's <style is:global> block reads these vars and applies
+// them only in the matching theme (light vs dark) — so an unset side falls
+// back to the theme default rather than leaking the other side's color.
+const bodyStyleParts: string[] = [];
+if (backgroundColor) bodyStyleParts.push(`--page-bg-light: ${backgroundColor}`);
+if (backgroundColorDark) bodyStyleParts.push(`--page-bg-dark: ${backgroundColorDark}`);
+const bodyStyle = bodyStyleParts.length > 0 ? bodyStyleParts.join('; ') : undefined;
 ---
 <!doctype html>
 <html lang="en">
@@ -31,7 +45,7 @@ const docs = loadDocsConfig();
       })();
     </script>
   </head>
-  <body>
+  <body style={bodyStyle}>
     <Navbar docs={docs} currentSlug={currentSlug} />
     <main class="nebula-custom-shell">
       <div class="nebula-custom-container mdx-prose">
@@ -92,6 +106,17 @@ const docs = loadDocsConfig();
          their internal centered alignment intact. */
       .nebula-custom-shell {
         width: 100%;
+      }
+      /* Per-page background override. Each rule is gated by the active theme
+         so a one-sided override (only light, or only dark) leaves the other
+         side falling through to the theme default rather than painting it
+         the wrong color. `:where()` keeps specificity equal to the body's
+         attribute selector, so source order tie-breaks. */
+      :where(:root:not([data-theme="dark"]):not(.dark)) body[style*="--page-bg-light"] {
+        background: var(--page-bg-light);
+      }
+      :where(:root[data-theme="dark"], :root.dark) body[style*="--page-bg-dark"] {
+        background: var(--page-bg-dark);
       }
       .nebula-custom-container {
         max-width: 64rem;

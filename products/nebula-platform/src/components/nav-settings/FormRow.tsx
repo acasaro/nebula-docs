@@ -104,6 +104,49 @@ export function ToggleRow({
   );
 }
 
+interface ColorRowProps {
+  label: string;
+  icon?: LucideIcon;
+  value: string;
+  onChange: (next: string) => void;
+  placeholder?: string;
+}
+
+export function ColorRow({
+  label,
+  icon,
+  value,
+  onChange,
+  placeholder,
+}: ColorRowProps) {
+  const id = useId();
+  // The native color picker only accepts #rrggbb. For named colors, var(),
+  // rgb()/hsl()/oklch(), or empty values, fall back to white in the swatch
+  // so it still renders — the text field stays the source of truth.
+  const swatchValue = /^#[0-9a-fA-F]{6}$/.test(value) ? value : '#ffffff';
+  return (
+    <FormRow label={label} icon={icon} htmlFor={id}>
+      <div className="flex items-center gap-2">
+        <input
+          type="color"
+          aria-label={`${label} swatch`}
+          value={swatchValue}
+          onChange={(e) => onChange(e.target.value)}
+          className="size-7 shrink-0 cursor-pointer rounded border border-border/60 bg-transparent p-0.5"
+        />
+        <Input
+          id={id}
+          type="text"
+          value={value}
+          placeholder={placeholder ?? '#ffffff or var(--color-muted)'}
+          onChange={(e) => onChange(e.target.value)}
+          className={UNDERLINE_INPUT_CLASSES}
+        />
+      </div>
+    </FormRow>
+  );
+}
+
 interface SelectRowProps {
   label: string;
   icon?: LucideIcon;

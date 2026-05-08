@@ -14,10 +14,10 @@ import {
   ChevronsUpDown,
   CirclePlus,
   FilePlus,
-  FoldVertical,
   FolderPlus,
   Folder,
   PanelsTopLeft,
+  SquareMinus,
   Plus,
   Settings,
 } from 'lucide-react';
@@ -321,7 +321,7 @@ function CollapseAllButton({ onCollapseAll }: CollapseAllButtonProps) {
       }}
       className="flex size-5 items-center justify-center rounded text-muted-foreground/70 transition-colors hover:bg-accent hover:text-foreground"
     >
-      <FoldVertical className="size-3.5" />
+      <SquareMinus className="size-3.5" />
     </button>
   );
 }
@@ -432,11 +432,11 @@ function TabSection({
   const settingsOpen = settingsOpenKey === settingsKey;
   const groupKeyBase = `tab${tabIndex}`;
   const [addingKind, setAddingKind] = useState<AddEntryKind | null>(null);
-  // Default closed (VS Code pattern). The user expands what they want to
-  // work in; the tree starts compact instead of opening every section on
-  // every mount. Collapse-all signal still applies — it just no-ops when
-  // everything is already closed.
-  const [expanded, setExpanded] = useState(false);
+  // Tabs default open so the top-level structure is visible on mount —
+  // groups and anything nested below stay closed (their own default), so
+  // the user sees the shape of the doc set without a wall of pages. The
+  // header Collapse-all signal still applies and overrides this.
+  const [expanded, setExpanded] = useState(true);
 
   // Collapse-all signal: setting expanded=false on every signal bump (skip
   // the initial mount so we don't fight the default-open state). The header

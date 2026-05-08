@@ -4,4 +4,5 @@ export type {
   FeatureCardColor,
   FeatureCardLayout,
   FeatureCardProps,
+  FeatureCardTitleLevel,
 } from './FeatureCard';

@@ -3,36 +3,32 @@ title: "What Are Rollout Versions?"
 description: "Learn about versions, how they work, and the release stages for each platform."
 sidebarTitle: "About Versions"
 ---
-
-import { PlatformCard } from '@tenant/components/PlatformCard';
+import { PlatformCard } from "@tenant/components/PlatformCard";
 
 A **version** represents a single release of your mobile app (e.g., v1.2.6). Each version moves through a multi-stage release pipeline from build selection to production release. You can only move to the next stage after completing the current one.
 
 ## Version Stages
 
-<PlatformCard platform="ios">
+<Sheet color="blue" icon="https://firebasestorage.googleapis.com/v0/b/mcoe-d.firebasestorage.app/o/dev%2F1%2Fimages%2F295dd81ec252a4a4.svg?alt=media&token=3a7abdc0-de68-44c0-ae81-bfc8425bf322">
+1. **Release Candidate**: Select the release branch and Workflow that generates an IPA file.
+2. **TestFlight**: Upload the release candidate to TestFlight for testing.
+3. **Approvals**: Complete all 6 required approval tasks.
+4. **App Store Review**: Submit to Apple for review.
+5. **Release on the App Store**: Release to all users or configure a phased release.
+</Sheet>
 
-1. **[Release Candidate](/developers/release-management/versions/pipeline-stages/release-candidate)**: Specify the release branch and select the Workflow that generates an IPA file.
-2. **[TestFlight](/developers/release-management/versions/pipeline-stages/testing)**: Upload the release candidate to TestFlight, and distribute it for testing.
-3. **[Approvals](/developers/release-management/versions/pipeline-stages/approvals)**: Complete all 6 required approval tasks — compliance (OSPO, Legal, ESRO) followed by business (Service Owner, Technical Owner, Product Owner).
-4. **[App Store Review](/developers/release-management/versions/pipeline-stages/app-store-review)**: Submit your update for review in the App Store, and track the approval progress.
-5. **[Release on the App Store](/developers/release-management/versions/pipeline-stages/release)**: Release your app to all users at the same time, or configure a phased release.
+<Sheet color="green" icon="android" iconLibrary="material" iconType="outlined">
+1. **Release Candidate**: Select the release branch and Workflow that generates an AAB file.
+2. **Google Play Upload & Testing**: Upload the release candidate to Google Play for testing.
+3. **Approvals**: Complete all 6 required approval tasks.
+4. **Release on Google Play**: Release to all users or configure a staged rollout.
+</Sheet>
 
-</PlatformCard>
-
-<PlatformCard platform="android">
-
-1. **[Release Candidate](/developers/release-management/versions/pipeline-stages/release-candidate)**: Specify the release branch and select the Workflow that generates an AAB file.
-2. **[Google Play Upload & Testing](/developers/release-management/versions/pipeline-stages/google-play-testing)**: Upload the release candidate to Google Play, and distribute it for testing.
-3. **[Approvals](/developers/release-management/versions/pipeline-stages/approvals)**: Complete all 6 required approval tasks — compliance (OSPO, Legal, ESRO) followed by business (Service Owner, Technical Owner, Product Owner).
-4. **[Release on Google Play](/developers/release-management/versions/pipeline-stages/google-release)**: Release your app to all users at the same time, or configure a staged rollout.
-
-</PlatformCard>
 
 ## Version Statuses
 
 | Status | Meaning | Typical Situation |
-|--------|---------|-------------------|
+| --- | --- | --- |
 | **Draft** | Version was just created | In the Release Candidate stage, before an artifact is selected |
 | **In Progress** | Actively moving through the pipeline | Working through Testing, Approvals, or App Store Review |
 | **Completed** | Released to production | App is live on the App Store |

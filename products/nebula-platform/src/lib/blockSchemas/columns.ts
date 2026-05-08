@@ -1,12 +1,10 @@
 import { Columns2 } from 'lucide-react';
 import type { BlockAttrSchema } from './types';
 
-const COLS_OPTIONS = [
-  { value: '1', label: '1' },
-  { value: '2', label: '2' },
-  { value: '3', label: '3' },
-  { value: '4', label: '4' },
-] as const;
+const COLS_OPTIONS = Array.from({ length: 12 }, (_, i) => ({
+  value: String(i + 1),
+  label: String(i + 1),
+}));
 
 export const columnsSchema: BlockAttrSchema = {
   blockType: 'mdxColumns',

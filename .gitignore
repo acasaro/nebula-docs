@@ -30,6 +30,8 @@ pnpm-debug.log*
 # Claude
 .claude/settings.local.json
 .claude/settings.json
+.claude/worktrees/
+.claude/scheduled_tasks.lock
 
 # Coverage
 coverage/

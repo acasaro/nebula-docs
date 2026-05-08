@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { trackDeduped, deriveSiteContext } from '@nebula-docs/analytics';
 import {
   loadPagefind,
   type Pagefind,
@@ -123,6 +124,14 @@ export default function SearchModal({ base = '/', scopeBy = 'tab' }: SearchModal
       if (cancelled) return;
       setResults(resolved);
       setActiveIndex(0);
+      // Emit a `search` event once Pagefind returns results for this query.
+      // `trackDeduped` keyed on the term collapses repeats within the 250ms
+      // window so typing a single word doesn't fan out into many events.
+      const term = query.trim();
+      if (term) {
+        const ctx = deriveSiteContext(window.location.pathname);
+        trackDeduped('search', { ...ctx, search_term: term }, `search:${term}`);
+      }
     };
     run();
     return () => {

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   clearTokenCache,
 } from "@/lib/githubToken";
@@ -12,6 +12,7 @@ import {
 } from "@/lib/content";
 import { useGitSettings } from "@/lib/gitSettings";
 import { dashboardMockData } from "./mockData";
+import { subscribeBuilds, type BuildDoc } from "./firestore";
 import type {
   Actor,
   ActivityEntry,
@@ -246,10 +247,53 @@ async function loadDashboardData(args: {
   };
 }
 
+/** Latest webhook-written build per branch, keyed by branch name. */
+type BuildsByBranch = Map<string, BuildDoc>;
+
+/**
+ * Map a webhook build's status + conclusion onto the dashboard's
+ * EntryStatus. The webhook records GitHub's terminology
+ * (`status: queued | in_progress | completed`,
+ * `conclusion: success | failure | cancelled | timed_out | …`); the
+ * dashboard renders `successful | building | failed`.
+ */
+function statusFromBuild(b: BuildDoc): EntryStatus {
+  if (b.status !== "completed") return "building";
+  if (b.conclusion === "success") return "successful";
+  return "failed";
+}
+
+/**
+ * Overlay live build state onto a GH-derived PreviewEntry. Branch is the
+ * join key — the webhook writes one builds/{run_id} doc per workflow run,
+ * and we keep the latest run per branch in `builds`.
+ *
+ * What gets overlaid: status (so a still-building PR shows as building,
+ * not the GH-derived "successful" default) and previewUrl (the webhook /
+ * recordPreview callback fills this in). Everything else stays from the
+ * GH commit lookup so titles/files/authors keep their human-readable
+ * shape — the webhook payload doesn't carry that info.
+ */
+function enrichPreviewWithBuild(p: PreviewEntry, b: BuildDoc | undefined): PreviewEntry {
+  if (!b) return p;
+  const next: PreviewEntry = {
+    ...p,
+    status: statusFromBuild(b),
+  };
+  if (b.previewUrl) {
+    next.previewUrl = b.previewUrl;
+    next.successMessage = `Your changes are now live at ${b.previewUrl}!`;
+  }
+  return next;
+}
+
 export function useDashboardData(): DashboardDataState {
   const settings = useGitSettings();
   const [state, setState] = useState<DashboardDataState>({ status: "loading" });
   const [reloadCount, setReloadCount] = useState(0);
+  const [buildsByBranch, setBuildsByBranch] = useState<BuildsByBranch>(
+    () => new Map(),
+  );
 
   const refresh = useCallback(() => {
     clearTokenCache();
@@ -288,5 +332,57 @@ export function useDashboardData(): DashboardDataState {
     };
   }, [settings, reloadCount, refresh]);
 
-  return state;
+  // Live Firestore subscription on `builds/` for this repo. Independent of
+  // the GH-derived data load above — they update on different cadences
+  // (GH on mount/refresh, Firestore on every webhook event).
+  useEffect(() => {
+    if (settings.status !== "ready") {
+      setBuildsByBranch(new Map());
+      return;
+    }
+    const fullName = `${settings.settings.owner}/${settings.settings.repo}`;
+    const unsub = subscribeBuilds(
+      { repoFullName: fullName },
+      (builds) => {
+        // Keep only the latest build per branch. `receivedAt` is a Firestore
+        // serverTimestamp, monotonic enough for "latest" — fall back to runId
+        // (an int the webhook event sequence reuses) when timestamps are
+        // missing on a freshly-written doc.
+        const next: BuildsByBranch = new Map();
+        for (const b of builds) {
+          if (!b.branch) continue;
+          const existing = next.get(b.branch);
+          if (
+            !existing ||
+            (b.receivedAt?.toMillis() ?? b.runId) >
+              (existing.receivedAt?.toMillis() ?? existing.runId)
+          ) {
+            next.set(b.branch, b);
+          }
+        }
+        setBuildsByBranch(next);
+      },
+      (err) => {
+        // Don't fail the whole dashboard if the subscription dies — Activity
+        // is still GH-derived. Log and carry on with an empty overlay.
+        // eslint-disable-next-line no-console
+        console.warn("[dashboard] builds subscription error:", err);
+      },
+    );
+    return unsub;
+  }, [settings]);
+
+  // Render-time merge: overlay live build state onto GH-derived previews.
+  // Memoized on (state, buildsByBranch) so re-renders don't fan out.
+  return useMemo(() => {
+    if (state.status !== "ready") return state;
+    if (buildsByBranch.size === 0) return state;
+    const enriched = state.data.previews.map((p) =>
+      enrichPreviewWithBuild(p, buildsByBranch.get(p.branch)),
+    );
+    return {
+      ...state,
+      data: { ...state.data, previews: enriched },
+    };
+  }, [state, buildsByBranch]);
 }

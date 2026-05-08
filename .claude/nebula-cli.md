@@ -807,14 +807,27 @@ in practice.
    docs repo, their CI, their bucket. The platform is the npm package
    they pull in.
 
-4. **CI runner: `uhg-runner` only.** `ubuntu-latest` and other public
-   runners are out of scope. The platform is UHG-internal; the generated
-   `.github/workflows/deploy.yml` hard-codes `uhg-runner`.
+4. **CI runner: matches the deploy target.** `uhg-runner` for tenants
+   on the OOSS path (UHG-internal infra is only reachable from
+   uhg-runner). `ubuntu-latest` for tenants on the Firebase Hosting
+   path (public github.com runners suffice). Reversed from the
+   original "uhg-runner only" call when Firebase Hosting became the
+   default — see decision #5 below.
 
-5. **Hosting: per-tenant OOSS bucket, behind UHG firewall, served via
-   UHG infra.** Same model as the existing `mcoe-dev-docs` bucket. No
-   public-internet hosting story; no per-tenant public domains. Bucket
-   provisioning is a one-time UHG-infra ask per tenant.
+5. **Hosting: Firebase Hosting (default) — Preview Channels for PRs,
+   primary site for main. Reversed 2026-05-08 from the original "OOSS
+   bucket per tenant" call.** The platform was designed assuming UHG
+   prod infra (OOSS); the dev / iteration loop has no OOSS access, so
+   Firebase Hosting (already in the Firebase project the SPA + functions
+   use) became the default. OOSS support remains in the codebase: the
+   `deploy.bucketBaseUrl` field on `docs.json` plus the webhook's Octokit
+   read of it covers OOSS-style "fixed host + sub-path" deploys.
+   Tenants behind UHG firewall can opt into OOSS by setting that field
+   and using the OOSS workflow steps; everyone else uses the
+   recordPreview callback path with Firebase Preview Channels. No
+   per-tenant public-domain provisioning is required for the Firebase
+   path — channels publish at `https://<site>--<channel>-<hash>.web.app`
+   and main publishes at the site's primary URL.
 
 6. **Schema versioning: pin the CLI version in tenant `package.json`,
    tenants upgrade when they choose.** Schema bumps don't break old

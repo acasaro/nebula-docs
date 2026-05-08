@@ -21,5 +21,6 @@ export const env = {
   fn: {
     mintGithubToken: mode === 'dev' ? 'mintGithubTokenDev' : 'mintGithubToken',
     getInstallation: mode === 'dev' ? 'getInstallationDev' : 'getInstallation',
+    getAnalyticsSummary: mode === 'dev' ? 'getAnalyticsSummaryDev' : 'getAnalyticsSummary',
   },
 } as const;

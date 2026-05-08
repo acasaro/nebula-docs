@@ -1,23 +1,34 @@
 name: Deploy docs
 
-# Deploys the docs site:
-#   - push to main → build with no base → upload to bucket root
-#   - pull_request   → build with --base /previews/<PR#>/ → upload to
-#                      bucket sub-path. The Nebula Cloud Function
-#                      githubWebhook listens for `workflow_run` events with
-#                      a non-empty `pull_requests[]`, reads `deploy.bucketBaseUrl`
-#                      from this repo's docs.json, and writes
-#                      `previewUrl: ${bucketBaseUrl}/previews/<PR#>/` onto
-#                      the matching builds/{run_id} doc the dashboard reads.
+# Default tenant deploy workflow — Firebase Hosting + Preview Channels.
 #
-# Companion workflow `cleanup-preview.yml` removes the sub-path when a PR
-# is closed.
+# - push to main           → build → deploy to the primary site (live).
+# - pull_request           → build → deploy to a per-PR Preview Channel
+#                            (`pr-<PR#>`) → POST the channel URL to the
+#                            recordPreview Cloud Function so it lands on
+#                            `builds/{run_id}.previewUrl` and the dashboard
+#                            Preview button lights up.
 #
-# Bucket auth: this template uses UHG's standard secret-vault + ooss-deploy
-# action chain (the same one MCOE uses today). Tenants on different infra
-# replace the "Get OOSS Credentials" + "Deploy to OOSS root" / "sub-path"
-# steps with whatever their hosting target requires; the build step itself
-# is identical regardless.
+# Companion workflow `cleanup-preview.yml` deletes the channel when a PR
+# closes so quota isn't wasted on stale previews.
+#
+# This is the recommended path. If your tenant deploys to a UHG OOSS bucket
+# (or any "fixed host + sub-path" target), copy `../workflows-ooss/*.yml`
+# into this directory instead and set `deploy.bucketBaseUrl` in your
+# `docs.json`.
+#
+# Required secrets (GitHub Actions repo secrets):
+#   FIREBASE_SERVICE_ACCOUNT          JSON of a Firebase Hosting deploy service
+#                                     account on your Firebase project.
+#   NEBULA_RECORD_PREVIEW_SECRET      Shared secret matching the Cloud Function's
+#                                     RECORD_PREVIEW_SECRET (or DEV_RECORD_PREVIEW_SECRET
+#                                     for dev). Use the dev one against the dev
+#                                     Function URL while iterating.
+#
+# Required variables (GitHub Actions repo variables):
+#   FIREBASE_PROJECT_ID               e.g. mcoe-d
+#   NEBULA_RECORD_PREVIEW_URL         The deployed function endpoint, e.g.
+#                                     https://recordpreviewdev-…-uc.a.run.app
 
 on:
   workflow_dispatch:
@@ -27,110 +38,73 @@ on:
     types: [opened, synchronize, reopened]
 
 permissions:
-  id-token: write
   contents: read
+  pull-requests: write       # FirebaseExtended/action-hosting-deploy comments on PRs
+  checks: write
 
 # Cancel any in-flight build for the same branch / PR — only the latest
-# commit's preview is meaningful, and per-PR builds + uploads aren't free.
+# commit's preview is meaningful.
 concurrency:
   group: deploy-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
   build-deploy:
-    runs-on: uhg-runner
-    env:
-      # Tenants set this to their OOSS bucket name. Pair with
-      # `deploy.bucketBaseUrl` in docs.json (which surfaces the public URL
-      # of the same bucket to the dashboard).
-      OOSS_BUCKET_NAME: REPLACE_ME_BUCKET_NAME
-      PNPM_VERSION: 10.33.0
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Configure JFrog SaaS Connection
-        uses: uhg-pipelines/epl-jf/configure-saas-connection@v4
-        with:
-          jfrog-url: https://centraluhg.jfrog.io
-          jfrog-edge-url: https://centraluhg.jfrog.io
-          jfrog-project-key: glb
-          npm-setup: true
-
-      - name: Fix pnpm auth for JFrog virtual repos
-        run: |
-          TOKEN=$(grep 'glb-npm-vir/:_authToken=' ~/.npmrc | sed 's/.*_authToken=//')
-          echo "//centraluhg.jfrog.io/:_authToken=${TOKEN}" >> ~/.npmrc
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version-file: '.nvmrc'
 
-      - name: Install pnpm
-        run: npm install -g pnpm@${{ env.PNPM_VERSION }}
-
+      # Tenant repo uses npm (the framework monorepo's `file:` link doesn't
+      # play nicely with pnpm). When this template ships in `nebula init`
+      # we'll generate the right install command per consumer.
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      # Compute the build base + bucket destination from the trigger.
-      # Outputs:
-      #   base — passed to `nebula build --base`. Empty for main pushes.
-      #   bucket-path — sub-path under the bucket. Empty for main pushes.
-      #   pr-number — convenience for downstream uses.
-      - name: Compute deploy target
-        id: target
-        run: |
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            PR="${{ github.event.pull_request.number }}"
-            echo "base=/previews/${PR}" >> "$GITHUB_OUTPUT"
-            echo "bucket-path=previews/${PR}" >> "$GITHUB_OUTPUT"
-            echo "pr-number=${PR}" >> "$GITHUB_OUTPUT"
-          else
-            echo "base=" >> "$GITHUB_OUTPUT"
-            echo "bucket-path=" >> "$GITHUB_OUTPUT"
-            echo "pr-number=" >> "$GITHUB_OUTPUT"
-          fi
+        run: npm ci
 
       - name: Build
-        run: |
-          if [ -n "${{ steps.target.outputs.base }}" ]; then
-            pnpm nebula build --base "${{ steps.target.outputs.base }}"
-          else
-            pnpm nebula build
-          fi
+        run: npm run build
 
-      - name: Get OOSS Credentials
-        uses: uhg-pipelines/immerse-actions/vaults/get-secrets@v2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # main → live; PR → preview channel `pr-<PR#>`. The action handles
+      # both modes via the `channelId` input: provide it for PRs, leave
+      # blank for live deploys.
+      - name: Deploy
+        id: deploy
+        uses: FirebaseExtended/action-hosting-deploy@v0
         with:
-          required-secrets: '["OOSS_AWS_ACCESS_KEY_ID", "OOSS_AWS_SECRET_ACCESS_KEY"]'
-          environment: dev
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          projectId: ${{ vars.FIREBASE_PROJECT_ID }}
+          channelId: ${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || '' }}
+          # Default 7d channel expiry is fine for review cycles. Bump if
+          # PRs routinely sit longer.
+          expires: 7d
 
-      # main → bucket root, with sync-delete so removed pages disappear.
-      - name: Deploy to OOSS root
-        if: github.event_name != 'pull_request'
-        uses: uhg-pipelines/cd-workflows/actions/ooss-deploy@v1.1.2
-        with:
-          OOSS_AWS_ACCESS_KEY_ID: ${{ env.OOSS_AWS_ACCESS_KEY_ID }}
-          OOSS_AWS_SECRET_ACCESS_KEY: ${{ env.OOSS_AWS_SECRET_ACCESS_KEY }}
-          build-directory: dist
-          ooss-custom-bucket-name: ${{ env.OOSS_BUCKET_NAME }}
-          enable-sync-delete: true
-
-      # pull_request → bucket sub-path. ooss-deploy@v1 doesn't accept a
-      # destination prefix, so use the aws CLI directly. `--delete` only
-      # affects keys under the previews/<PR>/ prefix, which is what we
-      # want — main's bucket root is unaffected.
-      - name: Deploy preview to OOSS sub-path
-        if: github.event_name == 'pull_request'
+      # Send the channel URL back to recordPreview so the dashboard can
+      # surface the Preview button. Skipped on `push` (live deploys don't
+      # populate previewUrl — that field is for PR previews only).
+      - name: Notify recordPreview
+        if: github.event_name == 'pull_request' && steps.deploy.outputs.details_url != ''
         env:
-          AWS_ACCESS_KEY_ID: ${{ env.OOSS_AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ env.OOSS_AWS_SECRET_ACCESS_KEY }}
-          BUCKET_PATH: ${{ steps.target.outputs.bucket-path }}
+          PREVIEW_URL: ${{ steps.deploy.outputs.details_url }}
+          RUN_ID: ${{ github.run_id }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPO_FULL_NAME: ${{ github.repository }}
+          ENDPOINT: ${{ vars.NEBULA_RECORD_PREVIEW_URL }}
+          SECRET: ${{ secrets.NEBULA_RECORD_PREVIEW_SECRET }}
         run: |
-          aws s3 sync ./dist "s3://${OOSS_BUCKET_NAME}/${BUCKET_PATH}/" \
-            --delete \
-            --no-progress
+          curl --fail-with-body --silent --show-error \
+            -X POST "$ENDPOINT" \
+            -H "Authorization: Bearer $SECRET" \
+            -H "Content-Type: application/json" \
+            -d "$(jq -n \
+                  --argjson runId "$RUN_ID" \
+                  --argjson prNumber "$PR_NUMBER" \
+                  --arg previewUrl "$PREVIEW_URL" \
+                  --arg repoFullName "$REPO_FULL_NAME" \
+                  '{runId: $runId, prNumber: $prNumber, previewUrl: $previewUrl, repoFullName: $repoFullName}')"

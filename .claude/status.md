@@ -108,9 +108,13 @@ Per-deployment landing page with Activity / Previews tabs.
 
 **OPEN**
 
-- Switch from `mockData.ts` to live Firestore subscriptions on the `activity/` and `builds/` collections. The function side already writes here; SPA wiring is the parked webhook follow-up below.
 - Time-aware greeting bound to the authenticated user (`useCurrentUser()` hook from `@nebula-docs/firebase`).
-- Confirm what currently renders is mock vs real — quick check.
+- Activity tab is currently GH-derived (commits via Octokit). Future: also overlay webhook-written activity events from Firestore so the feed shows GH App installs, pushes, and PR state changes that don't surface as commits on the default branch.
+
+**Live data wired (2026-05-08)**
+
+- Activity tab: GH-derived from real commits via Octokit — was already real, never mock.
+- Previews tab: GH-derived branch list overlaid with Firestore `builds/` subscription. `lib/dashboard/firestore.ts` exposes `subscribeBuilds({ repoFullName }, …)` (filtered server-side by `where('repo.fullName', '==', …)` to use the auto-built single-field index, sorted client-side). `useDashboardData` keeps a `Map<branch, BuildDoc>` of the latest build per branch and overlays `status` + `previewUrl` onto each preview row. Status mapping: `status==='completed' && conclusion==='success'` → `successful`; `status` in {queued, in_progress} → `building`; everything else → `failed`. Subscription failure logs a console warning and falls through (Activity stays usable).
 
 ---
 
@@ -134,8 +138,7 @@ GitHub webhook handler that writes events to Firestore for the SPA to consume.
 
 **PARKED**
 
-- SPA dashboard subscription to `activity/` and `builds/` (the mock-data → live-data swap on Home).
-- Verify Firestore rules on `nebula-docs-plat-dev` allow `activity` / `builds` reads. The default-DB rules are correct (auth'd reads, function bypasses via admin SDK); rules are per-database, so the dev DB needs the same applied either via the GCP console or by extending `firebase.json` for multi-database deploys.
+- Verify Firestore rules on `nebula-docs-plat-dev` allow `activity` / `builds` reads. The default-DB rules are correct (auth'd reads, function bypasses via admin SDK); rules are per-database, so the dev DB needs the same applied either via the GCP console or by extending `firebase.json` for multi-database deploys. The new builds-subscription on the dashboard will hit this rule — if reads fail with `permission-denied`, that's the cause.
 - Prod webhook URL / secret config in the `nebula-docs` (Enterprise) GitHub App settings — only when ready to roll out to prod.
 - Smoke test the preview-cleanup workflow on the dev tenant: the GH App token's bucket-write scope at PR-close time may differ from PR-open time depending on how `uhg-pipelines/immerse-actions/vaults/get-secrets@v2` resolves credentials.
 
@@ -158,12 +161,16 @@ Multi-tenant Astro-based static site generator. Design doc: [nebula-cli.md](nebu
 - JSON Schemas published as Phase 0 stubs at `packages/cli/schemas/{docs,theme}.schema.json`. Authoritative shape will be generated from `@nebula-docs/schemas` Zod definitions in Phase 3.
 - Component map at `src/runtime/components/registry.tsx` exposes the full `@nebula-docs/components` surface to MDX. Includes `CalloutShim` that accepts both `type` (Mintlify-style) and `variant` (our component API).
 
-**DONE — Preview before merge (`--base` flag + tenant workflow templates)**
+**DONE — Preview before merge (CLI side: `--base` flag + base-prefix wiring)**
 
 - `nebula build --base /previews/<PR#>` produces a bundle whose asset paths, sidebar links, navbar tabs, footer columns, breadcrumbs, and MDX-content `<a href>` / `<img src>` / Card href all resolve under that prefix. The flag is normalized (`/previews/42`, `/previews/42/`, and `previews/42` all collapse to `/previews/42`) before being passed to Astro's `base` config via `NEBULA_BASE`.
 - `withBase()` helper in `src/runtime/lib/nav.mjs` is the choke point for layout-emitted hrefs (Sidebar, SidebarGroup, SidebarPageLink, Navbar, Footer, DocsLayout breadcrumbs). External (`http:`/`mailto:`/scheme-relative `//`), hash-only, and relative URLs pass through; site-rooted paths get the base prepended.
 - MDX-content href/src rewriting: new `remarkBasePrefix` plugin in `@nebula-docs/mdx` walks the MDAST and rewrites `link` / `image` URLs plus string-valued `href` / `src` attributes on `mdxJsxFlowElement` / `mdxJsxTextElement`. Idempotent and a no-op when base is unset, so it's registered unconditionally in `astro.config.mjs`. Expression-valued attrs (`<Card href={someVar} />`) aren't rewritten — authors using those wrap with `withBase` themselves.
-- Tenant template at `packages/cli/template/.github/workflows/{deploy,cleanup-preview}.yml`. `deploy.yml` triggers on push-to-main (build with no base → ooss-deploy with sync-delete to bucket root) AND on pull_request (build with `--base /previews/<PR#>` → `aws s3 sync` to `previews/<PR#>/` with `--delete` scoped to the sub-prefix). `cleanup-preview.yml` triggers on PR close → `aws s3 rm --recursive` on the sub-prefix. Concurrency groups cancel in-flight runs for the same branch / PR. Bucket name is a `REPLACE_ME_BUCKET_NAME` env var the tenant fills in at scaffold time. Companion field `deploy.bucketBaseUrl` in `docs.json` (added to the JSON Schema stub + `@nebula-docs/schemas`'s `deployConfigSchema`) tells the webhook handler the public URL to construct preview URLs from.
+
+**Tenant workflow templates — two flavors (Firebase Hosting is the default, see [nebula-cli.md](nebula-cli.md) locked decision #5)**
+
+- **OOSS path (legacy, available for firewall-internal tenants)** — `packages/cli/template/.github/workflows/{deploy,cleanup-preview}.yml`. `deploy.yml` triggers on push-to-main (build → ooss-deploy with sync-delete to bucket root) AND on pull_request (build with `--base /previews/<PR#>` → `aws s3 sync` to `previews/<PR#>/` with `--delete` scoped to the sub-prefix). `cleanup-preview.yml` triggers on PR close → `aws s3 rm --recursive`. Companion field `deploy.bucketBaseUrl` in `docs.json` (added to the JSON Schema stub + `@nebula-docs/schemas`'s `deployConfigSchema`) tells the webhook handler the public URL to construct preview URLs from. The webhook handler reads it via Octokit using the same App-installation token mintGithubToken uses, with a 5-min per-repo cache.
+- **Firebase Hosting path (default, both dev and prod)** — uses `FirebaseExtended/action-hosting-deploy@v0` to deploy main to a primary site and PRs to Preview Channels. Channel URLs (with random hashes) aren't derivable from any config, so the workflow POSTs the channel URL to a `recordPreview` Cloud Function (shared-secret auth) which writes `previewUrl` onto `builds/{run_id}`. Same Firestore field, different population path.
 
 **OPEN — Phase 1 follow-ups**
 
@@ -193,7 +200,9 @@ Per-PR builds at `bucket/previews/<PR-number>/`, surfaced via the dashboard's ex
 - **Webhook** — `previewUrl` computed on `builds/{run_id}` for PR-triggered `workflow_run` events by reading `deploy.bucketBaseUrl` from the tenant's `docs.json` via Octokit (cached per-repo). See "Preview URL resolution" under [Webhook + activity feed](#webhook--activity-feed) above.
 - **Platform** — `PreviewExpandedDetails.tsx` and the Preview button already read `entry.previewUrl`. The mock-data → live-data swap on Home is the parked gating item; once it lands the button is live with no further changes.
 
-**Bucket URL choice (documented in code).** Three options were considered: (a) tenant exposes `deploy.bucketBaseUrl` in `docs.json`, function reads via Octokit; (b) function-side config map keyed by repo; (c) workflow writes a separate Firestore doc the function reads back. Picked (a) because the tenant repo is already the source of truth for everything else (navigation, theming, snippets), and the function already has installation-token machinery for `mintGithubToken` so reusing it adds no new auth surface. Cache TTL on the docs.json read is 5 minutes — a tenant flipping the field propagates within minutes.
+**Two URL-resolution paths, one Firestore field.** The OOSS path resolves `previewUrl` server-side: webhook reads `deploy.bucketBaseUrl` from the tenant's `docs.json` via Octokit and computes `${bucketBaseUrl}/previews/<PR#>/`. The Firebase path resolves it client-side: the deploy workflow gets the channel URL from `FirebaseExtended/action-hosting-deploy@v0` outputs and POSTs it to a `recordPreview` Cloud Function which writes the field directly. Both paths converge on `builds/{run_id}.previewUrl`; the dashboard doesn't care which produced it.
+
+**Default deploy target reversed 2026-05-08: Firebase Hosting, not OOSS.** Tenants behind UHG firewall who need internal-only hosting can still opt into the OOSS path by populating `deploy.bucketBaseUrl` and using the OOSS workflow steps. Everyone else uses Firebase Preview Channels. Background in [nebula-cli.md](nebula-cli.md) locked decision #5.
 
 ### ~~2. Snippets~~ — DONE (Mintlify-aligned import model)
 

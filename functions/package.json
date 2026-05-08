@@ -10,8 +10,8 @@
     "shell": "pnpm build && firebase functions:shell",
     "start": "pnpm shell",
     "deploy": "firebase deploy --only functions",
-    "deploy:dev": "firebase deploy --only functions:mintGithubTokenDev,functions:getInstallationDev,functions:githubWebhookDev",
-    "deploy:prod": "firebase deploy --only functions:mintGithubToken,functions:getInstallation,functions:githubWebhook",
+    "deploy:dev": "firebase deploy --only functions:mintGithubTokenDev,functions:getInstallationDev,functions:githubWebhookDev,functions:getAnalyticsSummaryDev,functions:recordPreviewDev",
+    "deploy:prod": "firebase deploy --only functions:mintGithubToken,functions:getInstallation,functions:githubWebhook,functions:getAnalyticsSummary,functions:recordPreview",
     "logs": "firebase functions:log",
     "typecheck": "tsc --noEmit",
     "lint": "echo \"(eslint TBD)\""
@@ -20,6 +20,7 @@
     "node": "22"
   },
   "dependencies": {
+    "@google-analytics/data": "^5.2.2",
     "@octokit/auth-app": "^7.1.4",
     "@octokit/rest": "^21.1.1",
     "firebase-admin": "^13.0.0",

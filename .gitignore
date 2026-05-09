@@ -11,6 +11,13 @@ out/
 .cache-loader/
 *.tsbuildinfo
 
+# Theme dist is an exception: brand-palette.css is hand-authored and tokens.css
+# is generated, but both ship with the workspace package and are imported by
+# consumers (CLI's global.css). CI doesn't run any per-package build before
+# the CLI build, so these have to be checked in.
+!/packages/theme/dist/
+!/packages/theme/dist/*
+
 # Logs
 *.log
 npm-debug.log*

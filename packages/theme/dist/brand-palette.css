@@ -1,0 +1,57 @@
+/**
+ * Brand-palette tokens — content palette consumed by editor components
+ * (Sheet, FeatureCard, Stats, etc.). Distinct from the per-tenant theme
+ * tokens generated into `tokens.css` (those drive surface chrome).
+ *
+ * Each hue exposes lightest/light/mid/dark/darkest where applicable.
+ * Components pick a hue and select shades:
+ *   - `mid` for accents / icon glyphs / pill bg / left edge
+ *   - `lightest` for icon-tile backgrounds
+ *   - `dark` for high-contrast surfaces (future use)
+ *
+ * Dark-mode "ghost" surfaces fall out naturally from the same `mid`
+ * mixed at low alpha against a dark canvas — no separate dark-mode
+ * entries needed. Both the Platform editor and the CLI render import
+ * this file so a card looks identical in either consumer.
+ *
+ * Source of truth — do not duplicate values into other CSS files.
+ */
+:root {
+  --brand-neutral-white: #ffffff;
+  --brand-neutral-light: #dbdbdb;
+  --brand-neutral-dark: #7c7c7c;
+  --brand-neutral-black: #000000;
+
+  --brand-purple-lightest: #f6eaff;
+  --brand-purple-light: #deb4ff;
+  --brand-purple-mid: #bf5af2;
+  --brand-purple-dark: #500e82;
+  --brand-purple-darkest: #3d125f;
+
+  --brand-blue-lightest: #d7f5ff;
+  --brand-blue-light: #88e3ff;
+  --brand-blue-mid: #147efb;
+  --brand-blue-dark: #11258e;
+
+  --brand-teal-lightest: #dbfffd;
+  --brand-teal-light: #95ffec;
+  --brand-teal-mid: #30d6d6;
+  --brand-teal-dark: #106375;
+
+  --brand-green-lightest: #dbfff3;
+  --brand-green-light: #95ffcc;
+  --brand-green-mid: #3ddc84;
+  --brand-green-dark: #107557;
+
+  --brand-yellow-lightest: #fff4cd;
+  --brand-yellow-light: #ffe27f;
+  --brand-yellow-mid: #ffd60a;
+
+  --brand-orange-light: #ffd7c9;
+  --brand-orange-mid: #ff9500;
+  --brand-orange-dark: #ff4400;
+
+  --brand-red-light: #ffd0ec;
+  --brand-red-mid: #ff453a;
+  --brand-red-dark: #e5113c;
+}

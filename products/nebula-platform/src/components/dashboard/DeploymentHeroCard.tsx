@@ -4,7 +4,6 @@ import {
   GitBranch,
   Globe,
   PenSquare,
-  Plus,
   RefreshCw,
 } from "lucide-react";
 import { Link } from "react-router";
@@ -112,16 +111,6 @@ export function DeploymentHeroCard({
             {deployment.domain}
             <ArrowUpRight className='size-3.5' />
           </a>
-          {deployment.customDomain ? null : (
-            <button
-              type='button'
-              className='group inline-flex w-fit items-center gap-1.5 text-sm font-medium text-brand-text hover:underline'>
-              <span className='inline-flex size-4 items-center justify-center rounded-full border border-dashed border-brand-text/70 group-hover:border-brand-text'>
-                <Plus className='size-2.5' />
-              </span>
-              Add custom domain
-            </button>
-          )}
         </div>
 
         <div className='flex flex-col gap-1.5 text-sm'>

@@ -32,6 +32,7 @@ const requestSchema = z.object({
   previewUrl: z.string().url(),
   prNumber: z.number().int().positive().optional(),
   repoFullName: z.string().optional(),
+  branch: z.string().optional(),
 });
 
 function authValid(secret: string, header: string | undefined): boolean {
@@ -92,18 +93,29 @@ export function makeRecordPreviewHandler(options: RecordPreviewOptions): HttpsFu
       response.status(400).json({ error: parsed.error.message });
       return;
     }
-    const { runId, previewUrl } = parsed.data;
+    const { runId, previewUrl, prNumber, repoFullName, branch } = parsed.data;
     try {
+      // Also stamp the repo + PR info so the dashboard can find this doc
+      // via `where('repo.fullName', '==', …)` even when the webhook hasn't
+      // written its share of the build doc yet (the webhook + recordPreview
+      // can land in any order — recordPreview is often first because it
+      // fires from inside the same workflow run as the deploy step).
+      const update: Record<string, unknown> = {
+        previewUrl,
+        previewRecordedAt: FieldValue.serverTimestamp(),
+      };
+      if (prNumber) update.pullRequestNumber = prNumber;
+      if (branch) update.branch = branch;
+      if (repoFullName) {
+        const [owner, name] = repoFullName.split('/');
+        if (owner && name) {
+          update.repo = { owner, name, fullName: repoFullName };
+        }
+      }
       await db(databaseId)
         .collection('builds')
         .doc(String(runId))
-        .set(
-          {
-            previewUrl,
-            previewRecordedAt: FieldValue.serverTimestamp(),
-          },
-          { merge: true },
-        );
+        .set(update, { merge: true });
       response.status(204).send();
     } catch (err) {
       logger.error('recordPreview write failed', {

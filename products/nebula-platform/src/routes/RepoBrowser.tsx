@@ -100,6 +100,13 @@ function isMdxFile(name: string): boolean {
   return name.endsWith(".mdx") || name.endsWith(".md");
 }
 
+// GitHub-convention repo metadata files at the repo root. They render as
+// markdown but aren't docs pages, so they shouldn't surface as orphans. A
+// nested `content/api/README.md` (folder index pattern) is intentionally not
+// matched — those still belong in the orphan list until wired into nav.
+const REPO_METADATA_AT_ROOT =
+  /^(README|LICENSE|CHANGELOG|CONTRIBUTING|CODE_OF_CONDUCT)\.mdx?$/i;
+
 /**
  * Convert a tab's display name into the slug fragment we auto-prefix new
  * pages with. Lowercases, swaps any run of non-alphanumerics for `-`, and
@@ -670,6 +677,7 @@ export function RepoBrowser() {
     return allPaths
       .filter((p) => isMdxFile(p))
       .filter((p) => !p.includes("/snippets/"))
+      .filter((p) => !REPO_METADATA_AT_ROOT.test(p))
       .filter((p) => !referenced.has(p))
       .sort();
   }, [liveDocsConfig, resolvePagePath, allPaths]);

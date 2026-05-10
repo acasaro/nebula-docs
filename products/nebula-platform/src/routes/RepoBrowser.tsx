@@ -478,8 +478,27 @@ export function RepoBrowser() {
   const [saving, setSaving] = useState(false);
   const [creatingPr, setCreatingPr] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
-  const { addNotification, ensureBuildNotification } = useNotifications();
+  const { addNotification, ensureBuildNotification, notifications } =
+    useNotifications();
   const publishingBranches = usePublishingBranches();
+  // Track publish notifications we've already reacted to, so the
+  // success-removes-branch effect doesn't fire repeatedly per render.
+  const handledPublishSuccessIds = useRef<Set<string>>(new Set());
+
+  // When a publish notification transitions to 'success', drop the
+  // (now-deleted) branch from the BranchPicker. GitHub auto-merge
+  // deletes the head branch as soon as it merges; without this the
+  // local branches array still carries the dead ref and the dropdown
+  // shows it sitting in "Closing…" forever.
+  useEffect(() => {
+    for (const n of notifications) {
+      if (n.kind !== "publish") continue;
+      if (n.phase !== "success") continue;
+      if (handledPublishSuccessIds.current.has(n.id)) continue;
+      handledPublishSuccessIds.current.add(n.id);
+      setBranches((prev) => prev.filter((b) => b !== n.branch));
+    }
+  }, [notifications]);
 
   const active = settings.status === "ready" ? settings.settings : null;
 

@@ -197,6 +197,15 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
         (n) => n.kind === "publish" && n.phase === "in-progress",
       );
       if (current.length === 0) return;
+      // eslint-disable-next-line no-console
+      console.log(
+        "[notifications] polling",
+        current.length,
+        "publish notification(s):",
+        current.map((n) =>
+          n.kind === "publish" ? `PR#${n.prNumber}@${n.owner}/${n.repo}` : "?",
+        ),
+      );
       await Promise.all(
         current.map(async (n) => {
           if (n.kind !== "publish") return;
@@ -208,6 +217,10 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
               n.prNumber,
             );
             if (cancelled) return;
+            // eslint-disable-next-line no-console
+            console.log(
+              `[notifications] PR#${n.prNumber} state=${pr.state} merged=${pr.merged}`,
+            );
             if (pr.state !== "closed") return;
             updateNotification(n.id, {
               phase: pr.merged ? "success" : "failure",
@@ -217,10 +230,13 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
             });
           } catch (err) {
             // Transient — keep polling. Don't update phase; let the next
-            // poll retry. Surfacing every poll error in the UI would be
-            // noisy and confusing on flaky networks.
+            // poll retry. Logging the error so a stuck-in-progress
+            // notification has a paper trail in devtools.
             // eslint-disable-next-line no-console
-            console.warn("[notifications] poll error:", err);
+            console.warn(
+              `[notifications] poll error for PR#${n.prNumber}:`,
+              err,
+            );
           }
         }),
       );

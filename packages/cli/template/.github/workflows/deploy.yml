@@ -52,6 +52,13 @@ on:
   workflow_dispatch:
   push:
     branches: ['**']
+  # `create` fires on first ref creation. The editor's "Create branch"
+  # only creates a ref (no commits beyond the base), which doesn't fire
+  # `push` — without `create` here, a new branch sits without a preview
+  # channel until the first save. Adding it lets the channel be
+  # provisioned at the moment of branch creation; the editor's in-flight
+  # notification then has something to track.
+  create:
 
 permissions:
   contents: read
@@ -64,6 +71,9 @@ concurrency:
 
 jobs:
   build-deploy:
+    # `create` fires on tag creation too; we only want branches. push +
+    # workflow_dispatch always pass.
+    if: ${{ github.event_name != 'create' || github.event.ref_type == 'branch' }}
     runs-on: ubuntu-latest
 
     steps:

@@ -1385,6 +1385,15 @@ export function RepoBrowser() {
     if (!active) return;
     await createBranch(active.installationId, active.owner, active.repo, base, name);
     setBranches((prev) => (prev.includes(name) ? prev : [...prev, name].sort()));
+    // Branch creation fires GitHub's `create` event, which deploy.yml is
+    // wired to handle — provisioning the preview channel for the new
+    // branch's base commit immediately. Drop the in-flight notification
+    // now so the user sees the row appear at the moment they click
+    // Create, not 10s later when the first builds doc reaches Firestore.
+    ensureBuildNotification({
+      repoFullName: `${active.owner}/${active.repo}`,
+      branch: name,
+    });
     if (bringChanges) {
       // Dirty file drafts ride along — they're in our `files` map and will
       // commit to the new branch when navigation lands there.

@@ -10,6 +10,7 @@ import { NavSettingsPanel } from "@/components/NavSettingsPanel";
 import { NavTree, type AddEntryKind, type OpenNavSettings } from "@/components/NavTree";
 import { NavTreeSkeleton } from "@/components/NavTreeSkeleton";
 import { ORPHAN_ID_PREFIX, OrphanedPages } from "@/components/OrphanedPages";
+import { BuildingIndicator } from "@/components/BuildingIndicator";
 import { PreviewButton } from "@/components/PreviewButton";
 import { PublishingIndicator } from "@/components/PublishingIndicator";
 import { PublishMenu, type PublishChange } from "@/components/PublishMenu";
@@ -1596,6 +1597,14 @@ export function RepoBrowser() {
               setSaveMessage(`Publish failed: ${reason}`);
             }}
             onDismiss={() => setPublishing(null)}
+          />
+        ) : active && currentBranch && currentBranch !== active.defaultBranch ? (
+          // Show the build-in-progress chip only when no publish is in
+          // flight — publishing implies a build is running anyway, and
+          // stacking both chips would be noisy.
+          <BuildingIndicator
+            repoFullName={`${active.owner}/${active.repo}`}
+            branch={currentBranch}
           />
         ) : null}
         {active && currentBranch && currentBranch !== active.defaultBranch ? (

@@ -125,15 +125,14 @@ export function PublishingIndicator({
       role='status'
       aria-live='polite'>
       <Icon className={cn("size-4", iconCls)} />
-      <span>{label}</span>
       <a
         href={prUrl}
         target='_blank'
         rel='noreferrer'
-        className='inline-flex items-center gap-0.5 text-xs underline-offset-2 hover:underline'
+        className='inline-flex items-center gap-1 underline-offset-2 hover:underline'
         title='View PR on GitHub'>
-        #{prNumber}
-        <ExternalLink className='size-3' />
+        {label}
+        <ExternalLink className='size-3 opacity-70' />
       </a>
       {phase !== "merged" ? (
         <button

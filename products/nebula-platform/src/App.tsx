@@ -4,6 +4,7 @@ import { isFirebaseConfigured } from '@/lib/firebase';
 import { AppShell } from '@/components/AppShell';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { useGitSettings } from '@/lib/gitSettings';
+import { NotificationProvider } from '@/lib/notifications';
 import { useTheme } from '@/lib/theme';
 import { Analytics } from '@/routes/Analytics';
 import { Assets } from '@/routes/Assets';
@@ -50,8 +51,9 @@ export function App() {
 
   return (
     <BrowserRouter>
-      <AppToaster />
-      <Routes>
+      <NotificationProvider>
+        <AppToaster />
+        <Routes>
         <Route path="/sign-in" element={<SignIn />} />
 
         <Route element={<ProtectedRoute />}>
@@ -80,6 +82,7 @@ export function App() {
 
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+      </NotificationProvider>
     </BrowserRouter>
   );
 }

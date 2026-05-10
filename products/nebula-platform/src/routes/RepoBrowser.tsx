@@ -11,8 +11,8 @@ import { NavTree, type AddEntryKind, type OpenNavSettings } from "@/components/N
 import { NavTreeSkeleton } from "@/components/NavTreeSkeleton";
 import { ORPHAN_ID_PREFIX, OrphanedPages } from "@/components/OrphanedPages";
 import { BuildingIndicator } from "@/components/BuildingIndicator";
+import { NotificationCenter } from "@/components/NotificationCenter";
 import { PreviewButton } from "@/components/PreviewButton";
-import { PublishingIndicator } from "@/components/PublishingIndicator";
 import { PublishMenu, type PublishChange } from "@/components/PublishMenu";
 import { SourceEditor, languageForPath } from "@/components/SourceEditor";
 import { PageLoader } from "@/components/ui/PageLoader";
@@ -57,6 +57,7 @@ import { loadDrafts, makeDraftScopeKey, saveDrafts } from "@/lib/draftStore";
 import { applyFrontmatterPatch } from "@/lib/frontmatter";
 import { useFrontmatterCache } from "@/lib/frontmatterCache";
 import { useGitSettings } from "@/lib/gitSettings";
+import { useNotifications } from "@/lib/notifications";
 import { SnippetResolverProvider } from "@/lib/mdx/snippetResolver";
 import { buildTree, type TreeNode } from "@/lib/repoTree";
 import {
@@ -478,14 +479,7 @@ export function RepoBrowser() {
   const [saving, setSaving] = useState(false);
   const [creatingPr, setCreatingPr] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
-  /** Tracks an in-flight Publish (auto-merge enabled but PR not yet
-   *  merged). Set by handleCreatePr after enableAutoMerge succeeds;
-   *  cleared by the indicator's onMerged/onFailed/onDismiss callbacks. */
-  const [publishing, setPublishing] = useState<{
-    branch: string;
-    prNumber: number;
-    prUrl: string;
-  } | null>(null);
+  const { addNotification } = useNotifications();
 
   const active = settings.status === "ready" ? settings.settings : null;
 
@@ -1494,13 +1488,29 @@ export function RepoBrowser() {
       // the PR is open, user can merge it manually on github.com.
       try {
         await enableAutoMerge(active.installationId, nodeId);
-        setSaveMessage(
-          `Publishing — PR #${number} will merge after the build passes: ${url}`,
-        );
-        // Surface a persistent chip in the toolbar so the user can see the
-        // publish in flight even after dismissing the popover. The chip
-        // polls the PR and notifies us on merge so we can switch to main.
-        setPublishing({ branch: currentBranch, prNumber: number, prUrl: url });
+        // Push the in-flight publish into the notification center so it
+        // survives the redirect below. The provider's polling loop watches
+        // this notification and flips its phase on PR close.
+        addNotification({
+          kind: "publish",
+          phase: "in-progress",
+          title: `Publishing PR #${number}`,
+          description: `Will merge into ${active.defaultBranch} once the build passes.`,
+          href: url,
+          installationId: active.installationId,
+          owner: active.owner,
+          repo: active.repo,
+          prNumber: number,
+          branch: currentBranch,
+        });
+        // Redirect to the default branch — the publish branch is auto-
+        // deleted after merge, and any further edits there would be lost.
+        // The notification center carries the publish status across this
+        // navigation so the user keeps visibility into the in-flight merge.
+        if (currentBranch !== active.defaultBranch) {
+          handleSwitchBranch(active.defaultBranch);
+        }
+        setSaveMessage(null);
       } catch (mergeErr) {
         const reason =
           mergeErr instanceof Error ? mergeErr.message : "unknown";
@@ -1573,40 +1583,16 @@ export function RepoBrowser() {
             </span>
           ) : null}
         </div>
-        {publishing && active ? (
-          <PublishingIndicator
-            installationId={active.installationId}
-            owner={active.owner}
-            repo={active.repo}
-            prNumber={publishing.prNumber}
-            prUrl={publishing.prUrl}
-            branch={publishing.branch}
-            onMerged={() => {
-              setPublishing(null);
-              setSaveMessage(`Published to ${active.defaultBranch}.`);
-              // Auto-merge deletes the source branch (when the repo's
-              // "Automatically delete head branches" setting is on),
-              // so switch the editor to default to avoid a 404 on the
-              // next file fetch.
-              if (currentBranch !== active.defaultBranch) {
-                handleSwitchBranch(active.defaultBranch);
-              }
-            }}
-            onFailed={(reason) => {
-              setPublishing(null);
-              setSaveMessage(`Publish failed: ${reason}`);
-            }}
-            onDismiss={() => setPublishing(null)}
-          />
-        ) : active && currentBranch && currentBranch !== active.defaultBranch ? (
-          // Show the build-in-progress chip only when no publish is in
-          // flight — publishing implies a build is running anyway, and
-          // stacking both chips would be noisy.
+        {/* Build-in-progress chip — branch-local. Publish notifications
+            live in the bell dropdown (NotificationCenter) so they survive
+            the post-publish redirect to main. */}
+        {active && currentBranch && currentBranch !== active.defaultBranch ? (
           <BuildingIndicator
             repoFullName={`${active.owner}/${active.repo}`}
             branch={currentBranch}
           />
         ) : null}
+        <NotificationCenter />
         {active && currentBranch && currentBranch !== active.defaultBranch ? (
           <PreviewButton
             repoFullName={`${active.owner}/${active.repo}`}

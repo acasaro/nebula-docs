@@ -302,6 +302,12 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
               : "Build completed.",
             href: build.previewUrl ?? n.href,
           });
+          // Auto-dismiss after a short pause so the user sees the
+          // green-checked row briefly without having to clear it
+          // themselves. Failures stay until explicit dismiss — those
+          // need user attention.
+          const idToClear = n.id;
+          setTimeout(() => dismissNotification(idToClear), 3500);
         } else if (build.conclusion !== null) {
           updateNotification(n.id, {
             phase: "failure",
@@ -312,7 +318,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
         }
       }
     }
-  }, [notifications, updateNotification]);
+  }, [notifications, updateNotification, dismissNotification]);
 
   // Cleanup all subscriptions on unmount.
   useEffect(() => {

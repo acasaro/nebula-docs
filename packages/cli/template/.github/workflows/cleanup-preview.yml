@@ -1,0 +1,66 @@
+name: Cleanup preview channel
+
+# Deletes the Firebase Hosting Preview Channel for a branch the moment
+# the branch is removed from GitHub (auto-merge cleanup, manual delete,
+# etc.). Without this, channels stick around until their 7-day TTL —
+# wasteful and clutters the Firebase Console.
+#
+# Setup:
+#   - Replace REPLACE_ME_SITE_NAME with your hosting site name (the same
+#     one in firebase.json's `hosting.target`-resolved site).
+#   - Same FIREBASE_SERVICE_ACCOUNT secret + FIREBASE_PROJECT_ID variable
+#     deploy.yml uses.
+
+on:
+  delete:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: "Branch name to clean up the channel for (manual run)"
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  cleanup:
+    # Only trigger for branch deletions — `delete` also fires on tags.
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.ref_type == 'branch' }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install Firebase CLI
+        run: npm install --global firebase-tools
+
+      - name: Authenticate
+        env:
+          FIREBASE_SERVICE_ACCOUNT_PATH: ${{ runner.temp }}/firebase-sa.json
+        run: |
+          echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT_MCOE_D }}' > "$FIREBASE_SERVICE_ACCOUNT_PATH"
+          echo "GOOGLE_APPLICATION_CREDENTIALS=$FIREBASE_SERVICE_ACCOUNT_PATH" >> "$GITHUB_ENV"
+
+      # Same sanitization as deploy.yml so the channel ID matches.
+      - name: Compute channel ID
+        id: channel
+        env:
+          REF_NAME: ${{ github.event.inputs.branch || github.event.ref }}
+        run: |
+          SANITIZED=$(echo "$REF_NAME" \
+            | tr '[:upper:]' '[:lower:]' \
+            | sed -E 's/[^a-z0-9-]/-/g; s/-+/-/g; s/^-+//; s/-+$//' \
+            | cut -c -56)
+          echo "id=branch-${SANITIZED}" >> "$GITHUB_OUTPUT"
+
+      - name: Delete preview channel
+        run: |
+          firebase hosting:channel:delete \
+            "${{ steps.channel.outputs.id }}" \
+            --site REPLACE_ME_SITE_NAME \
+            --project "${{ vars.FIREBASE_PROJECT_ID }}" \
+            --force \
+            || true

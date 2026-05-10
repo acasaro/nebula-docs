@@ -29,6 +29,15 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # Need firebase.json in cwd; firebase CLI's `hosting:channel:delete`
+      # bails with "Not in a Firebase app directory" otherwise. Checkout
+      # main explicitly since the deleted branch (default checkout target)
+      # no longer exists.
+      - name: Checkout tenant (main)
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -56,11 +65,27 @@ jobs:
             | cut -c -56)
           echo "id=branch-${SANITIZED}" >> "$GITHUB_OUTPUT"
 
+      # Delete the channel. If it's already gone treat that as success;
+      # surface anything else as a real failure so we don't get silent
+      # green runs while the channel sits untouched.
       - name: Delete preview channel
+        env:
+          CHANNEL_ID: ${{ steps.channel.outputs.id }}
         run: |
-          firebase hosting:channel:delete \
-            "${{ steps.channel.outputs.id }}" \
+          set +e
+          out=$(firebase hosting:channel:delete "$CHANNEL_ID" \
             --site REPLACE_ME_SITE_NAME \
             --project "${{ vars.FIREBASE_PROJECT_ID }}" \
-            --force \
-            || true
+            --force 2>&1)
+          status=$?
+          set -e
+          echo "$out"
+          if [ $status -eq 0 ]; then
+            exit 0
+          fi
+          if echo "$out" | grep -qiE "could not find|does not exist|not found"; then
+            echo "Channel '$CHANNEL_ID' already deleted — treating as success."
+            exit 0
+          fi
+          echo "::error::firebase hosting:channel:delete failed for '$CHANNEL_ID'"
+          exit "$status"

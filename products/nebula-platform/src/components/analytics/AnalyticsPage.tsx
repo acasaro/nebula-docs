@@ -1,6 +1,6 @@
-import { useState } from "react";
 import { PageLoader } from "@/components/ui/PageLoader";
 import { useAnalyticsSummary, type AnalyticsRangeKey } from "@/lib/analytics";
+import { useState } from "react";
 import { DateRangePicker } from "./DateRangePicker";
 import { MetricCard } from "./MetricCard";
 import { TopPagesTable } from "./TopPagesTable";
@@ -13,8 +13,8 @@ export function AnalyticsPage() {
 
   if (summary.status === "loading") {
     return (
-      <div className='mx-auto flex max-w-5xl justify-center py-16'>
-        <PageLoader />
+      <div className='-m-8 flex h-[calc(100vh-1rem)] items-center justify-center'>
+        <PageLoader size={120} ringStyle='crisp' label='Loading workspace...' />
       </div>
     );
   }
@@ -36,11 +36,7 @@ export function AnalyticsPage() {
     <div className='mx-auto flex max-w-5xl flex-col gap-6'>
       <div className='flex items-center justify-between'>
         <h1 className='text-2xl font-semibold tracking-tight'>Analytics</h1>
-        <DateRangePicker
-          value={rangeKey}
-          onChange={setRangeKey}
-          rangeLabel={data.range.label}
-        />
+        <DateRangePicker value={rangeKey} onChange={setRangeKey} rangeLabel={data.range.label} />
       </div>
 
       <div className='grid gap-3 sm:grid-cols-3'>

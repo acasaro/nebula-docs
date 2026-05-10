@@ -18,8 +18,8 @@ export function DashboardHomePage() {
 
   if (data.status === "loading") {
     return (
-      <div className='mx-auto flex max-w-5xl justify-center py-16'>
-        <PageLoader />
+      <div className='-m-8 flex h-[calc(100vh-1rem)] items-center justify-center'>
+        <PageLoader size={120} ringStyle='crisp' label='Loading workspace...' />
       </div>
     );
   }

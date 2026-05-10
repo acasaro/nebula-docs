@@ -317,16 +317,8 @@ export function SettingsGitRepo() {
 
   if (installs.status === "loading" || settings.status === "loading") {
     return (
-      <div className='mx-auto flex max-w-3xl flex-col gap-6'>
-        <header>
-          <h1 className='text-2xl font-semibold tracking-tight'>Git settings</h1>
-          <p className='text-sm text-muted-foreground'>
-            Pick the docs repo Nebula edits and the branch it commits to.
-          </p>
-        </header>
-        <div className='flex justify-center py-10'>
-          <PageLoader />
-        </div>
+      <div className='-m-8 flex h-[calc(100vh-1rem)] items-center justify-center'>
+        <PageLoader size={120} ringStyle='crisp' label='Loading workspace...' />
       </div>
     );
   }

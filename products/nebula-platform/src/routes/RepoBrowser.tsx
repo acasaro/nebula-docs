@@ -1,36 +1,28 @@
 import { BranchPicker } from "@/components/BranchPicker";
 import { ConfigurationsPanel } from "@/components/ConfigurationsPanel";
+import { EditorSurfaceSkeleton } from "@/components/EditorSurfaceSkeleton";
+import { FileTreeSkeleton } from "@/components/FileTreeSkeleton";
 import { FileTypeIcon, isBinaryFile } from "@/components/FileTypeIcon";
 import { useHeaderLeading, useHeaderSlot } from "@/components/HeaderSlot";
 import { MdxEditor, normalizeMdx } from "@/components/mdx/MdxEditor";
-import { NavSettingsPanel } from "@/components/NavSettingsPanel";
 import { HoverProvider, type DropSide, type HoverState } from "@/components/NavDnd";
-import { EditorSurfaceSkeleton } from "@/components/EditorSurfaceSkeleton";
-import { FileTreeSkeleton } from "@/components/FileTreeSkeleton";
+import { NavSettingsPanel } from "@/components/NavSettingsPanel";
+import { NavTree, type AddEntryKind, type OpenNavSettings } from "@/components/NavTree";
 import { NavTreeSkeleton } from "@/components/NavTreeSkeleton";
-import { OrphanedPages, ORPHAN_ID_PREFIX } from "@/components/OrphanedPages";
-import { SourceEditor, languageForPath } from "@/components/SourceEditor";
-import {
-  DndContext,
-  pointerWithin,
-  rectIntersection,
-  DragOverlay,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  type DragEndEvent,
-  type DragOverEvent,
-  type DragStartEvent,
-} from "@dnd-kit/core";
-import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
-import {
-  NavTree,
-  type AddEntryKind,
-  type OpenNavSettings,
-} from "@/components/NavTree";
+import { ORPHAN_ID_PREFIX, OrphanedPages } from "@/components/OrphanedPages";
 import { PublishMenu, type PublishChange } from "@/components/PublishMenu";
+import { SourceEditor, languageForPath } from "@/components/SourceEditor";
 import { PageLoader } from "@/components/ui/PageLoader";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  commitFiles,
+  createBranch,
+  createPullRequest,
+  fetchFileContent,
+  fetchRepoTree,
+  listBranches,
+  type FileChange,
+} from "@/lib/content";
 import {
   buildPageEntryResolver,
   filePathToPageSlug,
@@ -42,26 +34,27 @@ import {
   type PageEntry,
   type Tab,
 } from "@/lib/docsConfig";
-import { useThemeConfig, type ThemeConfig } from "@/lib/themeConfig";
-import { getThemeById } from "@nebula-docs/theme";
 import {
   addressOfEntry,
-  appendTab,
   appendAnchor,
   appendDropdown,
-  reorderTabs,
+  appendTab,
   appendToGroup,
   appendToTab,
   deleteEntry,
   findEntry,
   insertEntryAt,
   moveEntryToAddress,
+  reorderTabs,
   type DocsInsertAddress,
   type ResolveContext,
 } from "@/lib/docsConfigOps";
+import { loadDrafts, makeDraftScopeKey, saveDrafts } from "@/lib/draftStore";
 import { applyFrontmatterPatch } from "@/lib/frontmatter";
 import { useFrontmatterCache } from "@/lib/frontmatterCache";
+import { useGitSettings } from "@/lib/gitSettings";
 import { SnippetResolverProvider } from "@/lib/mdx/snippetResolver";
+import { buildTree, type TreeNode } from "@/lib/repoTree";
 import {
   buildRepoPathResolver,
   buildSnippetResolver,
@@ -69,24 +62,23 @@ import {
   useSnippetPrefetch,
   type SnippetCacheEntry,
 } from "@/lib/snippetCache";
-import {
-  commitFiles,
-  createBranch,
-  createPullRequest,
-  fetchFileContent,
-  fetchRepoTree,
-  listBranches,
-  type FileChange,
-} from "@/lib/content";
-import { loadDrafts, makeDraftScopeKey, saveDrafts } from "@/lib/draftStore";
-import { useGitSettings } from "@/lib/gitSettings";
-import { buildTree, type TreeNode } from "@/lib/repoTree";
-import {
-  EDITOR_NAV_MAX,
-  EDITOR_NAV_MIN,
-  useEditorNavWidth,
-} from "@/lib/uiPrefs";
+import { useThemeConfig, type ThemeConfig } from "@/lib/themeConfig";
+import { EDITOR_NAV_MAX, EDITOR_NAV_MIN, useEditorNavWidth } from "@/lib/uiPrefs";
 import { cn } from "@/lib/utils";
+import {
+  DndContext,
+  DragOverlay,
+  PointerSensor,
+  pointerWithin,
+  rectIntersection,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+  type DragOverEvent,
+  type DragStartEvent,
+} from "@dnd-kit/core";
+import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import { getThemeById } from "@nebula-docs/theme";
 import { ChevronDown, ChevronRight, Code2, Eye, Files, Folder, Map, Settings } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Navigate, useNavigate, useParams } from "react-router";
@@ -597,10 +589,7 @@ export function RepoBrowser() {
   }, [active?.docsSubdirectory]);
   const docsSubdir = active?.docsSubdirectory ?? "";
 
-  const loadedFilePaths = useMemo(
-    () => new Set(Object.keys(files)),
-    [files],
-  );
+  const loadedFilePaths = useMemo(() => new Set(Object.keys(files)), [files]);
 
   // The repo's full path set, used by `buildPageEntryResolver` to translate
   // a docs.json page entry like `"index"` into the actual MDX path. The
@@ -619,15 +608,12 @@ export function RepoBrowser() {
     [repoPathSet, docsSubdir],
   );
 
-  const handleSnippetLoad = useCallback(
-    (path: string, entry: SnippetCacheEntry) => {
-      setFiles((prev) => (prev[path] ? prev : { ...prev, [path]: entry }));
-      // Mark prefetched snippets as fetched so opening one directly in the
-      // file tree skips the duplicate Octokit round-trip.
-      fetchedPathsRef.current.add(path);
-    },
-    [],
-  );
+  const handleSnippetLoad = useCallback((path: string, entry: SnippetCacheEntry) => {
+    setFiles((prev) => (prev[path] ? prev : { ...prev, [path]: entry }));
+    // Mark prefetched snippets as fetched so opening one directly in the
+    // file tree skips the duplicate Octokit round-trip.
+    fetchedPathsRef.current.add(path);
+  }, []);
 
   useSnippetPrefetch({
     installationId: active?.installationId ?? null,
@@ -700,9 +686,7 @@ export function RepoBrowser() {
         if (typeof entry === "object" && entry !== null && "group" in entry) {
           const g = entry as Group;
           ids.push(`group:${keyPath}`);
-          (g.pages ?? []).forEach((child, i) =>
-            visit(child as PageEntry, `${keyPath}/p${i}`),
-          );
+          (g.pages ?? []).forEach((child, i) => visit(child as PageEntry, `${keyPath}/p${i}`));
         } else {
           const fp = resolvePagePath(entry);
           ids.push(`page:${fp ?? keyPath}`);
@@ -715,9 +699,7 @@ export function RepoBrowser() {
         (tab.groups ?? []).forEach((g, gi) => {
           const groupPath = `${base}/${gi}/${g.group}`;
           ids.push(`group:${groupPath}`);
-          (g.pages ?? []).forEach((child, i) =>
-            visit(child, `${groupPath}/p${i}`),
-          );
+          (g.pages ?? []).forEach((child, i) => visit(child, `${groupPath}/p${i}`));
         });
       });
     }
@@ -751,15 +733,15 @@ export function RepoBrowser() {
   const handleDragStart = useCallback((e: DragStartEvent) => {
     setHover({ overId: null, side: null });
     const id = e.active?.id;
-    if (typeof id !== 'string') return;
+    if (typeof id !== "string") return;
     const ref = document.querySelector(`[data-dnd-id="${CSS.escape(id)}"]`);
     if (!(ref instanceof HTMLElement)) return;
     // Capture only the row's label text — the DragOverlay below renders a
     // compact Mintlify-style cursor pill rather than a full-width snapshot
     // of the source row. The whole-row preview was visually heavy and made
     // the drop target awkward to see.
-    const labelEl = ref.querySelector('span.truncate, span');
-    const label = labelEl?.textContent?.trim() || '';
+    const labelEl = ref.querySelector("span.truncate, span");
+    const label = labelEl?.textContent?.trim() || "";
     setDragOverlay({ id, label });
   }, []);
 
@@ -770,11 +752,11 @@ export function RepoBrowser() {
       setHover({ overId: null, side: null });
       return;
     }
-    const activeStr = typeof activeId === 'string' ? activeId : '';
-    const activeIsTab = activeStr.startsWith('tab:');
-    const activeIsGroup = activeStr.startsWith('group:');
-    const overIsTab = overId.startsWith('tab:');
-    const overIsGroup = overId.startsWith('group:');
+    const activeStr = typeof activeId === "string" ? activeId : "";
+    const activeIsTab = activeStr.startsWith("tab:");
+    const activeIsGroup = activeStr.startsWith("group:");
+    const overIsTab = overId.startsWith("tab:");
+    const overIsGroup = overId.startsWith("group:");
     if (overId.startsWith(ORPHAN_ID_PREFIX)) {
       // Orphan rows aren't drop targets.
       setHover({ overId: null, side: null });
@@ -797,17 +779,17 @@ export function RepoBrowser() {
     if (overIsTab || overIsGroup) {
       if (overIsTab && activeIsTab) {
         const midY = overRect.top + overRect.height / 2;
-        setHover({ overId, side: pointerY < midY ? 'above' : 'below' });
+        setHover({ overId, side: pointerY < midY ? "above" : "below" });
         return;
       }
       if (overIsGroup && activeIsGroup) {
         const midY = overRect.top + overRect.height / 2;
-        setHover({ overId, side: pointerY < midY ? 'above' : 'below' });
+        setHover({ overId, side: pointerY < midY ? "above" : "below" });
         return;
       }
       const sourceIsPage = !activeIsTab && !activeIsGroup;
       if (sourceIsPage || (activeIsGroup && overIsTab)) {
-        setHover({ overId, side: 'into' });
+        setHover({ overId, side: "into" });
         return;
       }
       // Other cross-kind combos (tab over group/page, etc.) — disallow.
@@ -820,7 +802,7 @@ export function RepoBrowser() {
       return;
     }
     const midY = overRect.top + overRect.height / 2;
-    const side: DropSide = pointerY < midY ? 'above' : 'below';
+    const side: DropSide = pointerY < midY ? "above" : "below";
     setHover({ overId, side });
   }, []);
 
@@ -874,25 +856,25 @@ export function RepoBrowser() {
       // and call `reorderTabs`. Cross-kind drops (tab over non-tab, etc.)
       // are blocked above by handleDragOver; double-check here so a stale
       // hover state can't slip through.
-      if (activeId.startsWith('tab:') && overId.startsWith('tab:')) {
+      if (activeId.startsWith("tab:") && overId.startsWith("tab:")) {
         const sourceResolved = findEntry(liveDocsConfig, activeId, resolveCtx);
         const targetResolved = findEntry(liveDocsConfig, overId, resolveCtx);
         if (
           !sourceResolved ||
           !targetResolved ||
-          sourceResolved.kind !== 'tab' ||
-          targetResolved.kind !== 'tab'
+          sourceResolved.kind !== "tab" ||
+          targetResolved.kind !== "tab"
         )
           return;
         const fromIndex = sourceResolved.tabIndex;
         const insertIndex =
-          side === 'below' ? targetResolved.tabIndex + 1 : targetResolved.tabIndex;
+          side === "below" ? targetResolved.tabIndex + 1 : targetResolved.tabIndex;
         handleConfigChange((config) => reorderTabs(config, fromIndex, insertIndex));
         return;
       }
       // Tab as source is only valid for tab-to-tab reorder (handled above).
       // Any other tab-source path falls through here and exits.
-      if (activeId.startsWith('tab:')) return;
+      if (activeId.startsWith("tab:")) return;
 
       const targetResolved = findEntry(liveDocsConfig, overId, resolveCtx);
       if (!targetResolved) return;
@@ -902,24 +884,24 @@ export function RepoBrowser() {
       //   source is itself a group).
       // For a group target → append to that group's own `pages` array.
       let dest: DocsInsertAddress;
-      if (side === 'into') {
-        if (targetResolved.kind === 'tab') {
-          if (activeId.startsWith('group:')) {
+      if (side === "into") {
+        if (targetResolved.kind === "tab") {
+          if (activeId.startsWith("group:")) {
             dest = {
-              kind: 'tab-groups',
+              kind: "tab-groups",
               tabIndex: targetResolved.tabIndex,
               index: targetResolved.tab.groups?.length ?? 0,
             };
           } else {
             dest = {
-              kind: 'tab-pages',
+              kind: "tab-pages",
               tabIndex: targetResolved.tabIndex,
               index: targetResolved.tab.pages?.length ?? 0,
             };
           }
-        } else if (targetResolved.kind === 'group') {
+        } else if (targetResolved.kind === "group") {
           dest = {
-            kind: 'group-pages',
+            kind: "group-pages",
             tabIndex: targetResolved.tabIndex,
             groupPath: targetResolved.groupPath,
             index: targetResolved.group.pages?.length ?? 0,
@@ -932,7 +914,7 @@ export function RepoBrowser() {
         if (!baseAddr) return;
         dest = {
           ...baseAddr,
-          index: side === 'below' ? baseAddr.index + 1 : baseAddr.index,
+          index: side === "below" ? baseAddr.index + 1 : baseAddr.index,
         };
       }
 
@@ -981,18 +963,18 @@ export function RepoBrowser() {
   // which the Hero CTAs and other primary-driven components pick up
   // via the normal cascade.
   useEffect(() => {
-    const baseId = liveThemeConfig?.extends ?? 'mcoe-default';
+    const baseId = liveThemeConfig?.extends ?? "mcoe-default";
     const base = getThemeById(baseId);
     const overrideTokens = liveThemeConfig?.tokens ?? {};
     const tokenAt = (key: keyof typeof base): string | null => {
       const o = overrideTokens[key];
-      if (typeof o === 'string' && o.length > 0) return o;
+      if (typeof o === "string" && o.length > 0) return o;
       const b = base[key];
-      return typeof b === 'string' && b.length > 0 ? b : null;
+      return typeof b === "string" && b.length > 0 ? b : null;
     };
-    const brand = tokenAt('brandPrimary');
-    const brandLight = tokenAt('brandPrimaryLight');
-    const brandDark = tokenAt('brandPrimaryDark');
+    const brand = tokenAt("brandPrimary");
+    const brandLight = tokenAt("brandPrimaryLight");
+    const brandDark = tokenAt("brandPrimaryDark");
     if (!brand && !brandLight && !brandDark) return;
     const decls: string[] = [];
     // The platform's `--primary` resolves through `--brand`; the CLI's
@@ -1011,7 +993,7 @@ export function RepoBrowser() {
       // brand bg — the CLI uses the equivalent (`--mcoe-bg-primary`) for
       // primary CTA text. Tenants with a light brand should override via
       // a custom theme.json key once we expose one.
-      decls.push('--primary-foreground: #fff;');
+      decls.push("--primary-foreground: #fff;");
     }
     if (brandLight) {
       decls.push(`--mcoe-brand-primary-light: ${brandLight};`);
@@ -1021,9 +1003,9 @@ export function RepoBrowser() {
       decls.push(`--mcoe-brand-primary-dark: ${brandDark};`);
       decls.push(`--brand-hover: ${brandDark};`);
     }
-    const styleEl = document.createElement('style');
-    styleEl.dataset.nebulaTenantPreview = '';
-    styleEl.textContent = `.mdx-prose { ${decls.join(' ')} }`;
+    const styleEl = document.createElement("style");
+    styleEl.dataset.nebulaTenantPreview = "";
+    styleEl.textContent = `.mdx-prose { ${decls.join(" ")} }`;
     document.head.appendChild(styleEl);
     return () => {
       styleEl.remove();
@@ -1097,9 +1079,7 @@ export function RepoBrowser() {
       if (!liveDocsConfig) return;
       const isTabParent = parentKey.startsWith("tab:");
       const append = (cfg: DocsConfig, entry: string | Group) =>
-        isTabParent
-          ? appendToTab(cfg, parentKey, entry)
-          : appendToGroup(cfg, parentKey, entry);
+        isTabParent ? appendToTab(cfg, parentKey, entry) : appendToGroup(cfg, parentKey, entry);
 
       if (kind === "group") {
         const newGroup: Group = { group: value, pages: [] };
@@ -1123,12 +1103,10 @@ export function RepoBrowser() {
       const rawSlug = value.replace(/\.mdx?$/i, "");
       const parentResolved = findEntry(liveDocsConfig, parentKey, resolveCtx);
       const parentTabIndex =
-        parentResolved && 'tabIndex' in parentResolved ? parentResolved.tabIndex : -1;
+        parentResolved && "tabIndex" in parentResolved ? parentResolved.tabIndex : -1;
       const parentTabName =
-        parentTabIndex >= 0
-          ? liveDocsConfig.navigation?.tabs?.[parentTabIndex]?.tab
-          : undefined;
-      const tabSlug = parentTabName ? slugifyTabName(parentTabName) : '';
+        parentTabIndex >= 0 ? liveDocsConfig.navigation?.tabs?.[parentTabIndex]?.tab : undefined;
+      const tabSlug = parentTabName ? slugifyTabName(parentTabName) : "";
       const slug =
         tabSlug && rawSlug !== tabSlug && !rawSlug.startsWith(`${tabSlug}/`)
           ? `${tabSlug}/${rawSlug}`
@@ -1136,7 +1114,11 @@ export function RepoBrowser() {
       const filePath = resolvePagePath(slug) ?? `${slug}.mdx`;
       handleConfigChange((cfg) => append(cfg, slug));
       const title =
-        slug.split("/").pop()?.replace(/[-_]+/g, " ").replace(/^./, (c) => c.toUpperCase()) ?? slug;
+        slug
+          .split("/")
+          .pop()
+          ?.replace(/[-_]+/g, " ")
+          .replace(/^./, (c) => c.toUpperCase()) ?? slug;
       const initial = `---\ntitle: ${JSON.stringify(title)}\n---\n\n# ${title}\n`;
       setFiles((prev) =>
         prev[filePath]
@@ -1419,9 +1401,7 @@ export function RepoBrowser() {
             ? `Delete ${deletionList[0]}`
             : `Update ${dirtyPaths[0]}`
           : `Update ${dirtyPaths.length} file${dirtyPaths.length === 1 ? "" : "s"}` +
-            (deletionList.length > 0
-              ? `, delete ${deletionList.length}`
-              : "");
+            (deletionList.length > 0 ? `, delete ${deletionList.length}` : "");
       await commitFiles(
         active.installationId,
         active.owner,
@@ -1507,8 +1487,7 @@ export function RepoBrowser() {
   );
 
   const headerSlot = useMemo(() => {
-    const showModeToggle =
-      !configurationsOpen && selectedPath && isMdxFile(selectedPath);
+    const showModeToggle = !configurationsOpen && selectedPath && isMdxFile(selectedPath);
     return (
       <>
         {showModeToggle ? (
@@ -1610,8 +1589,8 @@ export function RepoBrowser() {
 
   if (settings.status === "loading") {
     return (
-      <div className='-m-8 flex h-[calc(100vh-3rem)] items-center justify-center'>
-        <PageLoader />
+      <div className='-m-8 flex h-[calc(100vh-1rem)] items-center justify-center'>
+        <PageLoader size={120} ringStyle='crisp' label='Loading workspace...' />
       </div>
     );
   }
@@ -1661,8 +1640,7 @@ export function RepoBrowser() {
                 onDragCancel={() => {
                   setHover({ overId: null, side: null });
                   setDragOverlay(null);
-                }}
-              >
+                }}>
                 <SortableContext items={navDragIds} strategy={verticalListSortingStrategy}>
                   <HoverProvider hover={hover}>
                     <NavTree
@@ -1695,8 +1673,7 @@ export function RepoBrowser() {
                        indicator attached to the cursor, not a full row
                        being dragged around. Sized to content, max-width
                        caps long labels so the pill doesn't sprawl. */
-                    <div
-                      className='pointer-events-none inline-flex max-w-[14rem] items-center gap-1.5 rounded-md border border-border/60 bg-popover px-2 py-1 text-xs font-medium text-foreground shadow-lg'>
+                    <div className='pointer-events-none inline-flex max-w-[14rem] items-center gap-1.5 rounded-md border border-border/60 bg-popover px-2 py-1 text-xs font-medium text-foreground shadow-lg'>
                       <span className='truncate'>{dragOverlay.label}</span>
                     </div>
                   ) : null}
@@ -1773,8 +1750,7 @@ export function RepoBrowser() {
           <SnippetResolverProvider
             resolveContent={resolveSnippetContent}
             resolveRepoPath={resolveSnippetRepoPath}
-            catalog={snippetCatalog}
-          >
+            catalog={snippetCatalog}>
             <FileViewer
               path={selectedPath}
               content={currentEntry?.draft ?? null}

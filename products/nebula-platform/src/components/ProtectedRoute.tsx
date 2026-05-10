@@ -8,8 +8,8 @@ export function ProtectedRoute() {
 
   if (auth.status === "loading") {
     return (
-      <div className='flex min-h-screen items-center justify-center'>
-        <PageLoader />
+      <div className='-m-8 flex h-[calc(100vh-1rem)] items-center justify-center'>
+        <PageLoader size={120} ringStyle='crisp' label='Loading workspace...' />
       </div>
     );
   }

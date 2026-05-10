@@ -1,7 +1,7 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { PageLoader } from "@/components/ui/PageLoader";
+import { InlineSpinner } from "@/components/ui/NebulaLoader";
 import { env } from "@/lib/env";
 import { removeInstallation, useInstallations } from "@/lib/installations";
 import { ExternalLink, Plus, Settings as SettingsIcon, Trash2 } from "lucide-react";
@@ -36,9 +36,9 @@ export function SettingsGithubApp() {
           <CardHeader>
             <CardTitle>App not yet registered</CardTitle>
             <CardDescription>
-              Set <code>NEBULA_APP_INSTALL_URL_DEV</code> /{" "}
-              <code>NEBULA_APP_INSTALL_URL_PROD</code> in the root <code>.env</code> after
-              creating the GitHub App, and select the active env via <code>NEBULA_ENV</code>.
+              Set <code>NEBULA_APP_INSTALL_URL_DEV</code> / <code>NEBULA_APP_INSTALL_URL_PROD</code>{" "}
+              in the root <code>.env</code> after creating the GitHub App, and select the active env
+              via <code>NEBULA_ENV</code>.
             </CardDescription>
           </CardHeader>
         </Card>
@@ -56,7 +56,7 @@ export function SettingsGithubApp() {
         <CardContent className='flex flex-col gap-2'>
           {installs.status === "loading" ? (
             <div className='flex justify-center py-6'>
-              <PageLoader />
+              <InlineSpinner size={40} />
             </div>
           ) : installs.installations.length === 0 ? null : (
             installs.installations.map((it) => (

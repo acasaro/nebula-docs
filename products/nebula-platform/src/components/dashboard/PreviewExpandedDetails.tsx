@@ -1,7 +1,7 @@
 import { ArrowUpRight, Check, ExternalLink, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DeploymentLogList } from "@/components/dashboard/DeploymentLogList";
-import type { Deployment, PreviewEntry } from "@/lib/dashboard";
+import { formatFileCounts, type Deployment, type PreviewEntry } from "@/lib/dashboard";
 
 interface PreviewExpandedDetailsProps {
   entry: PreviewEntry;
@@ -13,10 +13,27 @@ export function PreviewExpandedDetails({
   deployment: _deployment,
 }: PreviewExpandedDetailsProps) {
   void _deployment;
+  const fileCountSummary = formatFileCounts(entry.fileCounts);
 
   return (
     <div className='grid gap-8 md:grid-cols-2'>
       <div className='flex flex-col gap-5 text-sm'>
+        {/* Change summary — moved here from the row's "Changes" column so the
+            preview row can stay compact while the expanded view carries the
+            commit subject + body + file-count summary inline with the rest
+            of the deploy details. */}
+        <div className='flex flex-col gap-1'>
+          <p className='text-sm font-medium leading-snug text-foreground'>
+            {entry.title}
+          </p>
+          {entry.subtitle ? (
+            <p className='text-sm text-muted-foreground'>{entry.subtitle}</p>
+          ) : null}
+          {fileCountSummary ? (
+            <p className='text-xs text-muted-foreground'>{fileCountSummary}</p>
+          ) : null}
+        </div>
+
         <div>
           <div className='inline-flex items-center gap-2 font-medium text-foreground'>
             <Check className='size-4 text-emerald-500' />

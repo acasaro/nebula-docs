@@ -21,6 +21,12 @@ import { cn } from "@/lib/utils";
 interface ActivityRowProps {
   entry: DashboardEntry;
   showBranch: boolean;
+  /** When false, hide the title/subtitle/file-counts column from the row
+   *  and let the expanded content carry that info instead. Used by the
+   *  Previews table so the row stays compact and the rich change summary
+   *  lives where the user already looks for it. Defaults to `true` to
+   *  preserve the Activity tab's existing layout. */
+  showChanges?: boolean;
   expandedContent: ReactNode;
 }
 
@@ -54,6 +60,7 @@ function ActorCell({ actor }: { actor: Actor }) {
 export function ActivityRow({
   entry,
   showBranch,
+  showChanges = true,
   expandedContent,
 }: ActivityRowProps) {
   const [open, setOpen] = useState(false);
@@ -79,7 +86,7 @@ export function ActivityRow({
             </div>
 
             {showBranch ? (
-              <div className='w-44 shrink-0'>
+              <div className='w-60 shrink-0'>
                 {branch ? <BranchPill name={branch} /> : null}
               </div>
             ) : null}
@@ -88,17 +95,23 @@ export function ActivityRow({
               <StatusPill tone='success' label={statusLabel(entry.status)} />
             </div>
 
-            <div className='flex min-w-0 flex-1 flex-col text-sm'>
-              <span className='truncate text-foreground'>{entry.title}</span>
-              {entry.subtitle ? (
+            {showChanges ? (
+              <div className='flex min-w-0 flex-1 flex-col text-sm'>
+                <span className='truncate text-foreground'>{entry.title}</span>
+                {entry.subtitle ? (
+                  <span className='truncate text-xs text-muted-foreground'>
+                    {entry.subtitle}
+                  </span>
+                ) : null}
                 <span className='truncate text-xs text-muted-foreground'>
-                  {entry.subtitle}
+                  {formatFileCounts(entry.fileCounts)}
                 </span>
-              ) : null}
-              <span className='truncate text-xs text-muted-foreground'>
-                {formatFileCounts(entry.fileCounts)}
-              </span>
-            </div>
+              </div>
+            ) : (
+              // Spacer keeps the chevron right-aligned without inheriting the
+              // changes column's text styling.
+              <div className='flex-1' aria-hidden />
+            )}
 
             <ChevronDown
               className={cn(

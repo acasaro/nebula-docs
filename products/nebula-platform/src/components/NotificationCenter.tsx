@@ -15,21 +15,22 @@ import { cn } from "@/lib/utils";
 
 /**
  * Bell icon button + dropdown listing the in-app notification queue.
- * Hidden entirely when the queue is empty so the toolbar stays uncluttered.
+ * Always visible (even when empty) so it's a stable target the user can
+ * reach without surprise — a notification appearing or vanishing changes
+ * the badge / pulse, not the existence of the bell.
  *
  * Each row renders the notification's phase icon, headline (clickable to
  * the source URL), optional description, and a dismiss button. The phase
- * comes from the provider's polling watcher, which transitions
- * `in-progress → success | failure` once the underlying PR closes.
+ * comes from the provider's polling/subscription watchers, which transition
+ * `in-progress → success | failure` once the underlying work completes.
  */
 export function NotificationCenter() {
   const { notifications, dismissNotification } = useNotifications();
 
-  if (notifications.length === 0) return null;
-
   const inProgressCount = notifications.filter(
     (n) => n.phase === "in-progress",
   ).length;
+  const isEmpty = notifications.length === 0;
 
   return (
     <Popover.Root>
@@ -49,13 +50,13 @@ export function NotificationCenter() {
               className='absolute -right-0.5 -top-0.5 size-2 animate-pulse rounded-full bg-blue-500 ring-2 ring-background'
               aria-hidden
             />
-          ) : (
+          ) : notifications.length > 0 ? (
             <span
               className='absolute -right-1 -top-1 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-semibold text-primary-foreground'
               aria-hidden>
               {notifications.length}
             </span>
-          )}
+          ) : null}
         </button>
       </Popover.Trigger>
       <Popover.Portal>
@@ -80,16 +81,22 @@ export function NotificationCenter() {
               </button>
             ) : null}
           </div>
-          <ul className='flex flex-col'>
-            {notifications.map((n) => (
-              <li key={n.id}>
-                <NotificationRow
-                  notification={n}
-                  onDismiss={() => dismissNotification(n.id)}
-                />
-              </li>
-            ))}
-          </ul>
+          {isEmpty ? (
+            <p className='px-2 py-6 text-center text-xs text-muted-foreground'>
+              No notifications.
+            </p>
+          ) : (
+            <ul className='flex flex-col'>
+              {notifications.map((n) => (
+                <li key={n.id}>
+                  <NotificationRow
+                    notification={n}
+                    onDismiss={() => dismissNotification(n.id)}
+                  />
+                </li>
+              ))}
+            </ul>
+          )}
         </Popover.Content>
       </Popover.Portal>
     </Popover.Root>

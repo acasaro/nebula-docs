@@ -21,6 +21,11 @@ interface BranchPickerProps {
   branches: string[];
   loading?: boolean;
   hasDirty: boolean;
+  /** Branches with an in-flight Publish — auto-merge has been queued and
+   *  the branch is on track to be deleted by GitHub's auto-merge. Rows for
+   *  these are disabled in the picker and labeled "Closing…" so the user
+   *  doesn't switch onto a branch that's about to vanish. */
+  publishingBranches?: Set<string>;
   onSwitch: (branch: string) => void;
   onCreate: (
     name: string,
@@ -35,6 +40,7 @@ export function BranchPicker({
   branches,
   loading,
   hasDirty,
+  publishingBranches,
   onSwitch,
   onCreate,
 }: BranchPickerProps) {
@@ -80,30 +86,43 @@ export function BranchPicker({
               ) : (
                 branches.map((b) => {
                   const isActive = b === currentBranch;
+                  const isClosing = publishingBranches?.has(b) ?? false;
                   return (
                     <button
                       key={b}
                       type="button"
+                      disabled={isClosing}
                       onClick={() => {
+                        if (isClosing) return;
                         onSwitch(b);
                         setOpen(false);
                       }}
                       className={cn(
                         'flex w-full items-center justify-between gap-2 rounded-md px-3 py-2 text-left text-sm transition-colors',
-                        isActive
-                          ? 'bg-brand/10 text-brand-text'
-                          : 'hover:bg-accent hover:text-accent-foreground',
+                        isClosing
+                          ? 'cursor-not-allowed opacity-60'
+                          : isActive
+                            ? 'bg-brand/10 text-brand-text'
+                            : 'hover:bg-accent hover:text-accent-foreground',
                       )}
                     >
                       <span className="flex items-center gap-2 truncate">
-                        <GitBranch
-                          className={cn(
-                            'size-4 shrink-0',
-                            isActive ? 'text-brand-text' : 'text-muted-foreground',
-                          )}
-                        />
+                        {isClosing ? (
+                          <InlineSpinner size={14} />
+                        ) : (
+                          <GitBranch
+                            className={cn(
+                              'size-4 shrink-0',
+                              isActive ? 'text-brand-text' : 'text-muted-foreground',
+                            )}
+                          />
+                        )}
                         <span className="truncate font-medium">{b}</span>
-                        {b === defaultBranch ? (
+                        {isClosing ? (
+                          <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                            Closing…
+                          </span>
+                        ) : b === defaultBranch ? (
                           <span
                             className={cn(
                               'rounded px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide',

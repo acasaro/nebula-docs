@@ -10,7 +10,6 @@ import { NavSettingsPanel } from "@/components/NavSettingsPanel";
 import { NavTree, type AddEntryKind, type OpenNavSettings } from "@/components/NavTree";
 import { NavTreeSkeleton } from "@/components/NavTreeSkeleton";
 import { ORPHAN_ID_PREFIX, OrphanedPages } from "@/components/OrphanedPages";
-import { BuildingIndicator } from "@/components/BuildingIndicator";
 import { NotificationCenter } from "@/components/NotificationCenter";
 import { PreviewButton } from "@/components/PreviewButton";
 import { PublishMenu, type PublishChange } from "@/components/PublishMenu";
@@ -57,7 +56,7 @@ import { loadDrafts, makeDraftScopeKey, saveDrafts } from "@/lib/draftStore";
 import { applyFrontmatterPatch } from "@/lib/frontmatter";
 import { useFrontmatterCache } from "@/lib/frontmatterCache";
 import { useGitSettings } from "@/lib/gitSettings";
-import { useNotifications } from "@/lib/notifications";
+import { useNotifications, usePublishingBranches } from "@/lib/notifications";
 import { SnippetResolverProvider } from "@/lib/mdx/snippetResolver";
 import { buildTree, type TreeNode } from "@/lib/repoTree";
 import {
@@ -479,7 +478,8 @@ export function RepoBrowser() {
   const [saving, setSaving] = useState(false);
   const [creatingPr, setCreatingPr] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
-  const { addNotification } = useNotifications();
+  const { addNotification, ensureBuildNotification } = useNotifications();
+  const publishingBranches = usePublishingBranches();
 
   const active = settings.status === "ready" ? settings.settings : null;
 
@@ -1451,6 +1451,13 @@ export function RepoBrowser() {
         toast.success("Saved", {
           description: `Committed ${fileLabel} to ${currentBranch}.`,
         });
+        // Surface the consequent build run in the notification center.
+        // Idempotent — if a row for this branch already exists, it gets
+        // reset to in-progress instead of creating a duplicate.
+        ensureBuildNotification({
+          repoFullName: `${active.owner}/${active.repo}`,
+          branch: currentBranch,
+        });
       }
       setSaveMessage(`Saved ${fileLabel} to ${currentBranch}.`);
       return true;
@@ -1563,6 +1570,7 @@ export function RepoBrowser() {
             branches={branches}
             loading={branchesLoading}
             hasDirty={dirtyPaths.length > 0}
+            publishingBranches={publishingBranches}
             onSwitch={handleSwitchBranch}
             onCreate={handleCreateBranch}
           />
@@ -1583,15 +1591,6 @@ export function RepoBrowser() {
             </span>
           ) : null}
         </div>
-        {/* Build-in-progress chip — branch-local. Publish notifications
-            live in the bell dropdown (NotificationCenter) so they survive
-            the post-publish redirect to main. */}
-        {active && currentBranch && currentBranch !== active.defaultBranch ? (
-          <BuildingIndicator
-            repoFullName={`${active.owner}/${active.repo}`}
-            branch={currentBranch}
-          />
-        ) : null}
         <NotificationCenter />
         {active && currentBranch && currentBranch !== active.defaultBranch ? (
           <PreviewButton

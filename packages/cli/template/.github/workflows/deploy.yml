@@ -1,51 +1,65 @@
 name: Deploy docs
 
-# Default tenant deploy workflow — Firebase Hosting + Preview Channels.
+# Default tenant deploy — Firebase Hosting + branch-keyed Preview Channels.
 #
-# - push to main           → build → deploy to the primary site (live).
-# - pull_request           → build → deploy to a per-PR Preview Channel
-#                            (`pr-<PR#>`) → POST the channel URL to the
-#                            recordPreview Cloud Function so it lands on
-#                            `builds/{run_id}.previewUrl` and the dashboard
-#                            Preview button lights up.
+# - push to main           → build → deploy to the live channel.
+# - push to any other branch → build → deploy to channel `branch-<sanitized>`.
+#                              Channel ID is deterministic from the branch name
+#                              (lowercased, non-alphanum chars → `-`), so every
+#                              push to the same branch updates the SAME URL.
+#                              No PR is required for a preview to exist.
 #
-# Companion workflow `cleanup-preview.yml` deletes the channel when a PR
-# closes so quota isn't wasted on stale previews.
+# Channels auto-expire after 7 days of inactivity (Firebase TTL). Each new
+# deploy resets the timer, so an active branch's preview stays alive
+# indefinitely; a stale branch's preview self-cleans without explicit
+# cleanup. There's intentionally NO cleanup-preview workflow in this dir.
 #
 # This is the recommended path. If your tenant deploys to a UHG OOSS bucket
 # (or any "fixed host + sub-path" target), copy `../workflows-ooss/*.yml`
 # into this directory instead and set `deploy.bucketBaseUrl` in your
 # `docs.json`.
 #
-# Required secrets (GitHub Actions repo secrets):
-#   FIREBASE_SERVICE_ACCOUNT          JSON of a Firebase Hosting deploy service
-#                                     account on your Firebase project.
-#   NEBULA_RECORD_PREVIEW_SECRET      Shared secret matching the Cloud Function's
-#                                     RECORD_PREVIEW_SECRET (or DEV_RECORD_PREVIEW_SECRET
-#                                     for dev). Use the dev one against the dev
-#                                     Function URL while iterating.
+# === Setup checklist ===
 #
-# Required variables (GitHub Actions repo variables):
-#   FIREBASE_PROJECT_ID               e.g. mcoe-d
-#   NEBULA_RECORD_PREVIEW_URL         The deployed function endpoint, e.g.
-#                                     https://recordpreviewdev-…-uc.a.run.app
+# 1. Replace the placeholders below in this file:
+#       REPLACE_ME_FRAMEWORK_REPO  →  e.g. acasaro/nebula-docs
+#                                     (the repo holding @nebula-docs/cli;
+#                                      this is a transitional shape — once
+#                                      the CLI is published to npm, drop the
+#                                      `Checkout framework` + `Install
+#                                      framework deps` steps and use
+#                                      `npm ci && npm run build` directly)
+#
+# 2. Required secrets on this tenant repo (GH Actions → Secrets):
+#       FIREBASE_SERVICE_ACCOUNT_<PROJECT_ID>   set automatically by
+#                                               `firebase init hosting:github`
+#       NEBULA_RECORD_PREVIEW_SECRET            matches the function-side
+#                                               DEV_RECORD_PREVIEW_SECRET
+#                                               (or RECORD_PREVIEW_SECRET
+#                                               for prod)
+#
+# 3. Required variables on this tenant repo (GH Actions → Variables):
+#       FIREBASE_PROJECT_ID         e.g. mcoe-d
+#       NEBULA_RECORD_PREVIEW_URL   the deployed function endpoint, e.g.
+#                                   https://recordpreviewdev-<hash>-uc.a.run.app
+#
+# 4. Update the secret name in the `firebaseServiceAccount` references
+#    below to match what `firebase init hosting:github` set on your repo —
+#    the helper prefixes with the project ID
+#    (`FIREBASE_SERVICE_ACCOUNT_<UPPERCASE_PROJECT_ID>`).
 
 on:
   workflow_dispatch:
   push:
-    branches: [main]
-  pull_request:
-    types: [opened, synchronize, reopened]
+    branches: ['**']
 
 permissions:
   contents: read
-  pull-requests: write       # FirebaseExtended/action-hosting-deploy comments on PRs
-  checks: write
 
-# Cancel any in-flight build for the same branch / PR — only the latest
-# commit's preview is meaningful.
+# Cancel any in-flight build for the same branch — only the latest commit's
+# preview matters.
 concurrency:
-  group: deploy-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
+  group: deploy-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -53,48 +67,93 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
+      - name: Checkout tenant
         uses: actions/checkout@v4
+
+      - name: Checkout framework
+        uses: actions/checkout@v4
+        with:
+          repository: REPLACE_ME_FRAMEWORK_REPO
+          path: nebula-docs
+          ref: main
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version-file: '.nvmrc'
+          cache: 'pnpm'
+          cache-dependency-path: 'nebula-docs/pnpm-lock.yaml'
 
-      # Tenant repo uses npm (the framework monorepo's `file:` link doesn't
-      # play nicely with pnpm). When this template ships in `nebula init`
-      # we'll generate the right install command per consumer.
-      - name: Install dependencies
-        run: npm ci
+      - name: Install framework deps
+        run: pnpm install --frozen-lockfile
+        working-directory: nebula-docs
 
-      - name: Build
-        run: npm run build
+      - name: Build tenant docs
+        run: pnpm --filter @nebula-docs/cli build "$GITHUB_WORKSPACE"
+        working-directory: nebula-docs
 
-      # main → live; PR → preview channel `pr-<PR#>`. The action handles
-      # both modes via the `channelId` input: provide it for PRs, leave
-      # blank for live deploys.
-      - name: Deploy
-        id: deploy
+      # Compute channel ID + whether this is a live deploy in one shell step
+      # so the conditional logic + branch-name sanitization is in one place.
+      # Sanitization: lowercase, replace non-alphanumeric-or-hyphen with `-`,
+      # collapse runs of `-`, strip leading/trailing `-`, truncate to 56 chars
+      # so the prefixed channel ID stays under Firebase's 63-char limit.
+      - name: Compute channel ID
+        id: channel
+        run: |
+          REF_NAME="${{ github.ref_name }}"
+          if [ "$REF_NAME" = "main" ]; then
+            echo "id=live" >> "$GITHUB_OUTPUT"
+            echo "is-live=true" >> "$GITHUB_OUTPUT"
+          else
+            SANITIZED=$(echo "$REF_NAME" \
+              | tr '[:upper:]' '[:lower:]' \
+              | sed -E 's/[^a-z0-9-]/-/g; s/-+/-/g; s/^-+//; s/-+$//' \
+              | cut -c -56)
+            echo "id=branch-${SANITIZED}" >> "$GITHUB_OUTPUT"
+            echo "is-live=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      # Two deploy steps because FirebaseExtended treats `expires` as preview-
+      # channel-only; setting it alongside `channelId: live` errors. Splitting
+      # also makes the intent obvious in run logs.
+      - name: Deploy live (main)
+        id: deploy-live
+        if: steps.channel.outputs.is-live == 'true'
         uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: ${{ secrets.GITHUB_TOKEN }}
-          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_MCOE_D }}
           projectId: ${{ vars.FIREBASE_PROJECT_ID }}
-          channelId: ${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || '' }}
-          # Default 7d channel expiry is fine for review cycles. Bump if
-          # PRs routinely sit longer.
+          target: docs
+          channelId: live
+
+      - name: Deploy preview channel (branch)
+        id: deploy-preview
+        if: steps.channel.outputs.is-live != 'true'
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_MCOE_D }}
+          projectId: ${{ vars.FIREBASE_PROJECT_ID }}
+          target: docs
+          channelId: ${{ steps.channel.outputs.id }}
           expires: 7d
 
-      # Send the channel URL back to recordPreview so the dashboard can
-      # surface the Preview button. Skipped on `push` (live deploys don't
-      # populate previewUrl — that field is for PR previews only).
+      # Send the channel URL back to recordPreview so the dashboard subscription
+      # can surface the Preview button. Skipped on live deploys (the live URL
+      # is the deployment.domain on the dashboard, not a previewUrl).
       - name: Notify recordPreview
-        if: github.event_name == 'pull_request' && steps.deploy.outputs.details_url != ''
+        if: steps.deploy-preview.outputs.details_url != ''
         env:
-          PREVIEW_URL: ${{ steps.deploy.outputs.details_url }}
+          PREVIEW_URL: ${{ steps.deploy-preview.outputs.details_url }}
           RUN_ID: ${{ github.run_id }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
           REPO_FULL_NAME: ${{ github.repository }}
+          BRANCH: ${{ github.ref_name }}
           ENDPOINT: ${{ vars.NEBULA_RECORD_PREVIEW_URL }}
           SECRET: ${{ secrets.NEBULA_RECORD_PREVIEW_SECRET }}
         run: |
@@ -104,7 +163,7 @@ jobs:
             -H "Content-Type: application/json" \
             -d "$(jq -n \
                   --argjson runId "$RUN_ID" \
-                  --argjson prNumber "$PR_NUMBER" \
                   --arg previewUrl "$PREVIEW_URL" \
                   --arg repoFullName "$REPO_FULL_NAME" \
-                  '{runId: $runId, prNumber: $prNumber, previewUrl: $previewUrl, repoFullName: $repoFullName}')"
+                  --arg branch "$BRANCH" \
+                  '{runId: $runId, previewUrl: $previewUrl, repoFullName: $repoFullName, branch: $branch}')"

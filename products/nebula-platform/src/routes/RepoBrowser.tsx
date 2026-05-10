@@ -10,6 +10,7 @@ import { NavSettingsPanel } from "@/components/NavSettingsPanel";
 import { NavTree, type AddEntryKind, type OpenNavSettings } from "@/components/NavTree";
 import { NavTreeSkeleton } from "@/components/NavTreeSkeleton";
 import { ORPHAN_ID_PREFIX, OrphanedPages } from "@/components/OrphanedPages";
+import { PreviewButton } from "@/components/PreviewButton";
 import { PublishMenu, type PublishChange } from "@/components/PublishMenu";
 import { SourceEditor, languageForPath } from "@/components/SourceEditor";
 import { PageLoader } from "@/components/ui/PageLoader";
@@ -1533,6 +1534,12 @@ export function RepoBrowser() {
             </span>
           ) : null}
         </div>
+        {active && currentBranch && currentBranch !== active.defaultBranch ? (
+          <PreviewButton
+            repoFullName={`${active.owner}/${active.repo}`}
+            branch={currentBranch}
+          />
+        ) : null}
         {active && currentBranch ? (
           <PublishMenu
             currentBranch={currentBranch}

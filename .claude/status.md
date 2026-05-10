@@ -260,16 +260,88 @@ docs.
   - `@nebula-docs/cli` — composition pipeline: globals → tenant base (`mcoe-default` / `uhc` / `optum` / `<custom>`) → `theme.json` overrides → CSS vars emitted to `dist/styles/theme.css`
   - `products/nebula-platform/` — new "Branding" settings panel parallel to GitHub App settings. Color picker for primary, font selectors, logo upload. Serializes to `theme.json` and commits via existing dirty-tracking flow.
 
-### 4. Analytics dashboard
+### ~~4. Analytics dashboard~~ — DONE (v1, MCOE-only, Firebase Analytics provider)
 
-Read-side counterpart to `@nebula-docs/analytics` (write-side). Visitors, views, page visit counts on the home dashboard.
+Full architecture + operational runbook in [analytics.md](analytics.md). Two systems:
+**write side** ships events from CLI-rendered tenant pages to GA4 via the Firebase
+Analytics SDK; **read side** is a Cloud Function querying GA4 Data API on demand
+for the dashboard. Same `mcoe-d` Firebase project serves both.
 
-- **Where it lives**:
-  - `@nebula-docs/analytics` — provider system. Subpath exports per provider (`@nebula-docs/analytics/firebase`, `/ga4`, etc.) for tree-shaking. **v1 ships Firebase Analytics provider** since MCOE already uses Firebase.
-  - SSG runtime auto-tracker (React island) — wires DOM events to schema (`page_view`, `nav_click`, `outbound_click`, etc.) using `data-analytics-*` attributes
-  - `functions/src/getAnalyticsSummary.ts` — new callable. Takes `{ repo, range }`, queries Firebase Analytics via service account, returns aggregates. Provider-reader interface so PostHog/Plausible/GA4 readers slot in later.
-  - `products/nebula-platform/` — new dashboard widgets (visitors / views / top pages cards) wired to `getAnalyticsSummary`. Degrades gracefully when no provider is configured (shows "Analytics not configured").
-- **Note**: provider-send-side and dashboard-read-side are different concerns. The send-side ships in `@nebula-docs/analytics`; the read-side is a Cloud Function + UI in the Platform.
+**Landed:**
+
+- `@nebula-docs/analytics` (new package, eighth in the framework). Provider-agnostic
+  core (`core.ts`, `provider.ts`, `events.ts`, `config.ts`, `context.ts`,
+  `autoTracker.ts`) + Firebase subpath (`@nebula-docs/analytics/firebase`).
+  Event schema ports the legacy Docusaurus taxonomy verbatim:
+  `page_view`, `nav_click`, `outbound_click`, `protocol_click`, `code_copy`,
+  `search`, `theme_switch`, `color_mode_toggle`, `scroll_depth`, `engaged_time`,
+  `surface_impression`, `custom_interaction`. Auto-tracker handles DOM click
+  delegation, scroll-depth + engagement-time milestones, and the
+  `data-theme="dark"` color-mode watcher.
+- CLI integration: `prepareAstro.mjs` reads `docs.json.analytics` + workspace
+  root `.env` (via Node 22's `process.loadEnvFile`) and emits
+  `packages/cli/.nebula/analyticsConfig.mjs` (gitignored). Layout-side
+  `<AnalyticsBootstrap />` (used by both `DocsLayout` and `CustomLayout`)
+  dynamic-imports `runtime/analytics/bootstrap.mjs` from inside an inline
+  module script — Astro's hoisted-script bundler dropped a side-effect-only
+  import, so we trigger the module with `import().catch(...)`. Tenants opt in
+  via `docs.json.analytics: { provider: "firebase" }`; absent → bootstrap exports
+  `null` and no analytics JS runs.
+- `tenants/mcoe-docs/docs.json` opted in. End-to-end verified:
+  `page_view`, `nav_click`, `scroll_depth` events flow into GA4 in the
+  console's DebugView from local CLI dev runs.
+- `functions/src/getAnalyticsSummaryHandler.ts` — shared GA4 Data API query
+  shape (8 parallel queries: current + previous totalUsers, current +
+  previous screenPageViews, current + previous search-event count, daily
+  timeseries, top pages). Returns `AnalyticsSummaryWire` (dates as ISO
+  strings to round-trip cleanly through Firebase callable JSON).
+- `functions/src/getAnalyticsSummary.ts` (prod) + `dev/getAnalyticsSummaryDev.ts`
+  (dev) — auth-gated callables, no VPC (GA4 is public Google network),
+  `defineSecret('GA4_SERVICE_ACCOUNT_JSON')` + `defineString('GA4_PROPERTY_ID', { default: '533814457' })`.
+  Both wrappers use the same secret because the same Firebase project serves
+  both env variants — no env split on the GA4 property.
+- Service account: `firebase-adminsdk-fbsvc@mcoe-d.iam.gserviceaccount.com`,
+  granted Viewer on the GA4 property (Property ID `533814457`). JSON stored
+  via `firebase functions:secrets:set GA4_SERVICE_ACCOUNT_JSON --data-file=...`
+  per the [secrets memory rule](feedback_firebase_secrets_data_file.md).
+- `getAnalyticsSummaryDev` deployed to `mcoe-d` (us-central1).
+  `package.json deploy:dev` script extended.
+- Platform `/analytics` route: `routes/Analytics.tsx` +
+  `components/analytics/{AnalyticsPage, MetricCard, VisitorsChart,
+  TopPagesTable, TopUsersTable, DateRangePicker}.tsx`. SVG bar chart
+  hatches the partial-day bucket via `<pattern>` so users can tell
+  finalized data from in-progress data. `lib/analytics/useAnalyticsSummary.ts`
+  resolves `env.fn.getAnalyticsSummary` (`Dev` vs unsuffixed) and decodes
+  the wire response back to `Date` instances. Verified against real
+  numbers — 11 visitors / 438 views / top pages list shows actual MCOE
+  paths.
+- Search-event tracking wired in `packages/cli/src/runtime/search/SearchModal.tsx`:
+  fires `trackDeduped('search', { ...ctx, search_term })` after Pagefind
+  returns results, dedupe-keyed on the term so typing doesn't fan out.
+- Sidebar nav: `BarChart3` icon between Assets and Git settings.
+
+**Open / deferred:**
+
+- **Prod function deploy.** `getAnalyticsSummary` (no `Dev` suffix) was written
+  but only `:dev` deployed. Run `pnpm --filter @nebula-docs/functions deploy:prod`
+  before flipping the SPA to `NEBULA_ENV=prod`.
+- **Top users column always empty.** GA4 Data API doesn't expose user-level
+  breakdowns without `setUserId()` having been called. Public docs are anonymous
+  traffic — wire requires either BigQuery export or a sign-in flow on the docs
+  side. Dashboard column shows "No active users yet" honestly.
+- **No caching on the function.** Editor-only audience today. Add a 5-minute
+  Firestore cache the moment the dashboard goes wider.
+- **Phase 4: `data-analytics-surface` tagging on Nebula components.** Today nav
+  clicks come back as generic `surface: "link"` with the link text as the label.
+  Tagging Card / FeatureCard / navbar tabs / footer columns in
+  `packages/components/` would give cleaner aggregations.
+  Auto-tracker already reads the attribute; components just need to emit it.
+- **`deriveSiteContext` is MCOE-specific.** Lift the instance set into a
+  tenant config when tenant #2 lands.
+- **Home dashboard widgets.** The original design called for visitors / views
+  / top pages cards on the Home dashboard too. Build out once the
+  `/analytics` page settles — the same hook + components compose into the
+  Home layout.
 
 ### ~~5. Search~~ — DONE (Pagefind)
 

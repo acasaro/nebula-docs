@@ -59,7 +59,7 @@ Five exist today; two are planned. None of the upcoming features (preview, snipp
 | `@nebula-docs/theme` | Frozen design tokens. Composed at build time → CSS vars. | Exists |
 | `@nebula-docs/firebase` | Firebase init + auth helpers. Platform-only consumer. | Exists |
 | `@nebula-docs/mdx` | Pure MDX parse / serialize / frontmatter helpers + snippet resolver. Two consumers (Platform editor at edit-time + CLI at build-time) so they can't drift. | Planned |
-| `@nebula-docs/analytics` | Pluggable analytics providers (GA4, Firebase, PostHog, Plausible). Subpath exports per provider; tenants tree-shake to zero JS if they skip analytics. | Planned |
+| `@nebula-docs/analytics` | Pluggable analytics providers (GA4, Firebase, PostHog, Plausible). Subpath exports per provider; tenants tree-shake to zero JS if they skip analytics. v1 ships Firebase Analytics provider for MCOE. See [analytics.md](analytics.md). | Exists |
 
 ### Naming convention
 
@@ -170,13 +170,14 @@ The five upcoming features map cleanly to existing packages — none requires a 
 | Preview before merge | `@nebula-docs/cli` (`--base` flag), tenant template (workflow YAML), `functions/` (preview URL on builds), `products/nebula-platform/` (Preview button) | Per-PR build at `bucket/previews/<PR-number>/`. |
 | Snippets | `@nebula-docs/mdx` (remark-snippets plugin) | Resolves both at build-time and editor-time so the editor shows resolved content. |
 | Custom theming | `@nebula-docs/theme` (tokens), `@nebula-docs/schemas` (`theme.json` schema), `@nebula-docs/cli` (composition pipeline), `products/nebula-platform/` (Branding settings panel) | `theme.json` overrides layered onto a base theme → CSS vars. |
-| Analytics dashboard | `@nebula-docs/analytics` (provider system), `functions/getAnalyticsSummary.ts` (Firebase reader), `products/nebula-platform/` (dashboard widgets) | v1 ships Firebase Analytics provider; abstraction supports GA4/PostHog/Plausible later. |
+| Analytics dashboard | `@nebula-docs/analytics` (provider system), `functions/getAnalyticsSummary{,Dev}.ts` (GA4 Data API reader), `products/nebula-platform/src/components/analytics/` (dashboard) | v1 (Firebase Analytics provider, MCOE-only) DONE — see [analytics.md](analytics.md). Abstraction ready for GA4/PostHog/Plausible. |
 | Search | `@nebula-docs/cli/src/runtime/search/` (Pagefind integration + UI island) | Tenants opt in via `docs.json`. Zero JS for tenants who skip it. |
 
 ## See also
 
 - [nebula.md](nebula.md) — Platform architecture deep-dive
 - [nebula-cli.md](nebula-cli.md) — CLI architecture deep-dive (Astro stack, multi-tenancy, build phases, locked decisions)
+- [analytics.md](analytics.md) — Analytics workstream (write-side package + read-side Cloud Function + dashboard)
 - [status.md](status.md) — live workstream snapshot + Upcoming workstreams
 - [conventions.md](conventions.md) — repo-wide rules
 - [archive/](archive/) — historical context

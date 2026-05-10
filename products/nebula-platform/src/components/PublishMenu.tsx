@@ -55,7 +55,7 @@ export function PublishMenu({
   const dirtyCount = changes.length;
   const busy = saving || creatingPr;
 
-  const saveLabel = onDefault ? "Publish" : `Save in ${currentBranch}`;
+  const saveLabel = onDefault ? "Publish" : "Save Draft";
 
   return (
     <>
@@ -126,7 +126,7 @@ export function PublishMenu({
                     setOpen(false);
                     setPrOpen(true);
                   }}>
-                  Create pull request
+                  Publish
                 </Button>
               ) : null}
             </div>
@@ -357,9 +357,9 @@ function CreatePrDialog({
       <DialogContent>
         <form onSubmit={handleSubmit}>
           <DialogHeader>
-            <DialogTitle>Create pull request</DialogTitle>
+            <DialogTitle>Publish to {defaultBranch}</DialogTitle>
             <DialogDescription>
-              Open a PR from{" "}
+              Merge{" "}
               <code className='rounded bg-muted px-1 font-mono text-[11px]'>{currentBranch}</code>{" "}
               into{" "}
               <code className='rounded bg-muted px-1 font-mono text-[11px]'>{defaultBranch}</code>.
@@ -405,7 +405,7 @@ function CreatePrDialog({
               Cancel
             </Button>
             <Button type='submit' disabled={creating || !title.trim()}>
-              {creating ? "Creating…" : "Create pull request"}
+              {creating ? "Publishing…" : "Publish"}
             </Button>
           </DialogFooter>
         </form>

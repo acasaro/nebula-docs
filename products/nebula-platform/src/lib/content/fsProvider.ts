@@ -112,6 +112,22 @@ export async function enableAutoMerge(
   throw new Error("Auto-merge isn't supported in local mode.");
 }
 
+export interface PullRequestState {
+  state: 'open' | 'closed';
+  merged: boolean;
+  mergedAt: string | null;
+  htmlUrl: string;
+}
+
+export async function fetchPullRequest(
+  _installationId: number,
+  _owner: string,
+  _repo: string,
+  _pullNumber: number,
+): Promise<PullRequestState> {
+  throw new Error("Pull request polling isn't supported in local mode.");
+}
+
 export async function listRecentCommits(
   _installationId: number,
   _owner: string,

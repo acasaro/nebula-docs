@@ -12,6 +12,7 @@ export {
   commitFiles,
   createPullRequest,
   enableAutoMerge,
+  fetchPullRequest,
   listRecentCommits,
   getCommitDetails,
 } from '@/lib/githubApi';
@@ -24,4 +25,5 @@ export type {
   CommitFileChange,
   CommitDetails,
   MergeMethod,
+  PullRequestState,
 } from '@/lib/githubApi';

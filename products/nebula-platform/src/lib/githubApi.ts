@@ -400,6 +400,38 @@ export async function createPullRequest(
 
 export type MergeMethod = 'MERGE' | 'SQUASH' | 'REBASE';
 
+export interface PullRequestState {
+  state: 'open' | 'closed';
+  merged: boolean;
+  mergedAt: string | null;
+  htmlUrl: string;
+}
+
+/**
+ * Fetch a single PR's merge state. Used by the editor's publishing
+ * indicator to poll whether an in-flight auto-merge has completed.
+ *
+ * Webhook-driven Firestore subscription would be ideal here (real-time,
+ * no polling), but the existing activity collection's shape doesn't make
+ * a per-PR-number query cheap. Polling at ~10s intervals is fine for
+ * the typical 1-2 minute CI + merge cycle.
+ */
+export async function fetchPullRequest(
+  installationId: number,
+  owner: string,
+  repo: string,
+  pullNumber: number,
+): Promise<PullRequestState> {
+  const oct = await octokitFor(installationId);
+  const { data } = await oct.pulls.get({ owner, repo, pull_number: pullNumber });
+  return {
+    state: data.state as 'open' | 'closed',
+    merged: Boolean(data.merged),
+    mergedAt: data.merged_at,
+    htmlUrl: data.html_url,
+  };
+}
+
 /**
  * Enable auto-merge on a PR via GitHub's GraphQL API. The merge happens
  * automatically once required status checks pass and the PR is mergeable.
@@ -422,12 +454,14 @@ export async function enableAutoMerge(
   mergeMethod: MergeMethod = 'SQUASH',
 ): Promise<void> {
   const oct = await octokitFor(installationId);
+  // The variable name `method` is reserved by @octokit/graphql (it shadows
+  // the HTTP method option), so use `mergeMethod` here instead.
   await oct.graphql(
-    `mutation($prId: ID!, $method: PullRequestMergeMethod!) {
-       enablePullRequestAutoMerge(input: { pullRequestId: $prId, mergeMethod: $method }) {
+    `mutation($prId: ID!, $mergeMethod: PullRequestMergeMethod!) {
+       enablePullRequestAutoMerge(input: { pullRequestId: $prId, mergeMethod: $mergeMethod }) {
          pullRequest { number autoMergeRequest { enabledAt } }
        }
      }`,
-    { prId: prNodeId, method: mergeMethod },
+    { prId: prNodeId, mergeMethod },
   );
 }

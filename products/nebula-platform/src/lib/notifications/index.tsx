@@ -292,6 +292,17 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
         if (n.phase !== "in-progress") continue;
         const build = latestByBranch.get(n.branch);
         if (!build) continue;
+        // STALE-BUILD GUARD: Firestore /builds entries persist forever
+        // (we delete the Firebase Hosting Channel on branch delete but
+        // not the historical build docs). If the user creates a branch
+        // whose name was previously used + deleted, the old success
+        // build doc still matches by branch — without this guard the
+        // notification would immediately flash "Preview ready" using
+        // the stale previewUrl, then auto-dismiss. Anchor on receivedAt
+        // (set by the webhook with serverTimestamp) — only match a
+        // build that arrived AFTER the notification was created.
+        const buildTime = build.receivedAt?.toMillis();
+        if (buildTime === undefined || buildTime <= n.createdAt) continue;
         if (build.status !== "completed") continue;
         if (build.conclusion === "success") {
           updateNotification(n.id, {

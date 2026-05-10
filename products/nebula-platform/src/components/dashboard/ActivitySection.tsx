@@ -1,7 +1,5 @@
-import { Plus } from "lucide-react";
 import { ActivityTable } from "@/components/dashboard/ActivityTable";
 import { PreviewsTable } from "@/components/dashboard/PreviewsTable";
-import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type {
   ActivityEntry,
@@ -62,15 +60,6 @@ export function ActivitySection({
           })}
         </div>
       </div>
-
-      {tab === "previews" ? (
-        <div>
-          <Button variant='outline' size='sm'>
-            <Plus />
-            Create custom preview
-          </Button>
-        </div>
-      ) : null}
 
       {tab === "live" ? (
         <ActivityTable entries={activity} deployment={deployment} />

@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils";
 
-export type StatusPillTone = "brand" | "success";
+export type StatusPillTone = "brand" | "success" | "failed" | "building";
 
 interface StatusPillProps {
   tone: StatusPillTone;
@@ -17,6 +17,16 @@ const toneStyles: Record<StatusPillTone, { dot: string; pill: string }> = {
     dot: "bg-emerald-500",
     pill:
       "bg-emerald-500/12 text-emerald-700 dark:text-emerald-400 dark:bg-emerald-500/15",
+  },
+  failed: {
+    dot: "bg-red-500",
+    pill:
+      "bg-red-500/12 text-red-700 dark:text-red-400 dark:bg-red-500/15",
+  },
+  building: {
+    dot: "bg-amber-500 animate-pulse",
+    pill:
+      "bg-amber-500/12 text-amber-700 dark:text-amber-400 dark:bg-amber-500/15",
   },
 };
 

@@ -21,7 +21,12 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import type { IconValue as DocsIconValue } from '@/lib/docsConfig';
+import {
+  docsIconToForm,
+  formIconToDocs,
+  type DocsIconValue,
+  type IconValue as FormIconValue,
+} from '@/components/IconField';
 import {
   findEntry,
   type ResolveContext,
@@ -39,7 +44,6 @@ import type {
   PageObject,
   Tab,
 } from '@/lib/docsConfig';
-import type { IconValue as FormIconValue } from '@/components/IconField';
 
 const PANEL_TITLE: Record<OpenNavSettings['kind'], string> = {
   page: 'Page settings',
@@ -509,26 +513,6 @@ function formIconToFrontmatterString(
 ): string | null {
   if (!icon || !icon.icon) return null;
   return icon.icon;
-}
-
-function docsIconToForm(icon: DocsIconValue | undefined): FormIconValue {
-  if (!icon) return {};
-  if (typeof icon === 'string') return { icon };
-  return {
-    icon: icon.name,
-    iconLibrary: icon.library as FormIconValue['iconLibrary'],
-    iconType: icon.style as FormIconValue['iconType'],
-  };
-}
-
-function formIconToDocs(icon: FormIconValue): DocsIconValue | undefined {
-  if (!icon.icon) return undefined;
-  if (!icon.iconLibrary && !icon.iconType) return icon.icon;
-  return {
-    name: icon.icon,
-    library: icon.iconLibrary,
-    style: icon.iconType,
-  };
 }
 
 function mergeTab(tab: Tab, patch: Partial<TabConfigValues>): Tab {

@@ -15,6 +15,11 @@ interface ActivitySectionProps {
   deployment: Deployment;
   activity: ActivityEntry[];
   previews: PreviewEntry[];
+  hasMoreActivity: boolean;
+  hasMorePreviews: boolean;
+  onLoadMoreActivity: () => void;
+  onLoadMorePreviews: () => void;
+  loadingMore: boolean;
 }
 
 const TABS: { value: DashboardTab; label: string }[] = [
@@ -28,6 +33,11 @@ export function ActivitySection({
   deployment,
   activity,
   previews,
+  hasMoreActivity,
+  hasMorePreviews,
+  onLoadMoreActivity,
+  onLoadMorePreviews,
+  loadingMore,
 }: ActivitySectionProps) {
   const heading = tab === "live" ? "Activity" : "Previews";
 
@@ -62,9 +72,21 @@ export function ActivitySection({
       </div>
 
       {tab === "live" ? (
-        <ActivityTable entries={activity} deployment={deployment} />
+        <ActivityTable
+          entries={activity}
+          deployment={deployment}
+          hasMore={hasMoreActivity}
+          onLoadMore={onLoadMoreActivity}
+          loadingMore={loadingMore}
+        />
       ) : (
-        <PreviewsTable entries={previews} deployment={deployment} />
+        <PreviewsTable
+          entries={previews}
+          deployment={deployment}
+          hasMore={hasMorePreviews}
+          onLoadMore={onLoadMorePreviews}
+          loadingMore={loadingMore}
+        />
       )}
     </section>
   );

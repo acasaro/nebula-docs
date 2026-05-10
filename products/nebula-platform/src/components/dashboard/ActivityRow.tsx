@@ -8,7 +8,7 @@ import {
 } from "@/components/ui/collapsible";
 import { BranchPill } from "@/components/dashboard/BranchPill";
 import { NebulaBotAvatar } from "@/components/dashboard/NebulaBotAvatar";
-import { StatusPill } from "@/components/dashboard/StatusPill";
+import { StatusPill, type StatusPillTone } from "@/components/dashboard/StatusPill";
 import {
   formatFileCounts,
   formatRelativeTime,
@@ -34,6 +34,12 @@ function statusLabel(status: EntryStatus): string {
   if (status === "successful") return "Successful";
   if (status === "building") return "Building";
   return "Failed";
+}
+
+function statusTone(status: EntryStatus): StatusPillTone {
+  if (status === "successful") return "success";
+  if (status === "building") return "building";
+  return "failed";
 }
 
 function ActorCell({ actor }: { actor: Actor }) {
@@ -92,7 +98,7 @@ export function ActivityRow({
             ) : null}
 
             <div className='w-32 shrink-0'>
-              <StatusPill tone='success' label={statusLabel(entry.status)} />
+              <StatusPill tone={statusTone(entry.status)} label={statusLabel(entry.status)} />
             </div>
 
             {showChanges ? (

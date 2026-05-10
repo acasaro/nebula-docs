@@ -1,13 +1,23 @@
 import { ActivityRow } from "@/components/dashboard/ActivityRow";
+import { LoadMoreFooter } from "@/components/dashboard/LoadMoreFooter";
 import { PreviewExpandedDetails } from "@/components/dashboard/PreviewExpandedDetails";
 import type { Deployment, PreviewEntry } from "@/lib/dashboard";
 
 interface PreviewsTableProps {
   entries: PreviewEntry[];
   deployment: Deployment;
+  hasMore: boolean;
+  onLoadMore: () => void;
+  loadingMore: boolean;
 }
 
-export function PreviewsTable({ entries, deployment }: PreviewsTableProps) {
+export function PreviewsTable({
+  entries,
+  deployment,
+  hasMore,
+  onLoadMore,
+  loadingMore,
+}: PreviewsTableProps) {
   return (
     <div className='overflow-hidden rounded-xl border border-border/60 bg-card text-card-foreground'>
       <div className='flex items-center gap-4 border-b border-border/60 bg-muted/20 px-4 py-2 text-xs font-medium uppercase tracking-wide text-muted-foreground'>
@@ -30,6 +40,9 @@ export function PreviewsTable({ entries, deployment }: PreviewsTableProps) {
           />
         ))}
       </div>
+      {hasMore ? (
+        <LoadMoreFooter onLoadMore={onLoadMore} loading={loadingMore} />
+      ) : null}
     </div>
   );
 }

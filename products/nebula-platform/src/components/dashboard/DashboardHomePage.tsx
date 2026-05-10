@@ -78,6 +78,11 @@ export function DashboardHomePage() {
         deployment={data.data.deployment}
         activity={data.data.activity}
         previews={data.data.previews}
+        hasMoreActivity={data.hasMoreActivity}
+        hasMorePreviews={data.hasMorePreviews}
+        onLoadMoreActivity={data.loadMoreActivity}
+        onLoadMorePreviews={data.loadMorePreviews}
+        loadingMore={data.loadingMore}
       />
     </div>
   );

@@ -28,10 +28,19 @@ export type DashboardDataState =
   | { status: "loading" }
   | { status: "no-repo" }
   | { status: "error"; error: string; refresh: () => void }
-  | { status: "ready"; data: DashboardData; refresh: () => void };
+  | {
+      status: "ready";
+      data: DashboardData;
+      refresh: () => void;
+      hasMoreActivity: boolean;
+      hasMorePreviews: boolean;
+      loadMoreActivity: () => void;
+      loadMorePreviews: () => void;
+      loadingMore: boolean;
+    };
 
-const ACTIVITY_LIMIT = 15;
-const PREVIEW_BRANCH_LIMIT = 10;
+/** Activity + previews paginate by this many entries per "Load more" click. */
+const PAGE_SIZE = 5;
 const SITE_NAME = "MCoE Documentation";
 const MOCK_DOMAIN = "mcoe-docs.nebula.app";
 
@@ -172,16 +181,34 @@ function commitToPreviewEntry(
   };
 }
 
+interface LoadResult {
+  data: DashboardData;
+  /** True when the GH API returned exactly the requested page — there are
+   *  likely more commits available to fetch on the next "Load more". */
+  hasMoreActivity: boolean;
+  /** True when more non-default branches exist beyond the current slice. */
+  hasMorePreviews: boolean;
+}
+
 async function loadDashboardData(args: {
   installationId: number;
   owner: string;
   repo: string;
   defaultBranch: string;
-}): Promise<DashboardData> {
-  const { installationId, owner, repo, defaultBranch } = args;
+  activityLimit: number;
+  previewLimit: number;
+}): Promise<LoadResult> {
+  const {
+    installationId,
+    owner,
+    repo,
+    defaultBranch,
+    activityLimit,
+    previewLimit,
+  } = args;
 
   const [activityCommits, branches] = await Promise.all([
-    listRecentCommits(installationId, owner, repo, defaultBranch, ACTIVITY_LIMIT),
+    listRecentCommits(installationId, owner, repo, defaultBranch, activityLimit),
     listBranches(installationId, owner, repo),
   ]);
 
@@ -193,9 +220,8 @@ async function loadDashboardData(args: {
     ),
   );
 
-  const previewBranches = branches
-    .filter((b) => b !== defaultBranch)
-    .slice(0, PREVIEW_BRANCH_LIMIT);
+  const candidatePreviewBranches = branches.filter((b) => b !== defaultBranch);
+  const previewBranches = candidatePreviewBranches.slice(0, previewLimit);
 
   const previewLatest = await Promise.all(
     previewBranches.map(async (branch) => {
@@ -218,32 +244,36 @@ async function loadDashboardData(args: {
   const lastUpdatedAt = head?.authoredAt ?? new Date();
 
   return {
-    deployment: {
-      siteName: SITE_NAME,
-      status: "live",
-      domain: MOCK_DOMAIN,
-      customDomain: null,
-      owner,
-      repo,
-      branch: defaultBranch,
-      lastUpdatedAt,
-      lastUpdatedBy,
-    },
-    activity: activityCommits.map((c, i) =>
-      commitToActivityEntry(c, activityDetails[i] ?? null, defaultBranch),
-    ),
-    previews: previewLatest
-      .filter((p): p is NonNullable<typeof p> => p !== null)
-      .map(({ branch, commit, detail }) =>
-        commitToPreviewEntry(
-          branch,
-          commit,
-          detail,
-          owner,
-          repo,
-          dashboardMockData.previews[0]?.log ?? [],
-        ),
+    data: {
+      deployment: {
+        siteName: SITE_NAME,
+        status: "live",
+        domain: MOCK_DOMAIN,
+        customDomain: null,
+        owner,
+        repo,
+        branch: defaultBranch,
+        lastUpdatedAt,
+        lastUpdatedBy,
+      },
+      activity: activityCommits.map((c, i) =>
+        commitToActivityEntry(c, activityDetails[i] ?? null, defaultBranch),
       ),
+      previews: previewLatest
+        .filter((p): p is NonNullable<typeof p> => p !== null)
+        .map(({ branch, commit, detail }) =>
+          commitToPreviewEntry(
+            branch,
+            commit,
+            detail,
+            owner,
+            repo,
+            dashboardMockData.previews[0]?.log ?? [],
+          ),
+        ),
+    },
+    hasMoreActivity: activityCommits.length === activityLimit,
+    hasMorePreviews: candidatePreviewBranches.length > previewLimit,
   };
 }
 
@@ -287,17 +317,43 @@ function enrichPreviewWithBuild(p: PreviewEntry, b: BuildDoc | undefined): Previ
   return next;
 }
 
+/** Internal "ready"-shaped state — the public DashboardDataState wraps this
+ *  with the action callbacks closed over the hook's setters. */
+type ReadyState = {
+  status: "ready";
+  data: DashboardData;
+  hasMoreActivity: boolean;
+  hasMorePreviews: boolean;
+};
+type InternalState =
+  | { status: "loading" }
+  | { status: "no-repo" }
+  | { status: "error"; error: string }
+  | ReadyState;
+
 export function useDashboardData(): DashboardDataState {
   const settings = useGitSettings();
-  const [state, setState] = useState<DashboardDataState>({ status: "loading" });
+  const [state, setState] = useState<InternalState>({ status: "loading" });
   const [reloadCount, setReloadCount] = useState(0);
+  const [activityLimit, setActivityLimit] = useState(PAGE_SIZE);
+  const [previewLimit, setPreviewLimit] = useState(PAGE_SIZE);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [buildsByBranch, setBuildsByBranch] = useState<BuildsByBranch>(
     () => new Map(),
   );
 
   const refresh = useCallback(() => {
     clearTokenCache();
+    setActivityLimit(PAGE_SIZE);
+    setPreviewLimit(PAGE_SIZE);
     setReloadCount((n) => n + 1);
+  }, []);
+
+  const loadMoreActivity = useCallback(() => {
+    setActivityLimit((n) => n + PAGE_SIZE);
+  }, []);
+  const loadMorePreviews = useCallback(() => {
+    setPreviewLimit((n) => n + PAGE_SIZE);
   }, []);
 
   useEffect(() => {
@@ -311,26 +367,42 @@ export function useDashboardData(): DashboardDataState {
     }
 
     let cancelled = false;
-    setState({ status: "loading" });
+    // Don't flicker the page back to the spinner when the user clicks
+    // "Load more" — keep the existing rows visible and surface progress
+    // through `loadingMore` instead. The full-page loader only shows on
+    // first load (or after an error/refresh).
+    setState((prev) =>
+      prev.status === "ready" ? prev : { status: "loading" },
+    );
+    setLoadingMore(true);
     loadDashboardData({
       installationId: settings.settings.installationId,
       owner: settings.settings.owner,
       repo: settings.settings.repo,
       defaultBranch: settings.settings.defaultBranch,
+      activityLimit,
+      previewLimit,
     })
-      .then((data) => {
+      .then((result) => {
         if (cancelled) return;
-        setState({ status: "ready", data, refresh });
+        setLoadingMore(false);
+        setState({
+          status: "ready",
+          data: result.data,
+          hasMoreActivity: result.hasMoreActivity,
+          hasMorePreviews: result.hasMorePreviews,
+        });
       })
       .catch((err) => {
         if (cancelled) return;
+        setLoadingMore(false);
         const message = err instanceof Error ? err.message : String(err);
-        setState({ status: "error", error: message, refresh });
+        setState({ status: "error", error: message });
       });
     return () => {
       cancelled = true;
     };
-  }, [settings, reloadCount, refresh]);
+  }, [settings, reloadCount, activityLimit, previewLimit]);
 
   // Live Firestore subscription on `builds/` for this repo. Independent of
   // the GH-derived data load above — they update on different cadences
@@ -372,17 +444,33 @@ export function useDashboardData(): DashboardDataState {
     return unsub;
   }, [settings]);
 
-  // Render-time merge: overlay live build state onto GH-derived previews.
-  // Memoized on (state, buildsByBranch) so re-renders don't fan out.
-  return useMemo(() => {
-    if (state.status !== "ready") return state;
-    if (buildsByBranch.size === 0) return state;
-    const enriched = state.data.previews.map((p) =>
-      enrichPreviewWithBuild(p, buildsByBranch.get(p.branch)),
-    );
+  // Render-time merge: overlay live build state onto GH-derived previews,
+  // then attach the action callbacks the public DashboardDataState exposes.
+  // Memoized on (state, buildsByBranch, …) so re-renders don't fan out.
+  return useMemo<DashboardDataState>(() => {
+    if (state.status === "loading") return { status: "loading" };
+    if (state.status === "no-repo") return { status: "no-repo" };
+    if (state.status === "error")
+      return { status: "error", error: state.error, refresh };
+
+    const data =
+      buildsByBranch.size === 0
+        ? state.data
+        : {
+            ...state.data,
+            previews: state.data.previews.map((p) =>
+              enrichPreviewWithBuild(p, buildsByBranch.get(p.branch)),
+            ),
+          };
     return {
-      ...state,
-      data: { ...state.data, previews: enriched },
+      status: "ready",
+      data,
+      refresh,
+      hasMoreActivity: state.hasMoreActivity,
+      hasMorePreviews: state.hasMorePreviews,
+      loadMoreActivity,
+      loadMorePreviews,
+      loadingMore,
     };
-  }, [state, buildsByBranch]);
+  }, [state, buildsByBranch, refresh, loadMoreActivity, loadMorePreviews, loadingMore]);
 }

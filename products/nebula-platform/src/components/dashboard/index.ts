@@ -8,6 +8,7 @@ export { DeploymentHeroCard } from "./DeploymentHeroCard";
 export { DeploymentLogList } from "./DeploymentLogList";
 export { DeploymentThumbnail } from "./DeploymentThumbnail";
 export { LiveExpandedDetails } from "./LiveExpandedDetails";
+export { LoadMoreFooter } from "./LoadMoreFooter";
 export { NebulaBotAvatar } from "./NebulaBotAvatar";
 export { PreviewExpandedDetails } from "./PreviewExpandedDetails";
 export { PreviewsTable } from "./PreviewsTable";

@@ -1,13 +1,23 @@
 import { ActivityRow } from "@/components/dashboard/ActivityRow";
+import { LoadMoreFooter } from "@/components/dashboard/LoadMoreFooter";
 import { LiveExpandedDetails } from "@/components/dashboard/LiveExpandedDetails";
 import type { ActivityEntry, Deployment } from "@/lib/dashboard";
 
 interface ActivityTableProps {
   entries: ActivityEntry[];
   deployment: Deployment;
+  hasMore: boolean;
+  onLoadMore: () => void;
+  loadingMore: boolean;
 }
 
-export function ActivityTable({ entries, deployment }: ActivityTableProps) {
+export function ActivityTable({
+  entries,
+  deployment,
+  hasMore,
+  onLoadMore,
+  loadingMore,
+}: ActivityTableProps) {
   return (
     <div className='overflow-hidden rounded-xl border border-border/60 bg-card text-card-foreground'>
       <div className='flex items-center gap-4 border-b border-border/60 bg-muted/20 px-4 py-2 text-xs font-medium uppercase tracking-wide text-muted-foreground'>
@@ -28,6 +38,9 @@ export function ActivityTable({ entries, deployment }: ActivityTableProps) {
           />
         ))}
       </div>
+      {hasMore ? (
+        <LoadMoreFooter onLoadMore={onLoadMore} loading={loadingMore} />
+      ) : null}
     </div>
   );
 }

@@ -105,17 +105,31 @@ const searchEnabled = Boolean(docs.search);
       <div class="nebula-navbar-cta">
         {navbarLinks.map((link: any) => {
           const linkIcon = resolveIcon(link.icon);
+          const isExternal = typeof link.href === 'string' && /^https?:\/\//i.test(link.href);
           return (
-            <a class="nebula-navbar-link" href={withBase(link.href, siteBase)}>
+            <a
+              class="nebula-navbar-link"
+              href={withBase(link.href, siteBase)}
+              target={isExternal ? '_blank' : undefined}
+              rel={isExternal ? 'noopener noreferrer' : undefined}
+            >
               {linkIcon && (
-                <NebulaIcon
-                  name={linkIcon.name}
-                  library={linkIcon.library}
-                  type={linkIcon.type}
-                  size={14}
-                />
+                <span
+                  class="nebula-navbar-link-icon"
+                  style={link.color ? `color: ${link.color}` : undefined}
+                >
+                  <NebulaIcon
+                    name={linkIcon.name}
+                    library={linkIcon.library}
+                    type={linkIcon.type}
+                    size={14}
+                  />
+                </span>
               )}
               <span>{link.label}</span>
+              {isExternal && (
+                <NebulaIcon name="external-link" library="lucide" size={12} class="nebula-navbar-link-external" />
+              )}
             </a>
           );
         })}
@@ -374,6 +388,17 @@ const searchEnabled = Boolean(docs.search);
   .nebula-navbar-link:hover {
     background: color-mix(in srgb, var(--mcoe-text-heading) 4%, transparent);
     text-decoration: none;
+  }
+  /* Wrapper span scopes the configured `link.color` to the leading icon
+     only — the label and the trailing external-link arrow keep their
+     default text colors regardless of what the author picks. */
+  .nebula-navbar-link-icon {
+    display: inline-flex;
+    align-items: center;
+  }
+  .nebula-navbar-link-external {
+    color: var(--mcoe-text-secondary);
+    opacity: 0.7;
   }
   .nebula-navbar-primary {
     display: inline-flex;

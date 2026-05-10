@@ -18,6 +18,29 @@ export interface IconValue {
   iconType?: IconType;
 }
 
+/** docs.json icon shape — string name or `{ name, library, style }` object. */
+export type DocsIconValue = string | { name: string; library?: string; style?: string };
+
+export function docsIconToForm(icon: DocsIconValue | undefined): IconValue {
+  if (!icon) return {};
+  if (typeof icon === "string") return { icon };
+  return {
+    icon: icon.name,
+    iconLibrary: icon.library as IconLibrary | undefined,
+    iconType: icon.style as IconType | undefined,
+  };
+}
+
+export function formIconToDocs(icon: IconValue): DocsIconValue | undefined {
+  if (!icon.icon) return undefined;
+  if (!icon.iconLibrary && !icon.iconType) return icon.icon;
+  return {
+    name: icon.icon,
+    library: icon.iconLibrary,
+    style: icon.iconType,
+  };
+}
+
 interface IconFieldProps {
   value: IconValue;
   onChange: (next: IconValue) => void;

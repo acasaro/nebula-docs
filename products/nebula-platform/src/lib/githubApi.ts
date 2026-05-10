@@ -385,7 +385,7 @@ export async function createPullRequest(
   base: string,
   title: string,
   body: string,
-): Promise<{ number: number; url: string }> {
+): Promise<{ number: number; url: string; nodeId: string }> {
   const oct = await octokitFor(installationId);
   const { data } = await oct.pulls.create({
     owner,
@@ -395,5 +395,39 @@ export async function createPullRequest(
     title,
     body,
   });
-  return { number: data.number, url: data.html_url };
+  return { number: data.number, url: data.html_url, nodeId: data.node_id };
+}
+
+export type MergeMethod = 'MERGE' | 'SQUASH' | 'REBASE';
+
+/**
+ * Enable auto-merge on a PR via GitHub's GraphQL API. The merge happens
+ * automatically once required status checks pass and the PR is mergeable.
+ *
+ * Requires (configured on the repo, not the call):
+ *   - Repository setting "Allow auto-merge" enabled.
+ *   - Branch protection on the base branch with at least one required
+ *     status check OR required review. Without something to wait for,
+ *     GitHub refuses auto-merge with "Pull request is in clean status".
+ *
+ * Throws on failure with the GitHub error message attached. Common cases:
+ *   - "Auto merge is not allowed for this repository" — setting not enabled
+ *   - "Branch X is not enabled for pull requests" — protection misconfigured
+ *   - "Pull request is in clean status" — PR is already mergeable; caller
+ *     can fall back to a direct merge.
+ */
+export async function enableAutoMerge(
+  installationId: number,
+  prNodeId: string,
+  mergeMethod: MergeMethod = 'SQUASH',
+): Promise<void> {
+  const oct = await octokitFor(installationId);
+  await oct.graphql(
+    `mutation($prId: ID!, $method: PullRequestMergeMethod!) {
+       enablePullRequestAutoMerge(input: { pullRequestId: $prId, mergeMethod: $method }) {
+         pullRequest { number autoMergeRequest { enabledAt } }
+       }
+     }`,
+    { prId: prNodeId, method: mergeMethod },
+  );
 }

@@ -19,6 +19,7 @@ import {
   commitFiles,
   createBranch,
   createPullRequest,
+  enableAutoMerge,
   fetchFileContent,
   fetchRepoTree,
   listBranches,
@@ -1464,11 +1465,11 @@ export function RepoBrowser() {
     setCreatingPr(true);
     setSaveMessage(null);
     try {
-      // Auto-save any pending dirty drafts onto the branch first so the PR
-      // includes them. Skipping save here would open a PR that's missing
-      // in-progress work.
+      // Auto-save any pending dirty drafts onto the branch first so the
+      // publish includes them. Skipping save here would publish a PR
+      // that's missing in-progress work.
       if (dirtyPaths.length > 0) await handleSave();
-      const { number, url } = await createPullRequest(
+      const { number, url, nodeId } = await createPullRequest(
         active.installationId,
         active.owner,
         active.repo,
@@ -1477,10 +1478,26 @@ export function RepoBrowser() {
         title,
         body,
       );
-      setSaveMessage(`Opened PR #${number}: ${url}`);
+      // Enable auto-merge so GitHub queues the merge and executes when
+      // the deploy.yml workflow's required check passes. Failures here
+      // (auto-merge disabled, no required check, etc.) are non-fatal:
+      // the PR is open, user can merge it manually on github.com.
+      try {
+        await enableAutoMerge(active.installationId, nodeId);
+        setSaveMessage(
+          `Publishing — PR #${number} will merge after the build passes: ${url}`,
+        );
+      } catch (mergeErr) {
+        const reason =
+          mergeErr instanceof Error ? mergeErr.message : "unknown";
+        setSaveMessage(
+          `PR #${number} opened — merge manually (${reason}): ${url}`,
+        );
+      }
     } catch (err) {
-      const detail = err instanceof Error ? err.message : "Failed to create PR.";
-      setSaveMessage(`PR failed: ${detail}`);
+      const detail =
+        err instanceof Error ? err.message : "Failed to publish.";
+      setSaveMessage(`Publish failed: ${detail}`);
       throw err instanceof Error ? err : new Error(detail);
     } finally {
       setCreatingPr(false);

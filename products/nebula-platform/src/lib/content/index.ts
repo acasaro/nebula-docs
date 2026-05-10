@@ -21,6 +21,7 @@ export const listBranches = provider.listBranches;
 export const createBranch = provider.createBranch;
 export const commitFiles = provider.commitFiles;
 export const createPullRequest = provider.createPullRequest;
+export const enableAutoMerge = provider.enableAutoMerge;
 export const listRecentCommits = provider.listRecentCommits;
 export const getCommitDetails = provider.getCommitDetails;
 
@@ -31,4 +32,5 @@ export type {
   CommitSummary,
   CommitFileChange,
   CommitDetails,
+  MergeMethod,
 } from './githubProvider';

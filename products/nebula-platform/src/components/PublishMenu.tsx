@@ -94,7 +94,8 @@ export function PublishMenu({
               <p
                 className={cn(
                   "mb-2 px-1 text-xs leading-tight",
-                  message.startsWith("Save failed") || message.startsWith("PR failed")
+                  message.startsWith("Save failed") ||
+                    message.startsWith("Publish failed")
                     ? "text-destructive"
                     : "text-emerald-500",
                 )}>

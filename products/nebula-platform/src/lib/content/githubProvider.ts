@@ -11,6 +11,7 @@ export {
   createBranch,
   commitFiles,
   createPullRequest,
+  enableAutoMerge,
   listRecentCommits,
   getCommitDetails,
 } from '@/lib/githubApi';
@@ -22,4 +23,5 @@ export type {
   CommitSummary,
   CommitFileChange,
   CommitDetails,
+  MergeMethod,
 } from '@/lib/githubApi';

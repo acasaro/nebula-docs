@@ -96,10 +96,20 @@ export async function createPullRequest(
   _base: string,
   _title: string,
   _body: string,
-): Promise<{ number: number; url: string }> {
+): Promise<{ number: number; url: string; nodeId: string }> {
   throw new Error(
     "Pull requests aren't supported in local mode — your edits are written directly to the tenant on disk.",
   );
+}
+
+export type MergeMethod = 'MERGE' | 'SQUASH' | 'REBASE';
+
+export async function enableAutoMerge(
+  _installationId: number,
+  _prNodeId: string,
+  _mergeMethod?: MergeMethod,
+): Promise<void> {
+  throw new Error("Auto-merge isn't supported in local mode.");
 }
 
 export async function listRecentCommits(

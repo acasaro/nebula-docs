@@ -56,10 +56,6 @@ What's currently open and what's next. Completed-work narrative lives in git his
 
 Most of the plumbing is in place; the open work is the editor UI for tenants to author overrides without hand-editing JSON.
 
-### OOSS hosting port
-
-Add OOSS as a parallel deploy target for tenants behind UHG firewall. Handoff is in [ooss-hosting-port.md](ooss-hosting-port.md). The Firebase Hosting implementation is shipped; OOSS templates exist at `packages/cli/template/.github/workflows-ooss/` but haven't been executed for a real tenant.
-
 ## Status conventions
 
 When a workstream item lands, update this doc rather than spinning up a handoff file. Decisions discovered during work go into [decisions.md](decisions.md). If a workstream becomes substantial enough to need its own architecture doc, add it under `.claude/<topic>.md` and link from here.

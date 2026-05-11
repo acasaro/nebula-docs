@@ -57,9 +57,6 @@ vendor/                  # Reference material; delete each one once we stop refe
   editor-toolbars.md     # TextToolbar + LinkBubble + slot-aware dropdown pattern. Read
                          #   when touching the bubble menu, link bubble, or adding an
                          #   editable title slot.
-  ooss-hosting-port.md   # Handoff guide for porting the preview/notification flow from
-                         #   Firebase Hosting to OOSS. The Firebase implementation shipped;
-                         #   the OOSS port has not been executed for a tenant yet.
 ```
 
 ## Stack (workspace-wide)
@@ -67,7 +64,7 @@ vendor/                  # Reference material; delete each one once we stop refe
 - **Package manager**: pnpm v10.33 (workspace at root)
 - **Node**: ≥22 (pinned via `.nvmrc`)
 - **TypeScript**: strict everywhere; per-package `tsconfig.json` extends `tsconfig.base.json`
-- **CI**: GitHub Actions on `uhg-runner` → JFrog mirror → OOSS (deploys SPA + legacy docs site). Functions deploy manually (`deploy-functions.yml` is a stub).
+- **CI**: GitHub Actions on `uhg-runner` → JFrog mirror → Firebase Hosting (deploys Platform SPA via the `platform` target; tenant docs deploy via the templates in `packages/cli/template/.github/workflows/`). Functions deploy manually (`deploy-functions.yml` is a stub).
 - **Backend**: Firebase project `mcoe-d`. Auth + Firestore + Functions. Two Firestore databases: `(default)` for prod, `nebula-docs-plat-dev` for dev.
 - **Active env switch**: `NEBULA_ENV=dev|prod` in the root `.env`. Picks the GH App pair, the Firestore database, and the Cloud Function name suffix (`*Dev` vs unsuffixed).
 

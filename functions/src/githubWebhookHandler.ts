@@ -204,18 +204,23 @@ function buildWrites(eventName: string, payload: Record<string, unknown>): Fires
 }
 
 /**
- * Resolve the tenant's `deploy.bucketBaseUrl` from its `docs.json`. The
- * function uses an App-installation token (already minted for `mintGithubToken`)
- * to GET the file via Octokit. Returns `null` when the field is unset, the
- * file is missing, or the request fails — the caller treats null as "no
- * preview URL", which is intentional: tenants that haven't opted into
- * preview builds simply omit the field.
+ * Resolve the tenant's optional `deploy.bucketBaseUrl` override from its
+ * `docs.json`. Dormant plumbing — Firebase Hosting tenants (the default)
+ * leave the field unset and their preview URLs arrive via the
+ * `recordPreview` callback the deploy workflow POSTs. This function only
+ * fires the fallback path for tenants whose CI publishes to a static-host
+ * sub-path that the workflow can't easily echo back.
+ *
+ * Uses the App-installation token (already minted for `mintGithubToken`)
+ * to GET the file via Octokit. Returns `null` when the field is unset,
+ * the file is missing, or the request fails — the caller treats null as
+ * "no preview URL from this path".
  *
  * Cached per-repo at module scope with a short TTL. Cloud Function
  * containers are reused across invocations, so consecutive workflow_run
  * events for the same PR usually hit the cache (workflow_run fires 3+
  * times per CI run: queued / in_progress / completed). The TTL is short
- * enough that a tenant flipping bucketBaseUrl propagates within minutes.
+ * enough that a tenant flipping the field propagates within minutes.
  */
 const docsConfigCache = new Map<string, { bucketBaseUrl: string | null; fetchedAt: number }>();
 const DOCS_CONFIG_TTL_MS = 5 * 60 * 1000;

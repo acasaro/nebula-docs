@@ -6,7 +6,7 @@ The editor side of Nebula Docs. Pairs with the CLI documented in [nebula-cli.md]
 
 Git-based MDX editor. Sign in, pick a repo via the GitHub App, browse the file tree, edit MDX visually, commit + open PR. CI runs `nebula build` in the tenant repo and deploys the static site.
 
-**Stack:** Vite + React 19 + React Router 7 + Tailwind v4 + shadcn/ui + Tiptap (ProseMirror). Static SPA hosted in OOSS bucket `mcoe-dev-nebula`.
+**Stack:** Vite + React 19 + React Router 7 + Tailwind v4 + shadcn/ui + Tiptap (ProseMirror). Static SPA hosted on Firebase Hosting (target `platform`).
 
 **Two auth layers:**
 

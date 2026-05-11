@@ -32,9 +32,10 @@ export interface BuildDoc {
   receivedAt: Timestamp | null;
   pullRequestNumber: number | null;
   /** Set when the workflow's deploy step has reported back via the
-   *  recordPreview Cloud Function (Firebase Hosting path) OR when the
-   *  webhook resolved it from `docs.json` `deploy.bucketBaseUrl` (OOSS path).
-   *  Absent until the deploy step runs. */
+   *  recordPreview Cloud Function after `firebase hosting:channel:deploy`.
+   *  Fallback: the webhook resolves it from `docs.json` `deploy.bucketBaseUrl`
+   *  if the tenant has set that dormant override. Absent until the deploy
+   *  step runs. */
   previewUrl: string | null;
   repoFullName: string;
 }

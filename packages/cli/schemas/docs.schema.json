@@ -131,12 +131,12 @@
     "deploy": {
       "type": "object",
       "additionalProperties": false,
-      "description": "Build / deploy metadata. Used by the Cloud Functions webhook handler to construct per-PR preview URLs. Tenants that don't opt into preview builds can omit this field.",
+      "description": "Reserved for tenant-specific deploy overrides read by the webhook handler. Firebase Hosting tenants leave this off — preview URLs arrive via the recordPreview callback.",
       "properties": {
         "bucketBaseUrl": {
           "type": "string",
           "format": "uri",
-          "description": "Public base URL of the tenant's OOSS bucket, without trailing slash. The webhook handler appends `/previews/<PR#>/` to construct the preview URL written to builds/{run_id}.previewUrl."
+          "description": "Optional static-host base URL override, without trailing slash. Dormant — leave unset for Firebase Hosting tenants. When present, the webhook handler appends `/previews/<PR#>/` to construct the preview URL written to builds/{run_id}.previewUrl."
         }
       }
     },

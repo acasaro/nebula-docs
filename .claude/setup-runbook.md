@@ -36,7 +36,7 @@ Before clicking anything, write these down:
 | Field                       | Example                  | Notes                                                     |
 | --------------------------- | ------------------------ | --------------------------------------------------------- |
 | Firebase project ID         | `mcoe-d`                 | Lowercase, hyphenated. Hard to change later.              |
-| Tenant repo slug            | `uhg-internal/mcoe-docs-tenant` | `<org>/<repo>` on GitHub.                                |
+| Tenant repo slug            | `uhg-internal/mcoe-docs` | `<org>/<repo>` on GitHub.                                |
 | Firebase Hosting site name  | `mcoe-docs`              | One per tenant. **Distinct** from project ID. Determines the public URL `<site>.web.app`. |
 | Hosting target alias        | `docs`                   | Local alias in `.firebaserc`; lets `firebase.json` ref it by name. |
 | GitHub App name (prod)      | `nebula-docs-platform`   | Shown on PRs as the committing identity.                  |
@@ -137,7 +137,7 @@ placeholders in `deploy.yml`:
 
 | Placeholder                   | Value                                         |
 | ----------------------------- | --------------------------------------------- |
-| `REPLACE_ME_FRAMEWORK_REPO`   | `uhg-internal/nebula-docs` (until the CLI is on JFrog) |
+| `REPLACE_ME_FRAMEWORK_REPO`   | `uhc-tech/nebula-docs-platform` (until the CLI is on JFrog) |
 | `REPLACE_ME_SITE_NAME`        | Firebase hosting site name from step 3, e.g. `mcoe-docs` |
 
 The secret name in the workflows (`FIREBASE_SERVICE_ACCOUNT_MCOE_D`) must
@@ -652,6 +652,5 @@ Set via `firebase functions:secrets:set <name> --data-file=<path>
 
 # When in doubt
 
-- For Path A questions, also read [.claude/ooss-hosting-port.md](ooss-hosting-port.md) — it overlaps in the "wire a tenant for hosting" sections.
 - For architecture context, [.claude/architecture.md](architecture.md) and [.claude/nebula.md](nebula.md).
 - The Cloud Functions code in `functions/src/` is the authoritative source for secret names + auth shapes. Grep `defineSecret` if anything in this doc looks stale.

@@ -31,8 +31,7 @@ The renderer + tooling. Pairs with the Platform documented in [nebula.md](nebula
                      ▼
               ┌─────────────────────────┐
               │ Tenant deploy target    │
-              │ Firebase Hosting (def)  │
-              │ or OOSS (opt-in)        │
+              │ Firebase Hosting        │
               └─────────────────────────┘
 ```
 
@@ -80,7 +79,6 @@ Key sections (full schema in `packages/schemas/src/docs/`):
 - `navbar`, `footer` — chrome
 - `search` → `{ provider: "pagefind", scopeBy: "tab" }` — Pagefind opt-in; omit to ship zero search JS
 - `analytics` → `{ provider: "firebase" }` — opt-in; omit to ship zero analytics JS
-- `deploy.bucketBaseUrl` — OOSS opt-in (Firebase Hosting is default)
 - `redirects`, `errors.404` — routing extras
 
 **Validation.** Tenants get a JSON Schema published at a stable URL. The CLI validates at build time; Platform validates on save.
@@ -103,12 +101,7 @@ Key sections (full schema in `packages/schemas/src/docs/`):
 - **MDX content** — `remarkBasePrefix` walks MDAST rewriting `link`/`image` URLs plus string-valued `href`/`src` on JSX flow/text elements. Idempotent, no-op when base is unset.
 - **Expression-valued attrs** (`<Card href={someVar} />`) aren't rewritten — wrap with `withBase` yourself.
 
-Two deploy paths converge on `builds/{run_id}.previewUrl` in Firestore:
-
-- **Firebase Hosting (default)** — `FirebaseExtended/action-hosting-deploy@v0` → Preview Channels → workflow POSTs channel URL to `recordPreview` Cloud Function with shared-secret auth.
-- **OOSS (opt-in)** — workflow `aws s3 sync` to `previews/<PR#>/`; webhook handler reads `deploy.bucketBaseUrl` from `docs.json` via Octokit (5-min per-repo cache) and computes `previewUrl = ${bucketBaseUrl}/previews/<PR#>/`.
-
-The OOSS port is documented in [ooss-hosting-port.md](ooss-hosting-port.md) — the templates exist at `packages/cli/template/.github/workflows-ooss/` but haven't been executed for a real tenant.
+Preview URLs land on `builds/{run_id}.previewUrl` in Firestore via Firebase Hosting Preview Channels: the tenant workflow runs `firebase hosting:channel:deploy` (channel ID derived from branch name), extracts the channel URL from the CLI's JSON output, then POSTs it to the `recordPreview` Cloud Function with shared-secret auth. The dashboard subscription reads the doc and surfaces the Preview button.
 
 ## Snippets (Mintlify-aligned ES imports)
 
@@ -148,7 +141,6 @@ Phase 0 (skeleton) + Phase 1 (synthetic tenant renders) shipped. Pagefind search
 
 ## See also
 
-- [decisions.md](decisions.md) — locked decisions (Astro, Pagefind, Firebase Hosting default, etc.) + the gotchas that bite (SSR boundary, auto-import shadowing, dark-mode FOUC, prose layering, Tailwind workspace scan)
+- [decisions.md](decisions.md) — locked decisions (Astro, Pagefind, Firebase Hosting, etc.) + the gotchas that bite (SSR boundary, auto-import shadowing, dark-mode FOUC, prose layering, Tailwind workspace scan)
 - [nebula.md](nebula.md) — the Platform side
 - [status.md](status.md) — current open work
-- [ooss-hosting-port.md](ooss-hosting-port.md) — OOSS porting handoff

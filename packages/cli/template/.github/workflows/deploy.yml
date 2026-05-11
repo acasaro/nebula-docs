@@ -17,7 +17,7 @@ name: Deploy docs
 # === Setup checklist ===
 #
 # 1. Replace the placeholders below in this file:
-#       REPLACE_ME_FRAMEWORK_REPO  →  e.g. uhg-internal/nebula-docs
+#       REPLACE_ME_FRAMEWORK_REPO  →  e.g. uhc-tech/nebula-docs-platform
 #                                     (the repo holding @nebula-docs/cli;
 #                                      this is a transitional shape — once
 #                                      the CLI is published to npm, drop the

@@ -8,7 +8,7 @@ Settled architectural choices and gotchas that future Claude will hit. Don't rel
 - **Source-of-truth: Tiptap doc in memory, MDX as the I/O format.** Load: MDX → MDAST → Tiptap doc. Serialize: Tiptap doc → MDX on every `onUpdate`. JSX without a NodeView wraps as opaque `mdxRaw`. `normalizeMdx()` round-trips a file on load so opening doesn't mark it dirty.
 - **Edit storage: in-memory until commit.** No Firestore drafts. A reload loses unsaved work.
 - **Vite + Cloud Functions, not Next.js.** Only signing the GH App private key needs server-side execution; everything else is happy in the client. `httpsCallable()` replaces Server Actions.
-- **SPA host: OOSS bucket `mcoe-dev-nebula`.** Behind UHG firewall; same deploy chain as the docs site.
+- **SPA host: Firebase Hosting.** Target `platform` / site `docs-nebula` per `firebase.json` + `.firebaserc`. Same Firebase project (`mcoe-d`) that backs Auth, Firestore, and Functions.
 - **Auth split: Firebase Auth (identity) + GitHub App (repo access), kept separate.** GH App holds repo permissions; users don't need their own repo permissions on GitHub. Commit attribution is `nebula-docs[bot]` with user noted in the commit body.
 
 ## CLI (renderer)
@@ -16,7 +16,7 @@ Settled architectural choices and gotchas that future Claude will hit. Don't rel
 - **Astro 5+, static-first.** `@astrojs/mdx` + `@astrojs/react` + Tailwind v4. React components hydrate as islands; a tenant who writes pure prose ships zero JS.
 - **Single monolithic `@nebula-docs/cli` package.** Don't split until a concrete trigger arrives (e.g., Platform needs to invoke a build server-side).
 - **Per-tenant repo, owned by the tenant team.** The CLI is an npm dep, not a hosted service. Tenants pin the CLI version in their `package.json` and upgrade when they choose.
-- **Firebase Hosting is the default tenant deploy target. OOSS is opt-in.** Reversed 2026-05-08 from the original "OOSS bucket per tenant" call. Tenants behind UHG firewall opt into OOSS via `docs.json.deploy.bucketBaseUrl`. Don't propose OOSS unless a tenant has a firewall-internal hosting requirement.
+- **Firebase Hosting is the only supported tenant deploy target.** Reversed 2026-05-08 from the original "OOSS bucket per tenant" call; OOSS support was dropped 2026-05-11 to simplify the CLI distribution surface ahead of npm packaging. The `docs.json.deploy.bucketBaseUrl` field remains in the schema as a generic static-host override (dormant) but is not tied to OOSS and is not a documented option.
 - **Pagefind for search.** Build-time index, zero runtime dependency, multi-tenant by construction. Tenants opt in via `docs.json.search`; omitting it ships zero search JS.
 - **Snippets: ES module imports (Mintlify-aligned), not a custom `<Snippet file="...">` wrapper.** `@nebula-docs/mdx`'s `remarkAutoComponentImports` injects unimported component-name JSX tags as imports. Vite aliases `/snippets/*`, `/content/snippets/*`, `/shared/*` to the tenant root.
 - **Concurrency: assume single-editor per tenant.** No file-locking. Revisit if a tenant ever has two simultaneous editors.

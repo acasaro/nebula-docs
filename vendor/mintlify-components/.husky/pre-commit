@@ -1,4 +1,0 @@
-#!/bin/sh
-
-# Run lint before committing
-pnpm lint

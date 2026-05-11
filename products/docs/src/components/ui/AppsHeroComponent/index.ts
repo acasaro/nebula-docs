@@ -1,1 +1,0 @@
-export { AppsHeroComponent } from './AppsHeroComponent';

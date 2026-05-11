@@ -57,6 +57,9 @@ vendor/                  # Reference material; delete each one once we stop refe
   editor-toolbars.md     # TextToolbar + LinkBubble + slot-aware dropdown pattern. Read
                          #   when touching the bubble menu, link bubble, or adding an
                          #   editable title slot.
+  sync-from-personal.md  # Runbook for syncing the personal (public) repo's main into the
+                         #   enterprise repo as a single commit authored by the work user.
+                         #   Uses `git read-tree --reset -u` to swap the tree without a merge.
 ```
 
 ## Stack (workspace-wide)

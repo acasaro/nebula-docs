@@ -132,10 +132,10 @@ Ask the user (or grep around to confirm) BEFORE making changes. Don't assume.
    the existing PR-template uses `aws s3 sync` directly for sub-paths. Same
    approach here.
 6. **Is the framework npm-published yet?** The Firebase workflow checks out
-   `acasaro/nebula-docs` as a sister repo since `@nebula-docs/cli` isn't on
+   `uhg-internal/nebula-docs` as a sister repo since `@nebula-docs/cli` isn't on
    the JFrog mirror yet. If the user has since published the CLI to JFrog,
    you can drop the second checkout and just `pnpm install` + `pnpm nebula
-   build`. Check by grepping `acasaro/nebula-docs` in the existing tenant
+   build`. Check by grepping `uhg-internal/nebula-docs` in the existing tenant
    workflow.
 7. **Is the recordPreview Cloud Function deployed to this tenant's GitHub
    App webhook?** The function (`recordPreview` for prod, `recordPreviewDev`
@@ -214,7 +214,7 @@ jobs:
       - name: Checkout framework
         uses: actions/checkout@v4
         with:
-          repository: acasaro/nebula-docs   # or wherever the framework lives
+          repository: uhg-internal/nebula-docs   # or wherever the framework lives
           path: nebula-docs
           ref: main
 

@@ -26,6 +26,7 @@ on:
   workflow_dispatch:
 
 permissions:
+  id-token: write
   contents: read
 
 concurrency:
@@ -40,16 +41,26 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+      - name: Configure JFrog SaaS Connection
+        uses: uhg-pipelines/epl-jf/configure-saas-connection@v4
         with:
-          version: 10.33.0
+          jfrog-url: https://centraluhg.jfrog.io
+          jfrog-edge-url: https://centraluhg.jfrog.io
+          jfrog-project-key: glb
+          npm-setup: true
+
+      - name: Fix pnpm auth for JFrog virtual repos
+        run: |
+          TOKEN=$(grep 'glb-npm-vir/:_authToken=' ~/.npmrc | sed 's/.*_authToken=//')
+          echo "//centraluhg.jfrog.io/:_authToken=${TOKEN}" >> ~/.npmrc
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version-file: ".nvmrc"
-          cache: "pnpm"
+
+      - name: Install pnpm
+        run: npm install -g pnpm@10.33.0
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -67,11 +78,16 @@ jobs:
           FIREBASE_MEASUREMENT_ID: ${{ secrets.FIREBASE_MEASUREMENT_ID }}
           GITHUB_APP_INSTALL_URL: ${{ secrets.GITHUB_APP_INSTALL_URL }}
 
+      - name: Install Firebase CLI
+        run: npm install -g firebase-tools
+
+      - name: Authenticate Firebase
+        run: |
+          echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT_MCOE_D }}' > "${{ runner.temp }}/firebase-sa.json"
+          echo "GOOGLE_APPLICATION_CREDENTIALS=${{ runner.temp }}/firebase-sa.json" >> "$GITHUB_ENV"
+
       - name: Deploy to Firebase Hosting (docs-nebula)
-        uses: FirebaseExtended/action-hosting-deploy@v0
-        with:
-          repoToken: ${{ secrets.GITHUB_TOKEN }}
-          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_MCOE_D }}
-          projectId: mcoe-d
-          target: platform
-          channelId: live
+        run: |
+          firebase deploy --only hosting:platform \
+            --project mcoe-d \
+            --force

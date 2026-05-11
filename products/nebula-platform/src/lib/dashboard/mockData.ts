@@ -16,7 +16,7 @@ function commit(branch: string, shortSha: string) {
     source: `refs/heads/${branch}`,
     shortSha,
     fullSha: shortSha.padEnd(40, "0"),
-    htmlUrl: `https://github.com/acasaro/mcoe-docs/commit/${shortSha}`,
+    htmlUrl: `https://github.com/uhg-internal/mcoe-docs/commit/${shortSha}`,
   };
 }
 
@@ -39,7 +39,7 @@ const deployment: Deployment = {
   status: "live",
   domain: "mcoe-docs.nebula.app",
   customDomain: null,
-  owner: "acasaro",
+  owner: "uhg-internal",
   repo: "mcoe-docs",
   branch: "main",
   lastUpdatedAt: hoursAgo(8),
@@ -181,7 +181,7 @@ const previews: PreviewEntry[] = [
     filesChanged: [
       {
         path: "documentation/overview.mdx",
-        url: "https://github.com/acasaro/mcoe-docs/blob/test-new-branch/documentation/overview.mdx",
+        url: "https://github.com/uhg-internal/mcoe-docs/blob/test-new-branch/documentation/overview.mdx",
       },
     ],
     log: expandedLog,
@@ -202,7 +202,7 @@ const previews: PreviewEntry[] = [
     filesChanged: [
       {
         path: "documentation/overview.mdx",
-        url: "https://github.com/acasaro/mcoe-docs/blob/test-new-branch/documentation/overview.mdx",
+        url: "https://github.com/uhg-internal/mcoe-docs/blob/test-new-branch/documentation/overview.mdx",
       },
     ],
     log: expandedLog,
@@ -224,15 +224,15 @@ const previews: PreviewEntry[] = [
     filesChanged: [
       {
         path: "docs.json",
-        url: "https://github.com/acasaro/mcoe-docs/blob/test-new-branch/docs.json",
+        url: "https://github.com/uhg-internal/mcoe-docs/blob/test-new-branch/docs.json",
       },
       {
         path: "documentation/format-text.mdx",
-        url: "https://github.com/acasaro/mcoe-docs/blob/test-new-branch/documentation/format-text.mdx",
+        url: "https://github.com/uhg-internal/mcoe-docs/blob/test-new-branch/documentation/format-text.mdx",
       },
       {
         path: "documentation/overview.mdx",
-        url: "https://github.com/acasaro/mcoe-docs/blob/test-new-branch/documentation/overview.mdx",
+        url: "https://github.com/uhg-internal/mcoe-docs/blob/test-new-branch/documentation/overview.mdx",
       },
     ],
     log: expandedLog,

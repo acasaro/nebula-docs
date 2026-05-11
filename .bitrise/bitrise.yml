@@ -1,0 +1,37 @@
+---
+format_version: '26'
+default_step_lib_source: https://github.com/bitrise-io/bitrise-steplib.git
+project_type: node-js
+workflows:
+  run_tests:
+    steps:
+    - git-clone@8: {}
+    - restore-npm-cache@3: {}
+    - npm@3:
+        title: npm install
+        inputs:
+        - command: install
+    - npm@3:
+        title: npm run lint
+        inputs:
+        - command: run lint
+    - save-npm-cache@1: {}
+    triggers:
+      push:
+      - branch: main
+      pull_request:
+      - source_branch: "*"
+tools:
+  node: '22'
+meta:
+  bitrise.io:
+    stack: linux-docker-android-22.04
+    machine_type_id: g2.linux.2medium
+app:
+  envs:
+  - NODEJS_PROJECT_DIR: "."
+    opts:
+      is_expand: false
+  - temp_id_1: npm
+    opts:
+      is_expand: false

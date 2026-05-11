@@ -8,7 +8,7 @@
   },
   "scripts": {
     "dev:docs": "pnpm --filter @mcoe/docs start",
-    "dev:nebula": "pnpm --filter @nebula-docs/platform dev",
+    "nebula": "pnpm --filter @nebula-docs/platform dev",
     "build:docs": "pnpm --filter @mcoe/docs build",
     "build:nebula": "pnpm --filter @nebula-docs/platform build",
     "build": "pnpm -r build",

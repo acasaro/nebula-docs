@@ -50,7 +50,7 @@ Settled architectural choices and gotchas that future Claude will hit. Don't rel
 - **Tailwind workspace scan.** CLI's `global.css` adds `@source` directives for `../**/*.{astro,ts,tsx}` and `../../../components/src/**/*.{ts,tsx}` so utility classes from the symlinked workspace dep land in the bundle. Without it, Callout / Card / ParamField styles are missing.
 - **Frontmatter preservation in the editor.** Tiptap's parser drops `yaml` nodes; naive `tiptapDocToMdx` emits body-only MDX. `MdxEditor` keeps a `frontmatterRef` populated on `source` change and prepends it on every `onUpdate`. Without this, any cursor move wipes the frontmatter the settings panel just wrote.
 - **CodeGroup is currently shimmed via `.astro`** (the React version hits the SSR boundary above). When the Platform-side CodeGroup work stabilizes, diff the two APIs and converge on one.
-- **`commitFiles` deletions need a fresh tree rebuild.** GitHub's documented `sha: null + base_tree` merge returns `GitRPC::BadObjectState` for nested paths. The implementation fetches the parent commit's tree recursively and submits a flat tree without `base_tree`. Verified against `acasaro/mcoe-docs`.
+- **`commitFiles` deletions need a fresh tree rebuild.** GitHub's documented `sha: null + base_tree` merge returns `GitRPC::BadObjectState` for nested paths. The implementation fetches the parent commit's tree recursively and submits a flat tree without `base_tree`. Verified against `uhg-internal/mcoe-docs`.
 - **HMR brittleness on the CLI**: new MDX at content/ root or any `astro.config.mjs` edit can leave every page returning 500 with `UnknownContentCollectionError`. Stop the dev server and restart — don't try to fix in place.
 
 ## Known component API drift (intentional or accepted)

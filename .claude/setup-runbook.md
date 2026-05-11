@@ -36,7 +36,7 @@ Before clicking anything, write these down:
 | Field                       | Example                  | Notes                                                     |
 | --------------------------- | ------------------------ | --------------------------------------------------------- |
 | Firebase project ID         | `mcoe-d`                 | Lowercase, hyphenated. Hard to change later.              |
-| Tenant repo slug            | `acasaro/mcoe-docs-tenant` | `<org>/<repo>` on GitHub.                                |
+| Tenant repo slug            | `uhg-internal/mcoe-docs-tenant` | `<org>/<repo>` on GitHub.                                |
 | Firebase Hosting site name  | `mcoe-docs`              | One per tenant. **Distinct** from project ID. Determines the public URL `<site>.web.app`. |
 | Hosting target alias        | `docs`                   | Local alias in `.firebaserc`; lets `firebase.json` ref it by name. |
 | GitHub App name (prod)      | `nebula-docs-platform`   | Shown on PRs as the committing identity.                  |
@@ -137,7 +137,7 @@ placeholders in `deploy.yml`:
 
 | Placeholder                   | Value                                         |
 | ----------------------------- | --------------------------------------------- |
-| `REPLACE_ME_FRAMEWORK_REPO`   | `acasaro/nebula-docs` (until the CLI is on JFrog) |
+| `REPLACE_ME_FRAMEWORK_REPO`   | `uhg-internal/nebula-docs` (until the CLI is on JFrog) |
 | `REPLACE_ME_SITE_NAME`        | Firebase hosting site name from step 3, e.g. `mcoe-docs` |
 
 The secret name in the workflows (`FIREBASE_SERVICE_ACCOUNT_MCOE_D`) must

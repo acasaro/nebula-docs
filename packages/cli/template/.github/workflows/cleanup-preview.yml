@@ -26,7 +26,7 @@ jobs:
   cleanup:
     # Only trigger for branch deletions — `delete` also fires on tags.
     if: ${{ github.event_name == 'workflow_dispatch' || github.event.ref_type == 'branch' }}
-    runs-on: ubuntu-latest
+    runs-on: uhg-runner
 
     steps:
       # Need firebase.json in cwd; firebase CLI's `hosting:channel:delete`

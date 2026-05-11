@@ -289,12 +289,31 @@ export interface WebhookHandlerOptions {
     appId: SecretParam;
     privateKey: SecretParam;
   };
+  /**
+   * VPC connector to route the function's egress through. Set on the
+   * Enterprise prod wrapper so outbound calls to GitHub Enterprise leave
+   * via the allowlisted static IP (Cloud NAT behind `nebula-connector`).
+   * Dev wrapper omits this — dev talks to public github.com which has no
+   * IP allowlist, and routing dev egress through the NAT would just burn
+   * the static-IP budget for no benefit.
+   */
+  vpcConnector?: string;
+  /** Egress mode for the VPC connector. Defaults to ALL_TRAFFIC when vpcConnector is set. */
+  vpcConnectorEgressSettings?: 'ALL_TRAFFIC' | 'PRIVATE_RANGES_ONLY';
 }
 
 export function makeWebhookHandler(options: WebhookHandlerOptions): HttpsFunction {
-  const { secret, databaseId, githubApp } = options;
+  const { secret, databaseId, githubApp, vpcConnector, vpcConnectorEgressSettings } = options;
   const secrets = [secret, ...(githubApp ? [githubApp.appId, githubApp.privateKey] : [])];
-  return onRequest({ secrets }, async (request, response) => {
+  return onRequest({
+    secrets,
+    ...(vpcConnector
+      ? {
+          vpcConnector,
+          vpcConnectorEgressSettings: vpcConnectorEgressSettings ?? 'ALL_TRAFFIC',
+        }
+      : {}),
+  }, async (request, response) => {
     if (request.method !== 'POST') {
       response.status(405).send('Method Not Allowed');
       return;

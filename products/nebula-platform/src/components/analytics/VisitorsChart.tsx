@@ -1,4 +1,4 @@
-import { useId, useMemo } from "react";
+import { useId, useMemo, useState } from "react";
 import type { AnalyticsTimeseriesPoint } from "@/lib/analytics";
 
 interface VisitorsChartProps {
@@ -34,6 +34,7 @@ function shortDate(d: Date): string {
  */
 export function VisitorsChart({ points }: VisitorsChartProps) {
   const hatchId = useId();
+  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const max = useMemo(
     () => Math.max(1, ...points.map((p) => p.visitors)),
     [points],
@@ -65,18 +66,22 @@ export function VisitorsChart({ points }: VisitorsChartProps) {
               width='6'
               height='6'
               patternTransform='rotate(45)'>
-              <rect width='6' height='6' className='fill-emerald-400/35' />
-              <rect width='3' height='6' className='fill-emerald-400' />
+              <rect width='6' height='6' className='fill-brand/35' />
+              <rect width='3' height='6' className='fill-brand' />
             </pattern>
           </defs>
         </svg>
         {points.map((p, i) => {
           const heightPct = Math.max(2, (p.visitors / max) * 100);
+          const isHovered = hoveredIndex === i;
           return (
             <div
               key={i}
-              className='flex h-full items-end justify-center'
-              title={`${shortDate(p.date)}: ${p.visitors} visitors${p.partial ? " (partial)" : ""}`}>
+              className='relative flex h-full items-end justify-center'
+              onMouseEnter={() => setHoveredIndex(i)}
+              onMouseLeave={() =>
+                setHoveredIndex((prev) => (prev === i ? null : prev))
+              }>
               {p.partial ? (
                 <svg
                   width='100%'
@@ -95,10 +100,33 @@ export function VisitorsChart({ points }: VisitorsChartProps) {
                 </svg>
               ) : (
                 <div
-                  className='w-full rounded-md bg-emerald-400'
+                  className='w-full rounded-md bg-brand'
                   style={{ height: `${heightPct}%` }}
                 />
               )}
+              {isHovered ? (
+                <div
+                  role='tooltip'
+                  className='pointer-events-none absolute left-1/2 z-10 -translate-x-1/2 -translate-y-1.5 whitespace-nowrap rounded-md border border-border bg-popover px-2.5 py-1.5 text-xs shadow-md'
+                  style={{ bottom: `${heightPct}%` }}>
+                  <div className='font-medium text-foreground'>
+                    {shortDate(p.date)}
+                  </div>
+                  <div className='mt-0.5 flex items-center gap-1.5 text-muted-foreground'>
+                    <span
+                      aria-hidden='true'
+                      className='inline-block size-2 shrink-0 rounded-sm bg-brand'
+                    />
+                    <span className='font-mono tabular-nums text-foreground'>
+                      {p.visitors}
+                    </span>
+                    <span>
+                      visitor{p.visitors === 1 ? "" : "s"}
+                      {p.partial ? " (partial)" : ""}
+                    </span>
+                  </div>
+                </div>
+              ) : null}
             </div>
           );
         })}

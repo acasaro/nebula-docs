@@ -98,6 +98,13 @@ export function EditorWithBlockHandle({
   const containerRef = useRef<HTMLDivElement>(null);
   const handleAreaRef = useRef<HTMLDivElement>(null);
   const leaveTimerRef = useRef<number | null>(null);
+  // Tracks whether the block-menu Popover is open. The Popover is portaled
+  // outside the editor, so when it's taller than a short block (a single
+  // line of text, a small heading) the cursor lands "outside the block"
+  // as soon as the user reaches for Delete. Without freezing `active`,
+  // the pointermove handler unmounts BlockHandleUI and closes the menu
+  // before the click registers.
+  const menuOpenRef = useRef(false);
 
   useEffect(() => {
     if (!editing || !editor) return;
@@ -202,6 +209,19 @@ export function EditorWithBlockHandle({
     };
 
     const handler = (e: PointerEvent) => {
+      // Freeze the active block while the menu is open. The Popover.Content
+      // is portaled below the block, so moving the cursor into the menu
+      // looks like "left the block" to this handler — without the freeze,
+      // the BlockHandleUI unmounts and Delete becomes unclickable on any
+      // block shorter than the menu.
+      if (menuOpenRef.current) {
+        if (leaveTimerRef.current !== null) {
+          window.clearTimeout(leaveTimerRef.current);
+          leaveTimerRef.current = null;
+        }
+        return;
+      }
+
       const overEl = (el: HTMLElement | null) => {
         if (!el) return false;
         if (el.contains(e.target as Node)) return true;
@@ -341,6 +361,7 @@ export function EditorWithBlockHandle({
             block={active}
             containerRef={containerRef}
             handleAreaRef={handleAreaRef}
+            menuOpenRef={menuOpenRef}
             onOpenEdit={(blockPos, schema) =>
               setEditing({ blockPos, schema })
             }
@@ -390,15 +411,23 @@ function BlockHandleUI({
   block,
   containerRef,
   handleAreaRef,
+  menuOpenRef,
   onOpenEdit,
 }: {
   editor: Editor;
   block: ActiveBlock;
   containerRef: React.RefObject<HTMLDivElement | null>;
   handleAreaRef: React.RefObject<HTMLDivElement | null>;
+  menuOpenRef: React.RefObject<boolean>;
   onOpenEdit: (blockPos: number, schema: BlockAttrSchema) => void;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
+  useEffect(() => {
+    menuOpenRef.current = menuOpen;
+    return () => {
+      menuOpenRef.current = false;
+    };
+  }, [menuOpen, menuOpenRef]);
   const wasDraggingRef = useRef(false);
   const dragId = block.pos;
   const schema = getBlockSchema(block.node.type.name);

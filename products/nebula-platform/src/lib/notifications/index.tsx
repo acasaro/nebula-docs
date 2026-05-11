@@ -111,6 +111,34 @@ const NotificationsContext = createContext<NotificationsContextValue | null>(
 
 const POLL_INTERVAL_MS = 10_000;
 
+/**
+ * Which `workflow_run.conclusion` values should terminate a build
+ * notification.
+ *
+ * `cancelled` and `skipped` are intentionally excluded — they're typically
+ * noise:
+ * - `cancelled` happens when `concurrency: cancel-in-progress: true` kills
+ *   one of two simultaneous runs. Creating a new branch fires BOTH `create`
+ *   AND `push` events, so the workflow runs twice and one always loses.
+ *   The cancelled run lands in Firestore first and would otherwise flip the
+ *   notification to failure 90s before the surviving run reports success.
+ * - `skipped` happens when a workflow's job-level `if` filters everything
+ *   out (e.g. cleanup-preview.yml on a tag delete). Not a meaningful build
+ *   outcome.
+ *
+ * Everything else (success, failure, timed_out, action_required, neutral,
+ * stale) is a real terminal state and projects onto the notification.
+ *
+ * Null conclusion (status !== completed) is handled separately in the
+ * caller; this helper assumes a workflow_run that has reached completion.
+ */
+function isMeaningfulConclusion(conclusion: string | null): boolean {
+  if (conclusion === null) return false;
+  if (conclusion === "cancelled") return false;
+  if (conclusion === "skipped") return false;
+  return true;
+}
+
 export function NotificationProvider({ children }: { children: ReactNode }) {
   const [notifications, setNotifications] = useState<Notification[]>([]);
 
@@ -290,10 +318,26 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     function onBuildsSnapshot(builds: BuildDoc[], repoFullName: string) {
       const current = notificationsRef.current;
       const buildsForRepo = builds.filter((b) => b.repoFullName === repoFullName);
-      // Latest build per branch — same dedup the dashboard does.
+      const inProgressForRepo = current.filter(
+        (n) =>
+          n.kind === "build" &&
+          n.phase === "in-progress" &&
+          n.repoFullName === repoFullName,
+      );
+      // eslint-disable-next-line no-console
+      console.log(
+        `[notifications] builds snapshot for ${repoFullName} — ${buildsForRepo.length} build(s); ${inProgressForRepo.length} in-progress build notification(s)`,
+      );
+      // Latest build per branch — but only among those with a meaningful
+      // terminal conclusion (success or genuine failure). Cancelled and
+      // skipped runs are filtered out here so a duplicate-trigger run
+      // that lost the concurrency race doesn't shadow the surviving run.
+      // See `isMeaningfulConclusion` for the full list + rationale.
       const latestByBranch = new Map<string, BuildDoc>();
       for (const b of buildsForRepo) {
         if (!b.branch) continue;
+        if (b.status !== "completed") continue;
+        if (!isMeaningfulConclusion(b.conclusion)) continue;
         const existing = latestByBranch.get(b.branch);
         const score = (x: BuildDoc) => x.receivedAt?.toMillis() ?? x.runId;
         if (!existing || score(b) > score(existing)) {
@@ -301,13 +345,18 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
         }
       }
       // For each in-progress build notification on this repo, find the
-      // matching latest build and project its state into the notification.
-      for (const n of current) {
-        if (n.kind !== "build") continue;
-        if (n.repoFullName !== repoFullName) continue;
-        if (n.phase !== "in-progress") continue;
+      // matching latest meaningful build and project its state into the
+      // notification.
+      for (const n of inProgressForRepo) {
+        if (n.kind !== "build") continue; // type narrowing
         const build = latestByBranch.get(n.branch);
-        if (!build) continue;
+        if (!build) {
+          // eslint-disable-next-line no-console
+          console.log(
+            `[notifications] no meaningful build yet for ${n.branch} — waiting.`,
+          );
+          continue;
+        }
         // STALE-BUILD GUARD: Firestore /builds entries persist forever
         // (we delete the Firebase Hosting Channel on branch delete but
         // not the historical build docs). If the user creates a branch
@@ -318,8 +367,17 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
         // (set by the webhook with serverTimestamp) — only match a
         // build that arrived AFTER the notification was created.
         const buildTime = build.receivedAt?.toMillis();
-        if (buildTime === undefined || buildTime <= n.createdAt) continue;
-        if (build.status !== "completed") continue;
+        if (buildTime === undefined || buildTime <= n.createdAt) {
+          // eslint-disable-next-line no-console
+          console.log(
+            `[notifications] build for ${n.branch} (run ${build.runId}) is older than notification (${buildTime} ≤ ${n.createdAt}) — ignoring.`,
+          );
+          continue;
+        }
+        // eslint-disable-next-line no-console
+        console.log(
+          `[notifications] projecting build for ${n.branch} run=${build.runId} status=${build.status} conclusion=${build.conclusion}`,
+        );
         if (build.conclusion === "success") {
           updateNotification(n.id, {
             phase: "success",
@@ -335,7 +393,12 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
           // need user attention.
           const idToClear = n.id;
           setTimeout(() => dismissNotification(idToClear), 3500);
-        } else if (build.conclusion !== null) {
+        } else {
+          // Genuine failure (failure / timed_out / action_required /
+          // neutral / stale). `isMeaningfulConclusion` already filtered
+          // cancelled + skipped + queued + in_progress out of
+          // `latestByBranch`, so anything reaching here is terminal and
+          // unsuccessful.
           updateNotification(n.id, {
             phase: "failure",
             title: `Build failed for ${n.branch}`,

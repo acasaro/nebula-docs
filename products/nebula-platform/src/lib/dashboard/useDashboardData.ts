@@ -42,7 +42,6 @@ export type DashboardDataState =
 /** Activity + previews paginate by this many entries per "Load more" click. */
 const PAGE_SIZE = 5;
 const SITE_NAME = "MCoE Documentation";
-const MOCK_DOMAIN = "mcoe-docs.nebula.app";
 
 function commitAuthorToActor(author: CommitAuthor): Actor {
   if (author.type === "Bot") {
@@ -248,7 +247,7 @@ async function loadDashboardData(args: {
       deployment: {
         siteName: SITE_NAME,
         status: "live",
-        domain: MOCK_DOMAIN,
+        domain: `${repo}.web.app`,
         customDomain: null,
         owner,
         repo,
@@ -315,6 +314,32 @@ function enrichPreviewWithBuild(p: PreviewEntry, b: BuildDoc | undefined): Previ
     next.successMessage = `Your changes are now live at ${b.previewUrl}!`;
   }
   return next;
+}
+
+/** Strip protocol + trailing slash so the value matches the
+ *  bare-host shape `Deployment.domain` expects (the renderer prepends
+ *  `https://`). */
+function hostFromUrl(url: string): string {
+  return url.replace(/^https?:\/\//, "").replace(/\/+$/, "");
+}
+
+/** Firebase Hosting Preview Channel URLs follow `<site>--branch-<id>-<hash>.web.app`.
+ *  Pull the Firebase site name out of the host so we can build the production URL
+ *  (`<site>.web.app`) when the main-branch build doc didn't record one — common
+ *  because preview-channel deploys call recordPreview, but the live-channel deploy
+ *  on main typically doesn't. */
+function siteFromPreviewHost(host: string): string | null {
+  const m = host.match(/^([^.]+?)--/);
+  return m ? m[1]! : null;
+}
+
+function deriveProdHost(builds: BuildsByBranch, fallbackRepo: string): string {
+  for (const b of builds.values()) {
+    if (!b.previewUrl) continue;
+    const site = siteFromPreviewHost(hostFromUrl(b.previewUrl));
+    if (site) return `${site}.web.app`;
+  }
+  return `${fallbackRepo}.web.app`;
 }
 
 /** Internal "ready"-shaped state — the public DashboardDataState wraps this
@@ -453,11 +478,18 @@ export function useDashboardData(): DashboardDataState {
     if (state.status === "error")
       return { status: "error", error: state.error, refresh };
 
+    const mainBuild = buildsByBranch.get(state.data.deployment.branch);
     const data =
       buildsByBranch.size === 0
         ? state.data
         : {
             ...state.data,
+            deployment: {
+              ...state.data.deployment,
+              domain: mainBuild?.previewUrl
+                ? hostFromUrl(mainBuild.previewUrl)
+                : deriveProdHost(buildsByBranch, state.data.deployment.repo),
+            },
             previews: state.data.previews.map((p) =>
               enrichPreviewWithBuild(p, buildsByBranch.get(p.branch)),
             ),

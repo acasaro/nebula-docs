@@ -1,19 +1,30 @@
 name: Build & Deploy Firebase Functions
 
+# Push trigger stripped 2026-05-11 to stop infinite-queueing on this
+# personal repo mirror (uhg-runner is unavailable here, so runs sat
+# pending forever). The deploy step itself is a TODO stub guarded by
+# `if: env.FIREBASE_PROJECT_ID != ''` so nothing was ever deployed
+# even when runs completed.
+#
+# Function deploys are explicitly NOT automated from this repo: prod
+# functions are VPC-bound to a static-IP gcloud setup and must be
+# deployed manually via `pnpm --filter @nebula-docs/functions
+# deploy:prod` from inside the UHG network. To re-enable an automated
+# trigger on the enterprise mirror, add back:
+#   push:
+#     branches: [main]
+#     paths:
+#       - 'functions/**'
+#       - 'packages/schemas/**'
+#       - 'pnpm-workspace.yaml'
+#       - 'pnpm-lock.yaml'
+#       - 'package.json'
+#       - '.github/workflows/deploy-functions.yml'
+#       - 'firebase.json'
+#       - '.firebaserc'
+
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - main
-    paths:
-      - 'functions/**'
-      - 'packages/schemas/**'
-      - 'pnpm-workspace.yaml'
-      - 'pnpm-lock.yaml'
-      - 'package.json'
-      - '.github/workflows/deploy-functions.yml'
-      - 'firebase.json'
-      - '.firebaserc'
 
 permissions:
   id-token: write

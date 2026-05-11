@@ -83,7 +83,7 @@ import {
 } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { getThemeById } from "@nebula-docs/theme";
-import { ChevronDown, ChevronRight, Code2, Eye, Files, Folder, Map, Settings } from "lucide-react";
+import { ChevronDown, ChevronRight, Code2, Eye, Files, Folder, Map as MapIcon, Settings } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Navigate, useNavigate, useParams } from "react-router";
 import { toast } from "sonner";
@@ -484,19 +484,52 @@ export function RepoBrowser() {
   // Track publish notifications we've already reacted to, so the
   // success-removes-branch effect doesn't fire repeatedly per render.
   const handledPublishSuccessIds = useRef<Set<string>>(new Set());
+  // Cache of each publish notification's branch + last-seen phase, so when
+  // a notification disappears from the queue (user dismissed it) we can
+  // still tell whether to drop its branch from the local list.
+  type SeenPublishInfo = {
+    branch: string;
+    phase: "in-progress" | "success" | "failure";
+  };
+  const seenPublishNotifications = useRef(new Map<string, SeenPublishInfo>());
 
-  // When a publish notification transitions to 'success', drop the
-  // (now-deleted) branch from the BranchPicker. GitHub auto-merge
-  // deletes the head branch as soon as it merges; without this the
-  // local branches array still carries the dead ref and the dropdown
-  // shows it sitting in "Closing…" forever.
+  // (1) When a publish notification transitions to 'success', drop the
+  //     (now-deleted) branch from the BranchPicker. GitHub auto-merge
+  //     deletes the head branch as soon as it merges; without this the
+  //     local branches array still carries the dead ref and the dropdown
+  //     shows it sitting in "Closing…" forever.
+  //
+  // (2) Escape hatch for stuck states: if the polling never detects the
+  //     merge (auth blip, GitHub flake), the user can dismiss the
+  //     in-progress notification themselves. We treat dismiss-while-
+  //     in-progress as "user knows this is done" and drop the branch too.
+  //     Dismiss-after-failure leaves the branch alone — the branch
+  //     genuinely still exists when a PR closes without merging.
   useEffect(() => {
+    // (1) Success path.
     for (const n of notifications) {
       if (n.kind !== "publish") continue;
+      seenPublishNotifications.current.set(n.id, {
+        branch: n.branch,
+        phase: n.phase,
+      });
       if (n.phase !== "success") continue;
       if (handledPublishSuccessIds.current.has(n.id)) continue;
       handledPublishSuccessIds.current.add(n.id);
       setBranches((prev) => prev.filter((b) => b !== n.branch));
+    }
+    // (2) Dismiss escape-hatch.
+    const currentIds = new Set(notifications.map((n) => n.id));
+    for (const [id, info] of seenPublishNotifications.current) {
+      if (currentIds.has(id)) continue;
+      seenPublishNotifications.current.delete(id);
+      // Already handled by the success path → skip.
+      if (handledPublishSuccessIds.current.has(id)) continue;
+      // Only optimistic-remove on dismiss-while-in-progress. Failures
+      // leave the branch in place.
+      if (info.phase === "in-progress") {
+        setBranches((prev) => prev.filter((b) => b !== info.branch));
+      }
     }
   }, [notifications]);
 
@@ -1708,7 +1741,7 @@ export function RepoBrowser() {
             <TabsTrigger
               value='navigation'
               className='relative h-[calc(100%-1px)] gap-1.5 rounded-none border-0 px-4 text-sm font-semibold text-muted-foreground transition-colors hover:text-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none after:absolute group-data-[orientation=horizontal]/tabs:after:bottom-[-1px] after:left-0 after:right-0 after:h-0.5 after:bg-foreground after:opacity-0 data-[state=active]:after:opacity-100'>
-              <Map className='size-4' />
+              <MapIcon className='size-4' />
               Navigation
             </TabsTrigger>
             <TabsTrigger

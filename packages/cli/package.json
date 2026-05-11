@@ -1,7 +1,7 @@
 {
   "name": "@nebula-docs/cli",
-  "version": "0.0.0",
-  "private": true,
+  "version": "0.0.1",
+  "private": false,
   "type": "module",
   "description": "Multi-tenant docs renderer + tooling for Nebula Docs. Astro + MDX + React + Tailwind v4.",
   "bin": {
@@ -10,12 +10,17 @@
   "files": [
     "bin",
     "src",
-    "schemas"
+    "schemas",
+    "astro.config.mjs",
+    "README.md"
   ],
   "exports": {
     ".": "./src/index.ts",
     "./schemas/docs": "./schemas/docs.schema.json",
     "./schemas/theme": "./schemas/theme.schema.json"
+  },
+  "engines": {
+    "node": ">=22"
   },
   "scripts": {
     "dev": "tsx ./bin/nebula.mjs dev",
@@ -45,5 +50,8 @@
     "@types/react-dom": "^19.2.3",
     "tsx": "^4.20.0",
     "typescript": "^5.9.3"
+  },
+  "publishConfig": {
+    "registry": "<JFROG_NPM_LOCAL_URL>"
   }
 }

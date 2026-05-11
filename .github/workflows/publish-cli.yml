@@ -1,0 +1,142 @@
+name: Publish Nebula Docs CLI
+
+# Builds + publishes the six @nebula-docs/* packages to the JFrog npm
+# registry in dependency-DAG order. Manual trigger only (workflow_dispatch).
+# JFrog is the ONLY publish target — there is no public npm path.
+#
+# Two placeholders to fill before first run:
+#   - <JFROG_NPM_LOCAL>            the WRITABLE local npm repo on JFrog,
+#                                  e.g. glb-npm-local. Confirm exact name
+#                                  with your JFrog admin.
+#   - secrets.RELEASE_PUSH_TOKEN   PAT or GitHub App token with `contents:
+#                                  write` on this repo so the workflow can
+#                                  push the version-bump commit + v<version>
+#                                  tag.
+#
+# Inputs:
+#   version    Semver to publish. Required.
+#   dry-run    When true: `pnpm pack` only, upload tarballs as an artifact,
+#              skip publish + commit + tag. Use this for the first run to
+#              verify the six tarball layouts before going live.
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Semver to publish (e.g. 0.0.1)'
+        required: true
+        type: string
+      dry-run:
+        description: 'Pack only, no publish'
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  id-token: write
+  contents: write
+
+concurrency:
+  group: publish-cli
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: uhg-runner
+
+    env:
+      PNPM_VERSION: 10.33.0
+      JFROG_NPM_LOCAL: '<JFROG_NPM_LOCAL>'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.RELEASE_PUSH_TOKEN }}
+
+      - name: Configure JFrog SaaS Connection
+        uses: uhg-pipelines/epl-jf/configure-saas-connection@v4
+        with:
+          jfrog-url: https://centraluhg.jfrog.io
+          jfrog-edge-url: https://centraluhg.jfrog.io
+          jfrog-project-key: glb
+          npm-setup: true
+
+      - name: Fix pnpm auth for JFrog (read + write)
+        run: |
+          TOKEN=$(grep 'glb-npm-vir/:_authToken=' ~/.npmrc | sed 's/.*_authToken=//')
+          echo "//centraluhg.jfrog.io/:_authToken=${TOKEN}" >> ~/.npmrc
+          echo "//centraluhg.jfrog.io/artifactory/api/npm/${JFROG_NPM_LOCAL}/:_authToken=${TOKEN}" >> ~/.npmrc
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+
+      - name: Install pnpm
+        run: npm install -g pnpm@${{ env.PNPM_VERSION }}
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Bump versions + rewrite workspace deps
+        run: node scripts/release.mjs ${{ inputs.version }} --ci
+
+      - name: Refresh lockfile after version bump
+        run: pnpm install --lockfile-only
+
+      - name: Resolve publishConfig.registry placeholders
+        run: |
+          REG="https://centraluhg.jfrog.io/artifactory/api/npm/${JFROG_NPM_LOCAL}/"
+          for pkg in schemas theme mdx components analytics cli; do
+            node -e "
+              const fs = require('fs');
+              const p = 'packages/${pkg}/package.json';
+              const j = JSON.parse(fs.readFileSync(p, 'utf8'));
+              if (j.publishConfig && j.publishConfig.registry === '<JFROG_NPM_LOCAL_URL>') {
+                j.publishConfig.registry = '${REG/\//\\/}';
+                fs.writeFileSync(p, JSON.stringify(j, null, 2) + '\n');
+                console.log('resolved registry for', p);
+              }
+            "
+          done
+
+      - name: Build publishable packages
+        run: |
+          pnpm --filter @nebula-docs/schemas build
+          pnpm --filter @nebula-docs/theme build
+          pnpm --filter @nebula-docs/mdx build
+          pnpm --filter @nebula-docs/components build
+          pnpm --filter @nebula-docs/analytics build
+
+      - name: Publish in DAG order
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/_packs"
+          for pkg in schemas theme mdx components analytics cli; do
+            echo "::group::@nebula-docs/${pkg}"
+            cd "packages/${pkg}"
+            if [ "${{ inputs.dry-run }}" = "true" ]; then
+              pnpm pack --pack-destination "$GITHUB_WORKSPACE/_packs"
+            else
+              pnpm publish --no-git-checks
+            fi
+            cd "$GITHUB_WORKSPACE"
+            echo "::endgroup::"
+          done
+
+      - name: Upload tarballs (dry-run only)
+        if: ${{ inputs.dry-run == 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: tarballs
+          path: _packs/*.tgz
+
+      - name: Commit + tag (skipped on dry-run)
+        if: ${{ inputs.dry-run != 'true' }}
+        run: |
+          git config user.email "ci@uhc-tech.local"
+          git config user.name  "Nebula CI"
+          git add -A
+          git commit -m "release: v${{ inputs.version }}"
+          git tag "v${{ inputs.version }}"
+          git push --follow-tags

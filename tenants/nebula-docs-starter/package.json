@@ -1,0 +1,16 @@
+{
+  "name": "nebula-docs-starter",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "_comment": "In-monorepo starter uses workspace:* so the framework's pnpm install resolves @nebula-docs/cli to the local sibling. An EXTERNAL tenant repo replaces this with a literal version pin, e.g. \"@nebula-docs/cli\": \"0.0.1\", and resolves it from JFrog.",
+  "scripts": {
+    "dev": "nebula dev",
+    "build": "nebula build",
+    "preview": "nebula preview",
+    "validate": "nebula validate"
+  },
+  "devDependencies": {
+    "@nebula-docs/cli": "workspace:*"
+  }
+}

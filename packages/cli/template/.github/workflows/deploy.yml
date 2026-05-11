@@ -16,14 +16,9 @@ name: Deploy docs
 #
 # === Setup checklist ===
 #
-# 1. Replace the placeholders below in this file:
-#       REPLACE_ME_FRAMEWORK_REPO  →  e.g. uhc-tech/nebula-docs-platform
-#                                     (the repo holding @nebula-docs/cli;
-#                                      this is a transitional shape — once
-#                                      the CLI is published to npm, drop the
-#                                      `Checkout framework` + `Install
-#                                      framework deps` steps and use
-#                                      `npm ci && npm run build` directly)
+# 1. The tenant's `package.json` must declare `@nebula-docs/cli` as a
+#    devDependency at the desired pinned version. The build step below is
+#    just `pnpm install` + `pnpm nebula build` — no framework checkout.
 #
 # 2. Required secrets on this tenant repo (GH Actions → Secrets):
 #       FIREBASE_SERVICE_ACCOUNT_<PROJECT_ID>   set automatically by
@@ -79,13 +74,6 @@ jobs:
       - name: Checkout tenant
         uses: actions/checkout@v4
 
-      - name: Checkout framework
-        uses: actions/checkout@v4
-        with:
-          repository: REPLACE_ME_FRAMEWORK_REPO
-          path: nebula-docs
-          ref: main
-
       - name: Configure JFrog SaaS Connection
         uses: uhg-pipelines/epl-jf/configure-saas-connection@v4
         with:
@@ -107,13 +95,11 @@ jobs:
       - name: Install pnpm
         run: npm install -g pnpm@${{ env.PNPM_VERSION }}
 
-      - name: Install framework deps
+      - name: Install
         run: pnpm install --frozen-lockfile
-        working-directory: nebula-docs
 
-      - name: Build tenant docs
-        run: pnpm --filter @nebula-docs/cli build "$GITHUB_WORKSPACE"
-        working-directory: nebula-docs
+      - name: Build docs
+        run: pnpm nebula build
 
       # Compute channel ID + whether this is a live deploy in one shell step
       # so the conditional logic + branch-name sanitization is in one place.

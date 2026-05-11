@@ -1,17 +1,17 @@
-name: Build & Deploy Nebula Docs Platform to OOSS
+name: Build & Deploy Nebula Docs Platform to OOSS (DISABLED)
+
+# Disabled 2026-05-10 — Platform moved to Firebase Hosting (`docs-nebula`
+# via `deploy-platform.yml`). This file is retained as a reference for the
+# OOSS deploy recipe in case a firewall-internal Platform deploy is needed
+# later (e.g., from inside the UHG network where `uhg-runner` is available).
+#
+# Note the stale `products/nebula/dist` path on the deploy step (should be
+# `products/nebula-platform/dist`) — would need to be corrected before
+# re-enabling. Auto triggers have been stripped; this workflow can only be
+# fired manually via `workflow_dispatch`.
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - main
-    paths:
-      - 'products/nebula-platform/**'
-      - 'packages/**'
-      - 'pnpm-workspace.yaml'
-      - 'pnpm-lock.yaml'
-      - 'package.json'
-      - '.github/workflows/deploy-nebula.yml'
 
 permissions:
   id-token: write

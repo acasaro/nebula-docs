@@ -1,17 +1,21 @@
 name: Build & Deploy Docs to OOSS
 
+# Push trigger stripped 2026-05-11 to stop infinite-queueing on this
+# personal repo mirror (uhg-runner is unavailable here, so runs sat
+# pending forever). To re-enable on the UHG GitHub Enterprise mirror
+# where uhg-runner exists, add back:
+#   push:
+#     branches: [main]
+#     paths:
+#       - 'products/docs/**'
+#       - 'packages/**'
+#       - 'pnpm-workspace.yaml'
+#       - 'pnpm-lock.yaml'
+#       - 'package.json'
+#       - '.github/workflows/build-deploy.yml'
+
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - main
-    paths:
-      - 'products/docs/**'
-      - 'packages/**'
-      - 'pnpm-workspace.yaml'
-      - 'pnpm-lock.yaml'
-      - 'package.json'
-      - '.github/workflows/build-deploy.yml'
 
 permissions:
   id-token: write

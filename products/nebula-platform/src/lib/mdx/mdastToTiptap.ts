@@ -948,7 +948,7 @@ function mergeAdjacentLightDarkImgs(node: { children?: unknown }): void {
   for (const child of children) mergeAdjacentLightDarkImgs(child);
 }
 
-function isImgFlow(n: unknown): boolean {
+function isImgFlow(n: unknown): n is MdxJsxFlowElement {
   if (!n || typeof n !== 'object') return false;
   const obj = n as Record<string, unknown>;
   return obj.type === 'mdxJsxFlowElement' && obj.name === 'img';
@@ -1299,6 +1299,7 @@ interface HeroSlideShape {
   actions?: Array<{ label: string; href: string; style?: 'primary' | 'secondary' }>;
   background?: string;
   textColor?: string;
+  titleColor?: string;
   accentColor?: string;
   secondaryTitle?: string;
   secondaryDescription?: string;

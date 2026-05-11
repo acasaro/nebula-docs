@@ -614,6 +614,7 @@ export function addressOfEntry(resolved: ResolvedEntry): DocsInsertAddress | nul
       index: resolved.groupPath[0]!,
     };
   }
+  if (resolved.kind !== 'page') return null;
   if (resolved.inTabDirect) {
     return {
       kind: 'tab-pages',
@@ -687,6 +688,7 @@ export function moveEntryToAddress(
 ): DocsConfig {
   const resolved = findEntry(config, sourceKey, resolveCtx);
   if (!resolved || resolved.kind === 'tab') return config;
+  if (resolved.kind !== 'group' && resolved.kind !== 'page') return config;
   // Snapshot the entry before deletion so we can re-insert it.
   const entry: PageEntry =
     resolved.kind === 'group' ? resolved.group : resolved.page;

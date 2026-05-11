@@ -201,7 +201,7 @@ function serializeTable(node: TiptapNode): string {
   }, 0);
   if (colCount === 0) return '';
 
-  const headerRow = rows[0];
+  const headerRow = rows[0]!;
   const bodyRows = rows.slice(1);
   const align: Array<'left' | 'center' | 'right' | null> = [];
   for (let i = 0; i < colCount; i++) {

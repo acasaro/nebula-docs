@@ -1,27 +1,18 @@
 name: Build & Deploy Firebase Functions
 
-# Push trigger stripped 2026-05-11 to stop infinite-queueing on this
-# personal repo mirror (uhg-runner is unavailable here, so runs sat
-# pending forever). The deploy step itself is a TODO stub guarded by
-# `if: env.FIREBASE_PROJECT_ID != ''` so nothing was ever deployed
-# even when runs completed.
+# Manual deploy of the five prod Cloud Functions to project mcoe-d:
+# mintGithubToken, getInstallation, githubWebhook, getAnalyticsSummary,
+# recordPreview. Triggered from the Actions tab via workflow_dispatch
+# — no auto-deploy on push (intentional, matching deploy-platform.yml).
 #
-# Function deploys are explicitly NOT automated from this repo: prod
-# functions are VPC-bound to a static-IP gcloud setup and must be
-# deployed manually via `pnpm --filter @nebula-docs/functions
-# deploy:prod` from inside the UHG network. To re-enable an automated
-# trigger on the enterprise mirror, add back:
-#   push:
-#     branches: [main]
-#     paths:
-#       - 'functions/**'
-#       - 'packages/schemas/**'
-#       - 'pnpm-workspace.yaml'
-#       - 'pnpm-lock.yaml'
-#       - 'package.json'
-#       - '.github/workflows/deploy-functions.yml'
-#       - 'firebase.json'
-#       - '.firebaserc'
+# Reuses `pnpm --filter @nebula-docs/functions deploy:prod` so the CI
+# command matches the local manual command exactly. The pnpm script in
+# functions/package.json is the single source of truth for which
+# functions get deployed.
+#
+# Secrets used by individual functions (GITHUB_APP_PRIVATE_KEY, etc.)
+# are set out-of-band via `firebase functions:secrets:set --data-file=`
+# and are not part of this workflow.
 
 on:
   workflow_dispatch:
@@ -30,14 +21,16 @@ permissions:
   id-token: write
   contents: read
 
+concurrency:
+  group: deploy-functions-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build-deploy:
     runs-on: uhg-runner
 
     env:
       PNPM_VERSION: 10.33.0
-      # TODO: set FIREBASE_PROJECT_ID once provisioned
-      FIREBASE_PROJECT_ID: ''
 
     steps:
       - name: Checkout
@@ -71,10 +64,13 @@ jobs:
       - name: Build Functions
         run: pnpm --filter @nebula-docs/functions build
 
-      # TODO: replace with the deploy mechanism once Firebase project is provisioned.
-      # Will use firebase-tools `firebase deploy --only functions` with a service account.
-      - name: Deploy to Firebase
-        if: env.FIREBASE_PROJECT_ID != ''
+      - name: Install Firebase CLI
+        run: npm install -g firebase-tools
+
+      - name: Authenticate Firebase
         run: |
-          echo "TODO: deploy functions/lib to Firebase"
-          echo "FIREBASE_PROJECT_ID=$FIREBASE_PROJECT_ID"
+          echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT_MCOE_D }}' > "${{ runner.temp }}/firebase-sa.json"
+          echo "GOOGLE_APPLICATION_CREDENTIALS=${{ runner.temp }}/firebase-sa.json" >> "$GITHUB_ENV"
+
+      - name: Deploy prod functions
+        run: pnpm --filter @nebula-docs/functions deploy:prod

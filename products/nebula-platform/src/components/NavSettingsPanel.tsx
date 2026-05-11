@@ -525,8 +525,9 @@ function mergeTab(tab: Tab, patch: Partial<TabConfigValues>): Tab {
   if (patch.align !== undefined)
     next.align = patch.align && patch.align !== 'start' ? patch.align : undefined;
   if (patch.directory !== undefined)
-    next.directory =
-      patch.directory && patch.directory !== 'none' ? patch.directory : undefined;
+    next.directory = (patch.directory && patch.directory !== 'none'
+      ? patch.directory
+      : undefined) as Tab['directory'];
   return next;
 }
 
@@ -634,6 +635,7 @@ function mutateResolvedEntry(
     return next;
   }
 
+  if (resolved.kind !== 'page') return next;
   // page
   const tab = tabs[resolved.tabIndex];
   if (!tab) return next;

@@ -65,8 +65,8 @@ function getSelectionRect(editor: Editor): SelectionRect | null {
   if (sel && sel.rangeCount > 0 && !sel.isCollapsed) {
     const rects = sel.getRangeAt(0).getClientRects();
     if (rects.length > 0) {
-      const first = rects[0];
-      const last = rects[rects.length - 1];
+      const first = rects[0]!;
+      const last = rects[rects.length - 1]!;
       return {
         top: first.top,
         bottom: last.bottom,
@@ -262,7 +262,7 @@ function buildSlotOptions(
     return [1, 2, 3, 4].map((level) => ({
       id: `title-h${level}`,
       label: `Heading ${level}`,
-      Icon: HEADING_ICONS[level],
+      Icon: HEADING_ICONS[level]!,
       isActive: () => editor.isActive('mdxFeatureCardTitle', { level }),
       apply: () =>
         editor
@@ -341,7 +341,7 @@ function TextTypeMenu({ editor }: { editor: Editor }) {
   ];
 
   const options = slotOptions ?? defaultOptions;
-  const current = options.find((o) => o.isActive()) ?? options[0];
+  const current = options.find((o) => o.isActive()) ?? options[0]!;
 
   return (
     <DropdownMenu>

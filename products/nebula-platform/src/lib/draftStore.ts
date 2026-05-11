@@ -19,7 +19,7 @@ export interface StoredDraftBundle {
 }
 
 export interface DraftScope {
-  installationId: string;
+  installationId: number;
   owner: string;
   repo: string;
   branch: string;

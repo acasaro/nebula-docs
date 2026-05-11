@@ -1,86 +1,65 @@
 # Nebula Docs — Claude Guide
 
-pnpm-workspace monorepo for **Nebula Docs**, a multi-tenant documentation platform shipping:
+pnpm-workspace monorepo for **Nebula Docs**, a multi-tenant documentation platform. Two shipped products and seven supporting packages:
 
-- **Nebula Docs Platform** — the editor SPA in `products/nebula-platform/`. Vite + React 19 + Tailwind v4 + shadcn/ui + Tiptap. Substantially built; Phase 3 editor work in flight. See [.claude/nebula.md](.claude/nebula.md).
-- **Nebula Docs CLI** — the renderer + tooling at `packages/cli/`. Astro + MDX + React + Tailwind v4. Distributed as `@nebula-docs/cli`; binary `nebula` (the only place the brand is shortened). See [.claude/nebula-cli.md](.claude/nebula-cli.md).
-- **Shared packages** — `@nebula-docs/{components,schemas,theme,firebase}` exist; `@nebula-docs/mdx` and `@nebula-docs/analytics` are planned (extracted when their second consumer needs them).
-- **Cloud Functions** in `functions/` — three deployed prod functions (`mintGithubToken`, `getInstallation`, `githubWebhook`) plus three deployed dev variants for the parallel `nebula-docs-dev` GitHub App.
-- **Tenants** in `tenants/` — synthetic dev fixture and the in-flight MCOE migration target. Eventually each tenant moves to its own external repo.
+- **Nebula Docs Platform** — editor SPA at `products/nebula-platform/`. Vite + React 19 + Tailwind v4 + shadcn/ui + Tiptap. See [.claude/nebula.md](.claude/nebula.md).
+- **Nebula Docs CLI** — multi-tenant Astro renderer at `packages/cli/`. Distributed as `@nebula-docs/cli`; binary `nebula` (the only place the brand is shortened). See [.claude/nebula-cli.md](.claude/nebula-cli.md).
+- **Shared packages** — all seven exist and are in use: `@nebula-docs/{cli,components,schemas,theme,firebase,mdx,analytics}`.
+- **Cloud Functions** in `functions/` — six deployed (three prod + three dev). Token minting, installation lookup, webhook receiver, analytics summary, preview recording. Six is the count today; analytics + preview-record were added alongside the original three.
+- **Tenants** in `tenants/` — two synthetic fixtures (`nebula-docs-starter` populated; `nebula-docs-starter-empty` minimal). MCOE was extracted to its own GitHub repo on 2026-05-08 and is no longer in this monorepo.
 
-`products/docs/` is the legacy MCOE Docusaurus site, kept as content archive. It will become tenant zero of the CLI's render pipeline once the CLI is buildable. Don't develop new features there — content moves; the rendering layer changes.
+`products/docs/` is the legacy MCOE Docusaurus site, kept as content archive. No new features there — content has moved to the extracted MCOE tenant repo; this directory stays only until the CLI migration cuts over.
 
-For workstream-by-workstream status, see [.claude/status.md](.claude/status.md). For repo conventions, see [.claude/conventions.md](.claude/conventions.md).
+For locked decisions + hard-won gotchas, see [.claude/decisions.md](.claude/decisions.md). For current open work, see [.claude/status.md](.claude/status.md). For repo-wide conventions, see [.claude/conventions.md](.claude/conventions.md).
 
 ## Repo layout
 
 ```
 products/
-  nebula-platform/       # Nebula Docs Platform (editor SPA). Vite + React 19 + Tailwind v4
-                         #   + shadcn/ui + Tiptap. The active product.
+  nebula-platform/       # Editor SPA. Vite + React 19 + Tailwind v4 + shadcn/ui + Tiptap.
                          #   Package: @nebula-docs/platform.
-  docs/                  # Legacy MCOE Docusaurus site. Content archive — will become
-                         #   tenant zero of the CLI's render pipeline. No new features here.
+  docs/                  # Legacy MCOE Docusaurus site. Content archive only — no new features.
 
-packages/                # The seven-package framework
-  cli/                   # @nebula-docs/cli — CLI binary (`nebula`) + Astro integration
-                         #   + runtime + layouts + starter templates. Single npm package;
-                         #   tenants pull this in as a dev dep and run `nebula build`.
-                         #   Phase 0 + Phase 1 done; see .claude/status.md.
-  components/            # @nebula-docs/components — React MDX block components (callout,
-                         #   card, frame, code-block, tabs, accordion, mermaid, property,
-                         #   steps, tree, update, etc.). Single source of truth, consumed
-                         #   by Platform + CLI + legacy docs.
+packages/                # The seven-package framework. All seven exist.
+  cli/                   # @nebula-docs/cli — Astro renderer + nebula binary + runtime islands
+                         #   + layouts + starter templates. Single npm package.
+  components/            # @nebula-docs/components — React MDX block components. Single source
+                         #   of truth, consumed by Platform + CLI + legacy docs. ~31 components.
   schemas/               # @nebula-docs/schemas — Zod schemas + emitted JSON Schemas
-                         #   (docs.json, theme.json, frontmatter, block props).
+                         #   (docs.json, theme.json, block props).
   theme/                 # @nebula-docs/theme — TS-first frozen design tokens. Source in
-                         #   src/themes/*.ts. Generates dist/tokens.css.
-  firebase/              # @nebula-docs/firebase — slim init + auth helpers. Platform-only
-                         #   consumer. Accepts optional firestoreDbId.
-  mdx/                   # @nebula-docs/mdx — pure MDX parse/serialize/frontmatter +
-                         #   snippet resolver. PLANNED — extracted when CLI work starts;
-                         #   used by both CLI (build-time) and Platform (editor-time).
-  analytics/             # @nebula-docs/analytics — pluggable provider system. PLANNED —
-                         #   extracted when CLI's analytics work happens. v1 ships
-                         #   Firebase Analytics provider; abstracted for GA4/Plausible/
-                         #   PostHog later.
+                         #   src/themes/*.ts; generates dist/tokens.css.
+  firebase/              # @nebula-docs/firebase — slim init + auth helpers. Accepts optional
+                         #   firestoreDbId for dev/prod DB targeting.
+  mdx/                   # @nebula-docs/mdx — parse/serialize, frontmatter, snippet
+                         #   resolution, remarkAutoComponentImports, remarkBasePrefix.
+  analytics/             # @nebula-docs/analytics — provider-agnostic core + Firebase
+                         #   provider subpath. v1 ships Firebase Analytics → GA4.
 
-tenants/                 # Synthetic + transitional tenant repos. Two starters
-                         #   double as `nebula init` templates and as renderer
-                         #   development fixtures.
-  nebula-docs-starter/        # Full kitchen-sink starter — exercises every component,
-                              #   nav pattern, frontmatter field. `nebula init` default.
-                              #   Also the dev-fixture target for CLI work + visual-parity
-                              #   audit against the editor.
+tenants/                 # Synthetic dev fixtures. Tenant repos otherwise live in their own
+                         #   external GitHub repos (MCOE is the first).
+  nebula-docs-starter/        # Full kitchen-sink starter — exercises every component, nav
+                              #   pattern, frontmatter field. `nebula init` default.
   nebula-docs-starter-empty/  # Minimal "smallest valid tenant" — `nebula init --empty`.
-                              #   Stays small as a reference for what the absolute
-                              #   minimum tenant looks like.
-  mcoe-docs/             # MCOE migration target. PLANNED — eventually external repo.
 
-functions/               # Firebase Cloud Functions. Three prod functions (enterprise GH
-                         #   App, VPC-bound to nebula-connector) + three dev variants
-                         #   (public-GH dev App, no VPC). Shared webhook handler factory.
-                         #   All deployed to mcoe-d.
+functions/               # Firebase Cloud Functions. Six deployed: prod (Enterprise GH App,
+                         #   VPC-bound to nebula-connector) + dev (public-GH dev App, no VPC).
+                         #   Shared handler factories. All deployed to mcoe-d.
 
-vendor/                  # Reference material; deleted as we stop referencing each one.
-  mintlify-nodemodule/         # CLI / build packages — architecture study source
-  mintlify-components/         # Component port reference
-  mint-docs-ref/               # Full upstream rendering reference
-  mint-empty-starter-main/     # Blueprint for packages/cli/template/
-  mcoe-docs-main/              # Reference for a populated tenant repo
+vendor/                  # Reference material; delete each one once we stop referencing it.
 
 .claude/
-  architecture.md        # 10000-ft view: four pillars, seven packages, data flow
-  nebula.md              # Platform architecture + settled decisions
-  nebula-cli.md          # CLI architecture + locked decisions + tenant model
-  conventions.md         # Repo-wide patterns
-  editor-toolbars.md     # Inline TextToolbar + LinkBubble + slot-aware
-                         #   dropdown pattern (FeatureCard title is the
-                         #   reference implementation). Read first when
-                         #   touching the bubble menu, link bubble, or
-                         #   adding an editable title slot to a component.
-  status.md              # Live workstream snapshot + Upcoming workstreams
-  archive/               # Historical context (old docs-site arch, April 2026 refactor log)
+  nebula.md              # Platform architecture + decisions
+  nebula-cli.md          # CLI architecture + decisions + current phase + open follow-ups
+  decisions.md           # Locked decisions + hard-won gotchas (single quick-reference home)
+  status.md              # Current open work + next workstreams
+  conventions.md         # Negotiable repo patterns (hard rules are in this file, below)
+  editor-toolbars.md     # TextToolbar + LinkBubble + slot-aware dropdown pattern. Read
+                         #   when touching the bubble menu, link bubble, or adding an
+                         #   editable title slot.
+  ooss-hosting-port.md   # Handoff guide for porting the preview/notification flow from
+                         #   Firebase Hosting to OOSS. The Firebase implementation shipped;
+                         #   the OOSS port has not been executed for a tenant yet.
 ```
 
 ## Stack (workspace-wide)
@@ -88,41 +67,34 @@ vendor/                  # Reference material; deleted as we stop referencing ea
 - **Package manager**: pnpm v10.33 (workspace at root)
 - **Node**: ≥22 (pinned via `.nvmrc`)
 - **TypeScript**: strict everywhere; per-package `tsconfig.json` extends `tsconfig.base.json`
-- **CI**: GitHub Actions on `uhg-runner` → JFrog mirror → OOSS (deploys SPA + docs site). Functions are deployed manually for now (`deploy-functions.yml` is a stub).
-- **Backend**: Firebase project `mcoe-d`. Auth + Firestore + Functions. Two Firestore databases: `(default)` for prod-Enterprise data, `nebula-docs-plat-dev` for dev work.
-
-## Workspace conventions (canonical: [.claude/conventions.md](.claude/conventions.md))
-
-- Workspace deps: `"@nebula-docs/<name>": "workspace:*"`. Never reach across `products/*` for code; share via `packages/*`. The legacy docs site is `@mcoe/docs`.
-- `packages/components/` is the canonical home for MDX block components. New components go there with a Zod schema in `packages/schemas/`.
-- `packages/theme` data is **frozen**. Don't change color values, add themes, or restructure the `ThemeTokens` interface. Consumer plumbing is fair game.
-- Folder-per-component: `FolderName/ExportedName.tsx` + `index.ts` re-export barrel. Folder, filename, and exported component name match. **Zero `index.tsx` files** in the repo. (Docusaurus swizzles in `products/docs/src/theme/**` are the documented exception.)
+- **CI**: GitHub Actions on `uhg-runner` → JFrog mirror → OOSS (deploys SPA + legacy docs site). Functions deploy manually (`deploy-functions.yml` is a stub).
+- **Backend**: Firebase project `mcoe-d`. Auth + Firestore + Functions. Two Firestore databases: `(default)` for prod, `nebula-docs-plat-dev` for dev.
+- **Active env switch**: `NEBULA_ENV=dev|prod` in the root `.env`. Picks the GH App pair, the Firestore database, and the Cloud Function name suffix (`*Dev` vs unsuffixed).
 
 ## Hard rules
 
 These override anything else, including memory guidance.
 
-- **No "Mintlify" in shipped source.** Code, MDX, READMEs, JSDoc, identifiers, filenames, and commit messages must not contain "Mintlify" or variants. `.claude/` design docs MAY name Mintlify when factually describing the actual reference being studied (e.g., `vendor/mint-docs-ref/`); never use positioning ("clone of X"). Refer to components by their generic name or "Nebula Docs <X>".
-- **Brand is "Nebula Docs".** The editor app is "Nebula Docs Platform" (or "Studio"). The renderer + tooling is "Nebula Docs CLI". Never "Nebula CMS". "SSG" stays as informal shorthand for what the CLI does at build time, never as a package name or doc title.
-- **No `.env.example` files.** Use gitignored `.env`. The unified root `.env` (Vite envDir + dotenv) is the single source for `FIREBASE_*`, `NEBULA_*`, `FIRESTORE_*` shared values.
-- **Tokens are frozen.** Per above.
-- **Behavior preservation on `products/docs/`.** Until the CLI migration completes, the Docusaurus site must build and render exactly as it does today. Run `pnpm --filter @mcoe/docs build` and treat broken-link warnings as errors.
+- **No "Mintlify" in shipped source.** Code, MDX, READMEs, JSDoc, identifiers, filenames, commit messages must not contain "Mintlify" or variants. `.claude/` design docs MAY name Mintlify factually as the reference being studied; never as positioning ("clone of X").
+- **Brand is "Nebula Docs".** Editor SPA = "Nebula Docs Platform" (or "Studio"). Renderer + tooling = "Nebula Docs CLI". Never "Nebula CMS". "SSG" is informal shorthand only, never a package name or doc title.
+- **No `.env.example` files.** Use gitignored `.env`. The root `.env` is the single source for `FIREBASE_*`, `NEBULA_*`, `FIRESTORE_*` shared values.
+- **Tokens are frozen.** Don't change `packages/theme/src/themes/*.ts` color values, add themes, or restructure `ThemeTokens`. Consumer plumbing is fair game.
+- **Behavior preservation on `products/docs/`.** The legacy Docusaurus site must build and render exactly as today. Run `pnpm --filter @mcoe/docs build` and treat broken-link warnings as errors.
 - **GitHub host is GitHub Enterprise Cloud (`github.com/<org>`).** Not GHES. No `baseUrl` overrides on Octokit.
-- **Firebase Functions secrets via `--data-file`.** Never interactive paste. Matters most for the GitHub App PEM private keys.
-- **No component code in `index.tsx`.** Always `index.ts` re-export + `ComponentName.tsx`. Zero tolerance.
+- **Firebase Functions secrets via `--data-file=`.** Never interactive paste. Matters most for the GitHub App PEM keys.
+- **No component code in `index.tsx`.** Always `index.ts` re-export + `ComponentName.tsx`. Zero tolerance. (Docusaurus swizzles in `products/docs/src/theme/**` are the documented exception, going away with the CLI migration.)
+- **Filtered function deploys only.** `pnpm --filter @nebula-docs/functions deploy:dev|prod`. Never the unfiltered `deploy` — it touches both env sets and risks deploying dev code into prod.
 
 ## Cross-cutting tips
 
 - **Run from root**: `pnpm --filter @<scope>/<name> <script>`. Scopes: `@mcoe/docs` for the legacy site, `@nebula-docs/*` for everything else.
-- **Adding a workspace dep**: `pnpm --filter @<scope>/<consumer> add @<scope>/<dep>` (uses `workspace:*` automatically when target is local).
+- **Adding a workspace dep**: `pnpm --filter @<scope>/<consumer> add @<scope>/<dep>` (uses `workspace:*` when target is local).
 - **Cleanup**: `pnpm clean` removes per-package `node_modules`, `dist`, `build`, `.docusaurus`, plus root `node_modules`.
-- **Function deploys**: `pnpm --filter @nebula-docs/functions deploy:dev` or `deploy:prod`. Never the unfiltered `deploy` script — it touches both env sets and risks deploying local dev code into the prod function slots.
-- **Active env switch**: `NEBULA_ENV=dev|prod` in the root `.env`. Picks the GitHub App pair, the Firestore database (`nebula-docs-plat-dev` vs `(default)`), and the deployed Cloud Function names (`*Dev` suffix vs unsuffixed) the SPA calls.
 
 ## Where to start in a new chat
 
-1. Read [.claude/architecture.md](.claude/architecture.md) for the 10000-ft view (the four pillars, seven packages, data flow).
-2. Read [.claude/status.md](.claude/status.md) for the live workstream snapshot — what's done, what's open, where the code lives, and kickoff prompts for upcoming workstreams.
-3. Read [.claude/nebula.md](.claude/nebula.md) (Platform) and / or [.claude/nebula-cli.md](.claude/nebula-cli.md) (CLI) depending on which workstream you're touching.
-4. Read [.claude/conventions.md](.claude/conventions.md) for repo-wide patterns.
-5. The decisions documented in `nebula.md` and `nebula-cli.md` are settled — don't relitigate without flagging in the doc first.
+1. Read this file for the lay of the land.
+2. [.claude/decisions.md](.claude/decisions.md) — locked decisions and the gotchas that will bite you (Astro+React+MDX SSR boundary, dark-mode FOUC, auto-import shadowing, etc.).
+3. [.claude/status.md](.claude/status.md) — what's currently open and what's next.
+4. [.claude/nebula.md](.claude/nebula.md) and/or [.claude/nebula-cli.md](.claude/nebula-cli.md) — the pillar you're touching.
+5. [.claude/conventions.md](.claude/conventions.md) — repo conventions beyond the hard rules above.

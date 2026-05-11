@@ -69,20 +69,9 @@ editable text in the editor."
 - CLI render: `FeatureCard` reads `title` + `titleLevel` props and picks
   the matching `<hN>` tag.
 
-**Hard constraint that forced this shape**: the Astro+React+MDX boundary
-pre-renders nested React children to HTML strings before they reach a
-React parent component. Concretely — if you put a `<FeatureCardTitle>` JSX
-child inside `<FeatureCard>` in MDX, the parent React component receives
-the title pre-rendered as a string and can't introspect children to
-extract the slot. The CLI registry comment at
-[packages/cli/src/runtime/components/registry.tsx](../packages/cli/src/runtime/components/registry.tsx)
-spells this out: components that need to introspect children's props live
-as `.astro` files alongside the registry. Plain React parents with React
-children can't.
+**Hard constraint that forced this shape**: the Astro+React+MDX SSR boundary strips children from React parents (see [decisions.md](decisions.md)). A `<FeatureCardTitle>` JSX child inside `<FeatureCard>` reaches the parent as a pre-rendered string; the parent can't introspect. So title-slot data round-trips via flat attrs on the parent JSX, not as a sub-component child.
 
-So: any "title slot"-style data has to round-trip via flat attrs on the
-parent JSX, not as a sub-component child. To stamp out the same pattern
-for Card title, Accordion title, etc., copy what FeatureCard's title does:
+To stamp out the same pattern for Card title, Accordion title, etc., copy what FeatureCard's title does:
 
 1. Editor: add a `mdx<Component>Title` Node with `inline*` content + a
    `level` attr; update the parent's `content` schema to `<title> block*`.

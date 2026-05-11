@@ -38,6 +38,10 @@ import {
   type Tab,
 } from "@/lib/docsConfig";
 import {
+  extractPageSuggestions,
+  type PageSuggestion,
+} from "@/lib/pageSuggestions";
+import {
   addressOfEntry,
   appendAnchor,
   appendDropdown,
@@ -269,6 +273,7 @@ interface FileViewerProps {
   error: string | null;
   mode: ViewMode;
   onContentChange?: (next: string) => void;
+  pageSuggestions?: readonly PageSuggestion[];
 }
 
 function FileViewer({
@@ -279,6 +284,7 @@ function FileViewer({
   error,
   mode,
   onContentChange,
+  pageSuggestions,
 }: FileViewerProps) {
   if (!path) {
     return (
@@ -313,6 +319,7 @@ function FileViewer({
           key={`${path}:${revertNonce}`}
           source={content}
           onSourceChange={onContentChange}
+          pageSuggestions={pageSuggestions}
         />
       </div>
     ) : (
@@ -718,6 +725,11 @@ export function RepoBrowser() {
     }
     return docsConfigState.config;
   }, [files, docsConfigState.config]);
+
+  const pageSuggestions = useMemo<readonly PageSuggestion[]>(
+    () => extractPageSuggestions(liveDocsConfig),
+    [liveDocsConfig],
+  );
 
   // MDX files on disk but not referenced anywhere in docs.json. Snippets are
   // intentionally never in the nav, so they don't count. Surfaced under the
@@ -1885,6 +1897,7 @@ export function RepoBrowser() {
               error={fileError}
               mode={mode}
               onContentChange={handleContentChange}
+              pageSuggestions={pageSuggestions}
             />
           </SnippetResolverProvider>
         )}

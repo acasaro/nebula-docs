@@ -5,6 +5,7 @@ import { MediaPickerDialog } from '@/components/assets/MediaPickerDialog';
 import type { AssetCategory } from '@/lib/assets';
 import { IconField, type IconValue } from '@/components/IconField';
 import { NumberField, SelectField, TextField, ToggleField } from '@/components/fields';
+import { PageLinkField } from '@/components/fields/PageLinkField';
 import type { AttrField, BlockAttrs, BlockAttrSchema } from '@/lib/blockSchemas';
 import { cn } from '@/lib/utils';
 
@@ -68,14 +69,39 @@ function FieldRenderer({
   onRequestUpload: (key: string, category: AssetCategory) => void;
 }) {
   switch (field.kind) {
-    case 'text':
+    case 'text': {
+      const currentValue =
+        typeof values[field.key] === 'string'
+          ? (values[field.key] as string)
+          : '';
+      // URL fields whose name maps to "navigate the user to another page"
+      // (href, linkUrl, url) get page-aware autocomplete. Asset paths (src,
+      // srcDark, img) intentionally stay plain — they point at media, not
+      // doc pages.
+      const isPageLink =
+        field.type === 'url' &&
+        (field.key === 'href' ||
+          field.key === 'linkUrl' ||
+          field.key === 'url') &&
+        !field.upload;
+      if (isPageLink) {
+        return (
+          <PageLinkField
+            label={field.label}
+            icon={field.icon}
+            placeholder={field.placeholder}
+            value={currentValue}
+            onChange={(next) => onChange({ [field.key]: next || null })}
+          />
+        );
+      }
       return (
         <TextField
           label={field.label}
           icon={field.icon}
           placeholder={field.placeholder}
           type={field.type}
-          value={typeof values[field.key] === 'string' ? (values[field.key] as string) : ''}
+          value={currentValue}
           onChange={(next) => onChange({ [field.key]: next || null })}
           trailing={
             field.upload ? (
@@ -88,6 +114,7 @@ function FieldRenderer({
           }
         />
       );
+    }
     case 'number': {
       const raw = values[field.key];
       const num = typeof raw === 'number' ? raw : null;

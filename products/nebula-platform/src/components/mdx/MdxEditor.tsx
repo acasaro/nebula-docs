@@ -62,17 +62,23 @@ import { SlashCommand } from './slashCommand';
 import { SlashHint } from './slashHint';
 import { LinkBubble } from './LinkBubble';
 import { TextToolbar } from './TextToolbar';
+import {
+  PageSuggestionsProvider,
+  type PageSuggestion,
+} from '@/lib/pageSuggestions';
 
 interface MdxEditorProps {
   source: string;
   onSourceChange?: (next: string) => void;
   className?: string;
+  pageSuggestions?: readonly PageSuggestion[];
 }
 
 export function MdxEditor({
   source,
   onSourceChange,
   className,
+  pageSuggestions,
 }: MdxEditorProps) {
   const initial = useMemo(() => parseMdxForEditor(source), [source]);
   const initialDoc = initial.doc;
@@ -412,6 +418,7 @@ export function MdxEditor({
     : undefined;
 
   return (
+    <PageSuggestionsProvider pages={pageSuggestions ?? []}>
     <div
       className={cn(
         'min-h-full',
@@ -494,6 +501,7 @@ export function MdxEditor({
       />
     </div>
     </div>
+    </PageSuggestionsProvider>
   );
 }
 

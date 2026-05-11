@@ -7,6 +7,9 @@
       "hosting": {
         "icons": [
           "mcoe-icons"
+        ],
+        "platform": [
+          "docs-nebula"
         ]
       }
     }

@@ -1,0 +1,77 @@
+name: Deploy Nebula Docs Platform
+
+# Builds the Platform SPA with NEBULA_ENV=prod and deploys it to the
+# Firebase Hosting site `docs-nebula` (live URL: docs-nebula.web.app).
+# Single stable URL, no preview channels. The Platform's prod-env wiring
+# targets the enterprise nebula-docs GitHub App + (default) Firestore +
+# unsuffixed Cloud Functions.
+#
+# IMPORTANT — push trigger intentionally absent. This file lives in a
+# repo that mirrors to UHG GitHub Enterprise. The mirror is where the
+# Firebase service-account + SDK secrets actually live; pushes to the
+# personal/public mirror have no secrets and would fail-fast on the
+# deploy step, but we don't want them to even try. To re-enable
+# automatic deploys on the enterprise mirror, add back:
+#   push:
+#     branches: [main]
+#     paths:
+#       - 'products/nebula-platform/**'
+#       - 'packages/**'
+#       - 'pnpm-workspace.yaml'
+#       - 'pnpm-lock.yaml'
+#       - 'package.json'
+#       - '.github/workflows/deploy-platform.yml'
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-platform-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build Platform
+        run: pnpm --filter @nebula-docs/platform build
+        env:
+          NEBULA_ENV: prod
+          FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
+          FIREBASE_AUTH_DOMAIN: ${{ secrets.FIREBASE_AUTH_DOMAIN }}
+          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
+          FIREBASE_STORAGE_BUCKET: ${{ secrets.FIREBASE_STORAGE_BUCKET }}
+          FIREBASE_MESSAGE_SENDER_ID: ${{ secrets.FIREBASE_MESSAGE_SENDER_ID }}
+          FIREBASE_APP_ID: ${{ secrets.FIREBASE_APP_ID }}
+          FIREBASE_MEASUREMENT_ID: ${{ secrets.FIREBASE_MEASUREMENT_ID }}
+          GITHUB_APP_INSTALL_URL: ${{ secrets.GITHUB_APP_INSTALL_URL }}
+
+      - name: Deploy to Firebase Hosting (docs-nebula)
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_MCOE_D }}
+          projectId: mcoe-d
+          target: platform
+          channelId: live
